@@ -36,8 +36,11 @@ export const getPropiedades = async () => {
   return data;
 };
 
-export const createPropiedad = async (datos: any) => {
-  const { data } = await api.post<ApiResponse<Propiedad>>('/propiedades', datos);
+// 👇 ESTA ES LA FUNCIÓN MODIFICADA PARA SUBIR FOTOS
+export const createPropiedad = async (datos: FormData) => {
+  const { data } = await api.post<ApiResponse<Propiedad>>('/propiedades', datos, {
+    headers: { 'Content-Type': 'multipart/form-data' } // Esto permite enviar archivos
+  });
   return data;
 };
 

@@ -5,7 +5,7 @@ export interface Propietario {
   dni: string;
   fechaNacimiento: string;
   direccion: string;
-  createdAt?: string; // Opcional porque al crear no lo tenemos
+  createdAt?: string;
   updatedAt?: string;
 }
 
@@ -13,14 +13,27 @@ export interface Propietario {
 export interface Propiedad {
   id: string;
   direccion: string;
-  precio: number | string; // Puede venir como texto del input o numero de la BD
+  ubicacion: string;
+  precio: number;
   moneda: string;
-  tipo: 'Venta' | 'Alquiler' | string;
-  modalidad: 'Venta' | 'Alquiler' | 'Anticresis';
+  tipo: string;
+  modalidad: string;
   descripcion: string;
   area: number;
   areaConstruida: number;
+  habitaciones: number;
+  banos: number;
+  cocheras: number;
   propietarioId: string;
+  distribucion?: string;
+  asesor?: string;
+  mapaUrl?: string;
+  videoUrl?: string;
+  fotoPrincipal?: string;
+  galeria?: string[];
+  pdfUrl?: string;
+
+  // Relaciones
   Propietario?: Propietario;
 }
 
@@ -33,32 +46,24 @@ export interface Cliente {
   direccion: string;
 }
 
-// Definición de Interés (El match)
+// Definición de Interés
 export interface Interes {
   id: string;
   estado: string;
   nota?: string;
   clienteId: string;
   propiedadId: string;
-  Cliente?: Cliente;     // Para mostrar el nombre del interesado
-  Propiedad?: Propiedad; // Para mostrar qué casa quiere
-  createdAt?: string; 
+  Cliente?: Cliente;
+  Propiedad?: Propiedad;
+  createdAt?: string;
   updatedAt?: string;
 }
 
-// Respuesta genérica de tu API (Backend)
-// Esto nos ayuda a leer los mensajes: { message: "Éxito", data: ... }
-export interface ApiResponse<T> {
-  message: string;
-  data: T;
-  error?: string;
-}
-
-// Definición de Operación (Gestión)
+// Definición de Operación
 export interface Operacion {
   id: string;
-  tipoGestion: string; // Venta, Alquiler...
-  estado: string;      // Alta, Baja
+  tipoGestion: string;
+  estado: string;
   fechaOperacion: string;
   fechaContrato: string;
   precioFinal: number;
@@ -70,6 +75,7 @@ export interface Operacion {
   Cliente?: Cliente;
 }
 
+// Definición de Visita
 export interface Visita {
   id: string;
   asesor: string;
@@ -83,6 +89,7 @@ export interface Visita {
   Propiedad?: Propiedad;
 }
 
+// Definición de Seguimiento
 export interface Seguimiento {
   id: string;
   tipoAccion: string;
@@ -94,7 +101,7 @@ export interface Seguimiento {
   Propiedad?: Propiedad;
 }
 
-// Definición de Usuario (Login)
+// Definición de Usuario
 export interface Usuario {
   id: string;
   nombre: string;
@@ -102,7 +109,13 @@ export interface Usuario {
   rol: string;
 }
 
-// Respuesta del Login
+// Respuestas de API
+export interface ApiResponse<T> {
+  message: string;
+  data: T;
+  error?: string;
+}
+
 export interface AuthResponse {
   message: string;
   token: string;
