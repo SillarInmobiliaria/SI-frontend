@@ -110,7 +110,6 @@ export default function PropiedadesPage() {
         {loading ? <div className="text-center">Cargando...</div> : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {propiedadesFiltradas.map((p) => (
-              // 👇 LINK A LA PÁGINA DE DETALLE
               <Link href={`/propiedades/${p.id}`} key={p.id} className="block h-full group">
                 <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all overflow-hidden border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                   
@@ -143,7 +142,7 @@ export default function PropiedadesPage() {
                       <FaMapMarkerAlt /> <span className="truncate">{p.direccion}</span>
                     </div>
                     
-                    {/* Precio (Color corregido para modo claro) */}
+                    {/* Precio */}
                     <div className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">
                       {p.moneda === 'PEN' ? 'S/.' : '$'} {Number(p.precio).toLocaleString()}
                     </div>
@@ -151,7 +150,7 @@ export default function PropiedadesPage() {
                     {/* Características */}
                     <div className="bg-gray-50 dark:bg-base-200 p-3 rounded-lg border border-gray-100 dark:border-none mt-auto">
                       
-                      {/* Fila 1: Habitaciones */}
+                      {/* Habitaciones */}
                       <div className="flex justify-between items-center text-sm mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center gap-1" title="Dormitorios">
                           <FaBed className="text-indigo-500 text-lg" /> 
@@ -167,7 +166,7 @@ export default function PropiedadesPage() {
                         </div>
                       </div>
 
-                      {/* Fila 2: Áreas */}
+                      {/* Áreas */}
                       <div className="flex justify-between items-center text-xs font-semibold">
                         <div className="flex items-center gap-1 text-green-600 dark:text-green-400" title="Área Total">
                           <FaRulerCombined className="text-base" /> 

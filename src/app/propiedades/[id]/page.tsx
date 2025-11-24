@@ -165,7 +165,7 @@ export default function PropiedadDetallePage() {
         {/* COLUMNA IZQUIERDA (CONTENIDO) */}
         <div className="lg:col-span-2 space-y-10">
             
-            {/* 1. INFORMACIÓN */}
+            {/* INFORMACIÓN */}
             <div className={`${activeTab === 'informacion' ? 'block' : 'hidden'} animate-fade-in`}>
                 <h2 className="text-2xl font-bold text-primary flex items-center gap-2 mb-6 uppercase tracking-wide border-b pb-2 border-base-300">
                   <FaInfoCircle /> Información General
@@ -191,7 +191,7 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* 2. DESCRIPCIÓN */}
+            {/* DESCRIPCIÓN */}
             <div className={`${activeTab === 'descripcion' ? 'block' : 'hidden'} animate-fade-in`}>
                 <h2 className="text-2xl font-bold text-primary mb-6 uppercase tracking-wide border-b pb-2 border-base-300">Descripción</h2>
                 <div className="prose max-w-none text-lg text-base-content/80 leading-relaxed whitespace-pre-line text-justify bg-base-100 p-8 rounded-xl shadow-sm border border-base-300">
@@ -199,7 +199,7 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* 3. CARACTERÍSTICAS */}
+            {/* CARACTERÍSTICAS */}
             <div className={`${activeTab === 'caracteristicas' ? 'block' : 'hidden'} animate-fade-in`}>
                 <h2 className="text-2xl font-bold text-primary mb-6 uppercase tracking-wide border-b pb-2 border-base-300">Distribución y Detalles</h2>
                 
@@ -234,7 +234,7 @@ export default function PropiedadDetallePage() {
                 )}
             </div>
 
-            {/* 4. LOCALIZACIÓN */}
+            {/* LOCALIZACIÓN */}
             <div className={`${activeTab === 'localizacion' ? 'block' : 'hidden'} animate-fade-in`}>
                 <h2 className="text-2xl font-bold text-primary mb-6 uppercase tracking-wide border-b pb-2 border-base-300">Ubicación</h2>
                 <div className="bg-base-100 p-2 rounded-xl h-[500px] w-full border border-base-300 shadow-sm">
@@ -253,7 +253,7 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* 5. VIDEO */}
+            {/* VIDEO */}
             <div className={`${activeTab === 'video' ? 'block' : 'hidden'} animate-fade-in`}>
                 <h2 className="text-2xl font-bold text-primary mb-6 uppercase tracking-wide border-b pb-2 border-base-300">Recorrido Virtual</h2>
                 <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg border border-base-300">

@@ -21,10 +21,10 @@ export default function NuevaPropiedadPage() {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      // 1. Crear el "Sobre" para enviar archivos (FormData)
+      // Crear el "Sobre" para enviar archivos (FormData)
       const formData = new FormData();
 
-      // 2. Meter los datos de texto
+      // Meter los datos de texto
       formData.append('tipo', data.tipo);
       formData.append('modalidad', data.modalidad);
       formData.append('ubicacion', data.ubicacion);
@@ -43,7 +43,7 @@ export default function NuevaPropiedadPage() {
       if(data.mapaUrl) formData.append('mapaUrl', data.mapaUrl);
       if(data.videoUrl) formData.append('videoUrl', data.videoUrl);
 
-      // 3. Meter los archivos (Si existen)
+      // Meter los archivos (Si existen)
       if (data.fotoPrincipal[0]) {
         formData.append('fotoPrincipal', data.fotoPrincipal[0]);
       }
@@ -86,7 +86,7 @@ export default function NuevaPropiedadPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
-           {/* SECCIÓN 1: DATOS GENERALES */}
+           {/* DATOS GENERALES */}
            <div className="card bg-base-100 shadow-xl border-t-4 border-primary">
             <div className="card-body">
               <h2 className="card-title flex items-center gap-2 mb-4"><FaHome className="text-primary" /> Datos Generales</h2>
@@ -99,7 +99,7 @@ export default function NuevaPropiedadPage() {
             </div>
           </div>
 
-           {/* SECCIÓN 2: PRECIO */}
+           {/* PRECIO */}
            <div className="card bg-base-100 shadow-xl border-t-4 border-secondary">
             <div className="card-body">
                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -113,7 +113,7 @@ export default function NuevaPropiedadPage() {
             </div>
            </div>
 
-           {/* SECCIÓN 3: CARACTERÍSTICAS */}
+           {/* CARACTERÍSTICAS */}
            <div className="card bg-base-100 shadow-xl border-t-4 border-accent">
              <div className="card-body">
                <div className="grid grid-cols-3 gap-6 mb-6">
@@ -137,7 +137,7 @@ export default function NuevaPropiedadPage() {
            </div>
 
 
-          {/* SECCIÓN 4: MULTIMEDIA Y DOCUMENTOS (ACTUALIZADA) */}
+          {/* MULTIMEDIA Y DOCUMENTOS (ACTUALIZADA) */}
           <div className="card bg-base-100 shadow-xl border-t-4 border-warning">
             <div className="card-body">
               <h2 className="card-title flex items-center gap-2 mb-4">
@@ -195,7 +195,7 @@ export default function NuevaPropiedadPage() {
             </div>
           </div>
 
-          {/* SECCIÓN 5: GESTIÓN INTERNA */}
+          {/* GESTIÓN INTERNA */}
            <div className="card bg-base-100 shadow-xl border-t-4 border-info">
             <div className="card-body">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
