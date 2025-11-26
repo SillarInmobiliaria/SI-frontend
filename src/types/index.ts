@@ -48,7 +48,9 @@ export interface Cliente {
   dni: string;
   fechaNacimiento: string;
   direccion: string;
-}
+  email?: string;
+  telefono?: string;
+  }
 
 // Definición de Interés
 export interface Interes {
