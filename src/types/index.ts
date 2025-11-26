@@ -5,6 +5,10 @@ export interface Propietario {
   dni: string;
   fechaNacimiento: string;
   direccion: string;
+  email?: string;
+  banco?: string;
+  cuenta?: string;
+  cci?: string;
   createdAt?: string;
   updatedAt?: string;
 }
