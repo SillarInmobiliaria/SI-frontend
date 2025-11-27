@@ -33,17 +33,29 @@ export interface Propiedad {
   habitaciones: number;
   banos: number;
   cocheras: number;
-  propietarioId: string;
-  distribucion?: string;
-  asesor?: string;
+  Propietarios?: Propietario[]; 
+  distribucion?: string; 
+  asesor?: string;       
   mapaUrl?: string;
   videoUrl?: string;
   fotoPrincipal?: string;
   galeria?: string[];
   pdfUrl?: string;
-
-  // Relaciones
-  Propietario?: Propietario;
+  partidaRegistral?: string;
+  numeroPartida?: string;
+  fechaInicioContrato?: string;
+  fechaVencimientoContrato?: string;
+  fechaCaptacion?: string;
+  comision?: string;
+  tipoContrato?: string;
+  testimonio?: boolean;
+  hr?: boolean;
+  pu?: boolean;
+  impuestoPredial?: boolean;
+  arbitrios?: boolean;
+  copiaLiteral?: boolean;
+  plataforma?: string[]; 
+  [key: string]: any; 
 }
 
 // Definición de Cliente

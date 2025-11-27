@@ -5,31 +5,57 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
 import { createPropiedad } from '../../../services/api';
-import { FaHome, FaMapMarkedAlt, FaImages, FaUserTie, FaSave, FaArrowLeft } from 'react-icons/fa';
+import { 
+  FaHome, FaMapMarkedAlt, FaImages, FaUserTie, FaSave, FaArrowLeft, 
+  FaFileContract, FaCheckSquare, FaGlobe, FaLink, FaUserPlus, FaTrash 
+} from 'react-icons/fa';
 import Link from 'next/link';
 
-const UBICACIONES = ["Arequipa", "Yanahuara", "Cayma", "Cerro Colorado", "Jose Luis Bustamante y Rivero", "Sachaca", "Miraflores", "Mariano Melgar", "Paucarpata", "Socabaya", "Jacobo Hunter", "Alto Selva Alegre", "Tiabaya", "Uchumayo", "Characato", "Sabandía", "Mollebaya", "Yura", "La Joya", "Mollendo", "Camaná", "Mejía", "Pedregal"];
+const UBICACIONES = [
+  "Arequipa", "Yanahuara", "Cayma", "Cerro Colorado", "Jose Luis Bustamante y Rivero",
+  "Sachaca", "Miraflores", "Mariano Melgar", "Paucarpata", "Socabaya", "Jacobo Hunter",
+  "Alto Selva Alegre", "Tiabaya", "Uchumayo", "Characato", "Sabandía", "Mollebaya",
+  "Yura", "La Joya", "Mollendo", "Camaná", "Mejía", "Pedregal"
+];
 
 export default function NuevaPropiedadPage() {
   const router = useRouter();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
   const { register, handleSubmit } = useForm();
   const [loading, setLoading] = useState(false);
+  
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [currentOwnerId, setCurrentOwnerId] = useState("");
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => { fetchPropietarios(); }, []);
 
+  const handleAddOwner = () => {
+    if (currentOwnerId && !selectedOwners.includes(currentOwnerId)) {
+      setSelectedOwners([...selectedOwners, currentOwnerId]);
+      setCurrentOwnerId(""); 
+    }
+  };
+
+  const handleRemoveOwner = (id: string) => {
+    setSelectedOwners(selectedOwners.filter(ownerId => ownerId !== id));
+  };
+
   const onSubmit = async (data: any) => {
+    if (selectedOwners.length === 0) {
+      alert("⚠️ Debes asignar al menos un propietario.");
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Crear el "Sobre" para enviar archivos (FormData)
       const formData = new FormData();
 
-      // Meter los datos de texto
+      // Datos Texto
       formData.append('tipo', data.tipo);
       formData.append('modalidad', data.modalidad);
       formData.append('ubicacion', data.ubicacion);
       formData.append('direccion', data.direccion);
-      formData.append('moneda', data.moneda);
       formData.append('precio', data.precio);
       formData.append('area', data.area);
       formData.append('areaConstruida', data.areaConstruida);
@@ -38,33 +64,45 @@ export default function NuevaPropiedadPage() {
       formData.append('cocheras', data.cocheras);
       formData.append('descripcion', data.descripcion);
       formData.append('distribucion', data.distribucion);
-      formData.append('propietarioId', data.propietarioId);
+
+      // ENVIAR LISTA DE PROPIETARIOS
+      formData.append('propietarios', JSON.stringify(selectedOwners));
+
+      // Gestión y Legal
+      formData.append('fechaCaptacion', data.fechaCaptacion);
+      formData.append('comision', data.comision);
+      formData.append('tipoContrato', data.tipoContrato);
       if(data.asesor) formData.append('asesor', data.asesor);
+      
+      if(data.partidaRegistral) formData.append('partidaRegistral', data.partidaRegistral);
+      if(data.numeroPartida) formData.append('numeroPartida', data.numeroPartida); // 👈 NUEVO CAMPO ADICIONAL
+      if(data.fechaInicioContrato) formData.append('fechaInicioContrato', data.fechaInicioContrato);
+      if(data.fechaVencimientoContrato) formData.append('fechaVencimientoContrato', data.fechaVencimientoContrato);
+
+      // Plataformas (5 Links)
+      const links = [data.link1, data.link2, data.link3, data.link4, data.link5].filter(l => l);
+      formData.append('plataforma', JSON.stringify(links));
+
+      // Checks
+      ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral'].forEach(field => {
+          formData.append(field, data[field] ? 'true' : 'false');
+      });
+
+      // Files
+      if(data.fotoPrincipal[0]) formData.append('fotoPrincipal', data.fotoPrincipal[0]);
+      if(data.pdf[0]) formData.append('pdf', data.pdf[0]);
+      if(data.galeria?.length) {
+        for (let i = 0; i < data.galeria.length; i++) formData.append('galeria', data.galeria[i]);
+      }
       if(data.mapaUrl) formData.append('mapaUrl', data.mapaUrl);
       if(data.videoUrl) formData.append('videoUrl', data.videoUrl);
 
-      // Meter los archivos (Si existen)
-      if (data.fotoPrincipal[0]) {
-        formData.append('fotoPrincipal', data.fotoPrincipal[0]);
-      }
-      if (data.pdf[0]) {
-        formData.append('pdf', data.pdf[0]);
-      }
-      // Galería (Múltiples archivos)
-      if (data.galeria && data.galeria.length > 0) {
-        for (let i = 0; i < data.galeria.length; i++) {
-          formData.append('galeria', data.galeria[i]);
-        }
-      }
-
-      // 4. Enviar el sobre al backend
       await createPropiedad(formData);
-      
-      alert('✅ Propiedad publicada con fotos y documentos');
+      alert('✅ Propiedad creada con éxito');
       router.push('/propiedades');
     } catch (error) {
-      alert('❌ Error al publicar');
       console.error(error);
+      alert('❌ Error al crear');
     } finally {
       setLoading(false);
     }
@@ -74,150 +112,156 @@ export default function NuevaPropiedadPage() {
     <div className="min-h-screen bg-base-200 pb-12">
       <Navbar />
       <div className="container mx-auto p-6 max-w-5xl">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-8">
             <Link href="/propiedades" className="btn btn-circle btn-ghost"><FaArrowLeft /></Link>
-            <div>
-              <h1 className="text-3xl font-bold text-primary">Publicar Nueva Propiedad</h1>
-              <p className="text-gray-500">Completa la ficha técnica del inmueble</p>
-            </div>
-          </div>
+            <h1 className="text-3xl font-bold text-primary">Ficha de Captación de Inmueble</h1>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-
-           {/* DATOS GENERALES */}
-           <div className="card bg-base-100 shadow-xl border-t-4 border-primary">
+          
+          {/* 1. PROPIETARIOS */}
+          <div className="card bg-base-100 shadow-xl border-t-4 border-primary">
             <div className="card-body">
-              <h2 className="card-title flex items-center gap-2 mb-4"><FaHome className="text-primary" /> Datos Generales</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="form-control"><label className="label font-bold">Tipo</label><select {...register('tipo')} className="select select-bordered w-full text-lg"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local</option></select></div>
-                <div className="form-control"><label className="label font-bold">Modalidad</label><select {...register('modalidad')} className="select select-bordered w-full text-lg"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option></select></div>
-                <div className="form-control"><label className="label font-bold">Ubicación</label><select {...register('ubicacion')} className="select select-bordered w-full text-lg">{UBICACIONES.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
+              <h2 className="card-title flex items-center gap-2 mb-4"><FaUserTie className="text-primary"/> Propietarios (Captación)</h2>
+              <div className="flex gap-4 items-end">
+                <div className="form-control w-full">
+                    <label className="label font-bold">Buscar y Seleccionar Propietario</label>
+                    <select 
+                        className="select select-bordered w-full"
+                        value={currentOwnerId}
+                        onChange={(e) => setCurrentOwnerId(e.target.value)}
+                    >
+                        <option value="">-- Seleccione --</option>
+                        {propietarios.map(p => (
+                            <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>
+                        ))}
+                    </select>
+                </div>
+                <button type="button" onClick={handleAddOwner} className="btn btn-primary"><FaUserPlus/> Agregar</button>
               </div>
-              <div className="form-control mt-4"><label className="label font-bold">Dirección</label><input {...register('direccion', { required: true })} type="text" className="input input-bordered w-full text-lg" /></div>
+              <div className="mt-4 space-y-2">
+                {selectedOwners.length === 0 && <p className="text-sm text-gray-400 italic">No hay propietarios asignados aún.</p>}
+                {selectedOwners.map(id => {
+                    const owner = propietarios.find(p => p.id === id);
+                    return (
+                        <div key={id} className="flex justify-between items-center p-3 bg-base-200 rounded-lg">
+                            <span className="font-bold">{owner?.nombre} <span className="text-xs font-normal opacity-70">({owner?.dni})</span></span>
+                            <button type="button" onClick={() => handleRemoveOwner(id)} className="btn btn-xs btn-error btn-circle text-white"><FaTrash/></button>
+                        </div>
+                    )
+                })}
+              </div>
             </div>
           </div>
 
-           {/* PRECIO */}
-           <div className="card bg-base-100 shadow-xl border-t-4 border-secondary">
-            <div className="card-body">
-               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                 <div className="form-control"><label className="label font-bold">Moneda</label><select {...register('moneda')} className="select select-bordered w-full text-lg font-bold"><option value="USD">Dólares</option><option value="PEN">Soles</option></select></div>
-                 <div className="form-control md:col-span-3"><label className="label font-bold">Precio</label><input {...register('precio', { required: true })} type="number" className="input input-bordered w-full text-2xl font-bold text-success" /></div>
-               </div>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-4">
-                 <div className="form-control"><label className="label font-bold">Área T.</label><input {...register('area')} type="number" className="input input-bordered w-full" /></div>
-                 <div className="form-control"><label className="label-text font-bold">Área C.</label><input {...register('areaConstruida')} type="number" className="input input-bordered w-full" /></div>
-               </div>
-            </div>
-           </div>
+          {/* 2. DATOS DEL INMUEBLE */}
+          <div className="card bg-base-100 shadow-xl border-t-4 border-secondary">
+             <div className="card-body">
+                <h2 className="card-title mb-4"><FaHome className="text-secondary"/> Datos del Inmueble</h2>
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="form-control"><label className="label font-bold">Tipo</label><select {...register('tipo')} className="select select-bordered"><option>Casa</option><option>Departamento</option><option>Terreno</option><option>Local</option></select></div>
+                    <div className="form-control"><label className="label font-bold">Categoría</label><select {...register('modalidad')} className="select select-bordered"><option>Venta</option><option>Alquiler</option><option>Anticresis</option></select></div>
+                    <div className="form-control"><label className="label font-bold">Ubicación</label><select {...register('ubicacion')} className="select select-bordered">{UBICACIONES.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+                </div>
+                <div className="form-control mt-4"><label className="label font-bold">Dirección</label><input {...register('direccion')} className="input input-bordered" /></div>
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="form-control"><label className="label font-bold">Precio ($)</label><input {...register('precio')} type="number" className="input input-bordered" /></div>
+                    <div className="form-control"><label className="label font-bold">Área T.</label><input {...register('area')} type="number" className="input input-bordered" /></div>
+                    <div className="form-control"><label className="label font-bold">Área C.</label><input {...register('areaConstruida')} type="number" className="input input-bordered" /></div>
+                </div>
+             </div>
+          </div>
 
-           {/* CARACTERÍSTICAS */}
+           {/* 3. CARACTERÍSTICAS */}
            <div className="card bg-base-100 shadow-xl border-t-4 border-accent">
              <div className="card-body">
-               <div className="grid grid-cols-3 gap-6 mb-6">
-                  <div className="form-control"><label className="label font-bold text-center">Habitaciones</label><input {...register('habitaciones')} type="number" className="input input-bordered text-center" defaultValue={0}/></div>
-                  <div className="form-control"><label className="label font-bold text-center">Baños</label><input {...register('banos')} type="number" className="input input-bordered text-center" defaultValue={0}/></div>
-                  <div className="form-control"><label className="label font-bold text-center">Cocheras</label><input {...register('cocheras')} type="number" className="input input-bordered text-center" defaultValue={0}/></div>
+               <h2 className="card-title flex items-center gap-2 mb-4">📝 Detalles y Distribución</h2>
+               <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="form-control"><label className="label font-bold text-center">🛏️ Dormitorios</label><input {...register('habitaciones')} type="number" className="input input-bordered text-center text-lg" defaultValue={0} /></div>
+                  <div className="form-control"><label className="label font-bold text-center">🚿 Baños</label><input {...register('banos')} type="number" className="input input-bordered text-center text-lg" defaultValue={0} /></div>
+                  <div className="form-control"><label className="label font-bold text-center">🚗 Cocheras</label><input {...register('cocheras')} type="number" className="input input-bordered text-center text-lg" defaultValue={0} /></div>
                </div>
-               
-               <div className="space-y-8">
-                 <div className="form-control w-full">
-                   <label className="label font-bold">Descripción</label>
-                   <textarea {...register('descripcion')} className="textarea textarea-bordered h-32 text-lg w-full" />
-                 </div>
-                 
-                 <div className="form-control w-full">
-                   <label className="label font-bold">Distribución Técnica</label>
-                   <textarea {...register('distribucion')} className="textarea textarea-bordered h-48 font-mono text-sm w-full" />
-                 </div>
+               <div className="flex flex-col gap-6">
+                  <div className="form-control w-full"><label className="label font-bold">Descripción Comercial</label><textarea {...register('descripcion')} className="textarea textarea-bordered h-32 text-lg resize-none" placeholder="Ej: Hermosa casa..." /></div>
+                  <div className="form-control w-full"><label className="label font-bold">Distribución Técnica</label><textarea {...register('distribucion')} className="textarea textarea-bordered h-48 font-mono text-sm resize-none" placeholder="PRIMER NIVEL:..." /></div>
                </div>
              </div>
            </div>
+          
+          {/* 4. GESTIÓN LEGAL Y ADMINISTRATIVA */}
+          <div className="card bg-base-100 shadow-xl border-t-4 border-info">
+              <div className="card-body">
+                  <h2 className="card-title mb-4"><FaFileContract className="text-info"/> Datos Legales (Ficha Captación)</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                     <div className="form-control">
+                        <label className="label font-bold">Partida Registral</label>
+                        <input {...register('partidaRegistral')} type="text" className="input input-bordered w-full font-mono" placeholder="P12345678" maxLength={10} />
+                     </div>
+                     <div className="form-control">
+                        <label className="label font-bold">N° de Partida (Adicional)</label>
+                        <input {...register('numeroPartida')} type="text" className="input input-bordered w-full font-mono" placeholder="Otro número..." />
+                     </div>
+                  </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                     <div className="form-control"><label className="label font-bold">Fecha de Captación</label><input {...register('fechaCaptacion')} type="date" className="input input-bordered w-full" defaultValue={today} /></div>
+                     <div className="form-control"><label className="label font-bold">Inicio Contrato</label><input {...register('fechaInicioContrato')} type="date" className="input input-bordered w-full" /></div>
+                     <div className="form-control"><label className="label font-bold">Vencimiento Contrato</label><input {...register('fechaVencimientoContrato')} type="date" className="input input-bordered w-full" /></div>
+                  </div>
 
-          {/* MULTIMEDIA Y DOCUMENTOS (ACTUALIZADA) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                     <div className="form-control"><label className="label font-bold">Tipo de Contrato</label><select {...register('tipoContrato')} className="select select-bordered w-full"><option value="Sin Exclusiva">Sin Exclusiva</option><option value="Con Exclusiva">Con Exclusiva</option></select></div>
+                     <div className="form-control"><label className="label font-bold">Comisión (%)</label><input {...register('comision')} type="text" className="input input-bordered w-full" placeholder="Ej: 3%" /></div>
+                  </div>
+
+                  <div className="bg-base-200 p-4 rounded-lg mb-6">
+                     <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><FaCheckSquare/> Documentación en Regla</h3>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('testimonio')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">Testimonio</span></label>
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('hr')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">HR</span></label>
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('pu')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">PU</span></label>
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('impuestoPredial')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">Predial</span></label>
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('arbitrios')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">Arbitrios</span></label>
+                        <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('copiaLiteral')} className="checkbox checkbox-primary checkbox-sm" /> <span className="label-text">Copia Literal</span></label>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     <div className="space-y-3">
+                        <label className="label font-bold flex items-center gap-2"><FaGlobe className="text-info"/> Plataformas (Links)</label>
+                        {[1,2,3,4,5].map(i => (
+                            <div key={i} className="relative">
+                                <FaLink className="absolute left-3 top-3.5 text-gray-400"/>
+                                <input {...register(`link${i}`)} type="text" className="input input-bordered w-full pl-10" placeholder={`Link ${i}`} />
+                            </div>
+                        ))}
+                     </div>
+                     <div className="form-control"><label className="label font-bold">Asesor Encargado</label><input {...register('asesor')} type="text" className="input input-bordered w-full" placeholder="Nombre del asesor" /></div>
+                  </div>
+              </div>
+          </div>
+
+          {/* 5. MULTIMEDIA */}
           <div className="card bg-base-100 shadow-xl border-t-4 border-warning">
             <div className="card-body">
-              <h2 className="card-title flex items-center gap-2 mb-4">
-                <FaImages className="text-warning" /> Multimedia y Archivos
-              </h2>
-              
+              <h2 className="card-title flex items-center gap-2 mb-4"><FaImages className="text-warning" /> Multimedia</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* FOTO PRINCIPAL */}
-                <div className="form-control">
-                  <label className="label font-bold text-primary">1. Foto Principal (Portada)</label>
-                  <input 
-                    {...register('fotoPrincipal', { required: true })} 
-                    type="file" 
-                    accept="image/*"
-                    className="file-input file-input-bordered file-input-primary w-full" 
-                  />
-                </div>
-
-                {/* GALERÍA */}
-                <div className="form-control">
-                  <label className="label font-bold text-secondary">2. Galería (Fotos Secundarias)</label>
-                  <input 
-                    {...register('galeria')} 
-                    type="file" 
-                    multiple 
-                    accept="image/*"
-                    className="file-input file-input-bordered file-input-secondary w-full" 
-                  />
-                  <label className="label text-xs">Puedes seleccionar varias fotos a la vez.</label>
-                </div>
-
-                {/* PDF */}
-                <div className="form-control">
-                  <label className="label font-bold text-error">3. Ficha Técnica (PDF)</label>
-                  <input 
-                    {...register('pdf')} 
-                    type="file" 
-                    accept=".pdf"
-                    className="file-input file-input-bordered file-input-error w-full" 
-                  />
-                </div>
+                <div className="form-control"><label className="label font-bold">Foto Principal</label><input {...register('fotoPrincipal')} type="file" accept="image/*" className="file-input file-input-bordered file-input-primary w-full" /></div>
+                <div className="form-control"><label className="label font-bold">Galería</label><input {...register('galeria')} type="file" multiple accept="image/*" className="file-input file-input-bordered file-input-secondary w-full" /></div>
+                <div className="form-control"><label className="label font-bold">Ficha PDF</label><input {...register('pdf')} type="file" accept=".pdf" className="file-input file-input-bordered file-input-error w-full" /></div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div className="form-control">
-                  <label className="label font-bold">Video (YouTube Link)</label>
-                  <input {...register('videoUrl')} type="text" className="input input-bordered w-full" placeholder="https://youtu.be/..." />
-                </div>
-                <div className="form-control">
-                  <label className="label font-bold">Mapa (Google Maps iframe)</label>
-                  <input {...register('mapaUrl')} type="text" className="input input-bordered w-full" placeholder="<iframe..." />
-                </div>
+                <div className="form-control"><label className="label font-bold">Video URL</label><input {...register('videoUrl')} type="text" className="input input-bordered w-full" /></div>
+                <div className="form-control"><label className="label font-bold">Mapa Iframe</label><input {...register('mapaUrl')} type="text" className="input input-bordered w-full" /></div>
               </div>
             </div>
           </div>
 
-          {/* GESTIÓN INTERNA */}
-           <div className="card bg-base-100 shadow-xl border-t-4 border-info">
-            <div className="card-body">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="form-control"><label className="label font-bold">Propietario</label><select {...register('propietarioId', { required: true })} className="select select-bordered w-full text-lg"><option value="">Seleccione...</option>{propietarios.map((prop) => (<option key={prop.id} value={prop.id}>{prop.nombre}</option>))}</select></div>
-                <div className="form-control"><label className="label font-bold">Asesor</label><input {...register('asesor')} type="text" className="input input-bordered w-full text-lg" /></div>
-              </div>
-            </div>
-          </div>
-
-
-          {/* BOTONES DE ACCIÓN */}
           <div className="flex gap-4 justify-end pt-6">
             <Link href="/propiedades" className="btn btn-lg btn-ghost">Cancelar</Link>
-            <button 
-              type="submit" 
-              className={`btn btn-lg btn-primary px-12 shadow-xl ${loading ? 'loading' : ''}`}
-              disabled={loading}
-            >
-              <FaSave /> {loading ? 'Subir Archivos y Guardar' : 'Publicar Propiedad'}
-            </button>
+            <button type="submit" disabled={loading} className="btn btn-primary btn-lg px-10"><FaSave/> Guardar Ficha</button>
           </div>
-
         </form>
       </div>
     </div>

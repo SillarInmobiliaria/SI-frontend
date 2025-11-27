@@ -11,7 +11,7 @@ import {
   AuthResponse
 } from '../types';
 
-// 1. Configuramos la URL base
+// Configuramos la URL base
 const api = axios.create({
   baseURL: 'http://localhost:4000/api',
   headers: {
@@ -25,7 +25,7 @@ export const getPropietarios = async () => {
   return data;
 };
 
-export const createPropietario = async (datos: any) => { // 👈 Cambiado a 'any' para flexibilidad
+export const createPropietario = async (datos: Omit<Propietario, 'id'>) => {
   const { data } = await api.post<ApiResponse<Propietario>>('/propietarios', datos);
   return data;
 };
@@ -36,10 +36,10 @@ export const getPropiedades = async () => {
   return data;
 };
 
-// 👇 ESTA ES LA FUNCIÓN MODIFICADA PARA SUBIR FOTOS
+// 👇 ESTA ES LA FUNCIÓN IMPORTANTE PARA SUBIR FOTOS
 export const createPropiedad = async (datos: FormData) => {
   const { data } = await api.post<ApiResponse<Propiedad>>('/propiedades', datos, {
-    headers: { 'Content-Type': 'multipart/form-data' } // Esto permite enviar archivos
+    headers: { 'Content-Type': 'multipart/form-data' } 
   });
   return data;
 };
@@ -50,7 +50,7 @@ export const getClientes = async () => {
   return data;
 };
 
-export const createCliente = async (datos: any) => { // 👈 Cambiado a 'any' para evitar error de 'telefono'
+export const createCliente = async (datos: Omit<Cliente, 'id'>) => {
   const { data } = await api.post<ApiResponse<Cliente>>('/clientes', datos);
   return data;
 };
