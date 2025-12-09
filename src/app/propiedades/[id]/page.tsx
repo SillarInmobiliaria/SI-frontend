@@ -7,8 +7,9 @@ import {
   FaBed, FaBath, FaCar, FaRulerCombined, FaMapMarkerAlt, 
   FaWhatsapp, FaHome, FaDollarSign, FaFilePdf, FaShareAlt, 
   FaPlayCircle, FaImages, FaBuilding, FaInfoCircle, FaFileContract, 
-  FaCheckCircle, FaTimesCircle, FaGlobe, FaExternalLinkAlt, FaCalendarAlt, FaPercent, FaUserTie, FaEye, FaIdCard, FaUser, FaEnvelope, FaBirthdayCake, FaCreditCard, FaStickyNote,
-  FaPhone,
+  FaCheckCircle, FaTimesCircle, FaGlobe, FaExternalLinkAlt, FaCalendarAlt, 
+  FaPercent, FaUserTie, FaEye, FaIdCard, FaUser, FaPhone, FaEnvelope, 
+  FaBirthdayCake, FaStickyNote, FaCreditCard,
   FaCalendarCheck
 } from 'react-icons/fa';
 
@@ -189,7 +190,7 @@ export default function PropiedadDetallePage() {
                                         <div className="avatar placeholder"><div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center font-bold">{prop.nombre.charAt(0)}</div></div>
                                         <div><p className="font-bold text-sm">{prop.nombre}</p><p className="text-xs opacity-70 font-mono">DNI: {prop.dni}</p></div>
                                     </div>
-                                    {/* 👇 BOTÓN OJITO */}
+                                    {/* BOTÓN OJITO */}
                                     <button 
                                         onClick={() => setSelectedOwner(prop)}
                                         className="btn btn-sm btn-circle btn-ghost text-primary hover:bg-primary/10 tooltip" 
@@ -272,27 +273,68 @@ export default function PropiedadDetallePage() {
             </div>
         </div>
 
-        {/* MODAL DE DETALLE DEL PROPIETARIO */}
+        {/* 👇 MODAL DE DETALLE DEL PROPIETARIO (ESTILO PREMIUM) 👇 */}
         {selectedOwner && (
            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-             <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                <div className="bg-gray-800 text-white p-6 flex justify-between items-start">
-                   <div><h2 className="text-3xl font-bold">{selectedOwner.nombre}</h2><div className="flex gap-4 mt-2 text-sm opacity-80 font-mono"><span className="flex items-center gap-2"><FaIdCard/> {selectedOwner.dni}</span><span className="flex items-center gap-2"><FaCalendarCheck/> Alta: {selectedOwner.fechaAlta || 'No registrada'}</span></div></div>
-                   <button onClick={() => setSelectedOwner(null)} className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20">✕</button>
-                </div>
-                <div className="p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <div><h3 className="text-blue-800 font-bold uppercase text-sm border-b pb-2 mb-3 flex items-center gap-2"><FaUser /> Contacto</h3><ul className="space-y-3 text-sm text-gray-700"><li className="flex flex-col"><span className="text-xs font-bold text-gray-400 uppercase">Celular Principal</span><span className="flex items-center gap-2 font-medium text-lg"><FaPhone className="text-green-500"/> {selectedOwner.celular1}</span></li>{selectedOwner.celular2 && <li className="flex flex-col"><span className="text-xs font-bold text-gray-400 uppercase">Celular Secundario</span><span className="flex items-center gap-2 font-medium"><FaPhone className="text-gray-400"/> {selectedOwner.celular2}</span></li>}<li className="flex flex-col"><span className="text-xs font-bold text-gray-400 uppercase">Correo</span><span className="flex items-center gap-2 font-medium"><FaEnvelope className="text-blue-500"/> {selectedOwner.email || 'No registrado'}</span></li><li className="flex flex-col"><span className="text-xs font-bold text-gray-400 uppercase">Dirección</span><span className="flex items-center gap-2 font-medium"><FaMapMarkerAlt className="text-red-500"/> {selectedOwner.direccion}</span></li></ul></div>
-                            {selectedOwner.detalles && (<div><h3 className="text-gray-800 font-bold uppercase text-sm border-b pb-2 mb-3 flex items-center gap-2"><FaStickyNote /> Detalles / Notas</h3><p className="text-sm italic bg-gray-100 p-4 rounded-lg border-l-4 border-gray-300">{selectedOwner.detalles}</p></div>)}
+             <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                
+                {/* HEADER CON GRADIENTE */}
+                <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-800 text-white p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
+                    <div className="relative flex justify-between items-start">
+                        <div className="flex items-start gap-6">
+                            <div className="avatar placeholder shadow-2xl">
+                                <div className="bg-gradient-to-br from-orange-400 to-pink-600 text-white rounded-2xl w-20 h-20 flex items-center justify-center text-3xl font-bold border-4 border-white/20">
+                                    {selectedOwner.nombre.charAt(0).toUpperCase()}
+                                </div>
+                            </div>
+                            <div>
+                                <h2 className="text-3xl font-bold mb-2">{selectedOwner.nombre}</h2>
+                                <div className="flex flex-wrap gap-3 text-white/90 font-mono text-sm">
+                                    <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaIdCard/> {selectedOwner.dni}</span>
+                                    <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaCalendarCheck/> Alta: {selectedOwner.fechaAlta || 'No registrada'}</span>
+                                </div>
+                            </div>
                         </div>
+                        <button onClick={() => setSelectedOwner(null)} className="btn btn-circle btn-ghost text-white hover:bg-white/20">✕</button>
+                    </div>
+                </div>
+
+                <div className="p-8 bg-gray-50/50">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                         <div className="space-y-6">
-                            <div><h3 className="text-purple-800 font-bold uppercase text-sm border-b pb-2 mb-3 flex items-center gap-2"><FaUserTie /> Gestión Interna</h3><div className="bg-purple-50 p-4 rounded-lg border border-purple-100"><p className="text-xs font-bold text-purple-600 uppercase">Asesor Captador</p><p className="font-bold text-purple-900 text-lg">{selectedOwner.asesor || 'No especificado'}</p></div></div>
-                            <div><h3 className="text-green-700 font-bold uppercase text-sm border-b pb-2 mb-3 flex items-center gap-2"><FaCreditCard /> Información Bancaria</h3>{selectedOwner.banco ? (<div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm space-y-2"><div className="flex justify-between items-center"><span className="text-xs font-bold text-green-600 uppercase">Banco</span><span className="font-bold text-green-900">{selectedOwner.banco}</span></div><div><p className="text-xs text-green-600 font-bold uppercase">Cuenta</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200">{selectedOwner.cuenta}</p></div><div><p className="text-xs text-green-600 font-bold uppercase">CCI</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200">{selectedOwner.cci}</p></div></div>) : (<div className="bg-gray-100 p-4 rounded-lg text-center border border-gray-200 text-gray-400 italic text-sm">Sin datos bancarios.</div>)}</div>
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <h3 className="text-blue-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUser /> Datos de Contacto</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                                    <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Principal</p><p className="font-bold text-gray-800 text-lg flex items-center gap-2"><FaPhone className="text-green-500"/> {selectedOwner.celular1}</p></div>
+                                    {selectedOwner.celular2 && <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Secundario</p><p className="font-medium text-gray-700 flex items-center gap-2"><FaPhone className="text-gray-400"/> {selectedOwner.celular2}</p></div>}
+                                    <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Email</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaEnvelope className="text-blue-500"/> {selectedOwner.email || 'No registrado'}</p></div>
+                                    <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección</p><p className="font-medium text-gray-800 flex items-start gap-2"><FaMapMarkerAlt className="text-red-500 mt-1"/> {selectedOwner.direccion}</p></div>
+                                    <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Fecha de Nacimiento</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaBirthdayCake className="text-pink-500"/> {selectedOwner.fechaNacimiento}</p></div>
+                                </div>
+                            </div>
+                            {selectedOwner.detalles && (<div className="mt-4 pt-4 border-t border-gray-100"><p className="text-xs font-bold text-gray-400 uppercase mb-2"><FaStickyNote className="inline mr-1"/> Notas Internas</p><p className="text-sm italic bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800">{selectedOwner.detalles}</p></div>)}
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <h3 className="text-purple-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUserTie /> Gestión Interna</h3>
+                                <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Asesor Captador</p><p className="font-bold text-purple-900 text-xl">{selectedOwner.asesor || 'No especificado'}</p></div>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                                <h3 className="text-green-700 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaCreditCard /> Información Bancaria</h3>
+                                {selectedOwner.banco ? (
+                                    <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                                        <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-green-600 uppercase">Banco</span><span className="font-bold text-green-900 text-lg">{selectedOwner.banco}</span></div>
+                                        <div className="mb-2"><p className="text-xs text-green-600 font-bold uppercase">Cuenta</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cuenta}</p></div>
+                                        <div><p className="text-xs text-green-600 font-bold uppercase">CCI</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cci}</p></div>
+                                    </div>
+                                ) : (<div className="bg-gray-100 p-4 rounded-lg text-center text-gray-400 italic text-sm">Sin datos bancarios registrados.</div>)}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="bg-gray-50 p-4 flex justify-end border-t border-gray-100"><button onClick={() => setSelectedOwner(null)} className="btn btn-primary px-6">Cerrar Ficha</button></div>
+                <div className="bg-gray-50 p-6 flex justify-end border-t border-gray-100"><button onClick={() => setSelectedOwner(null)} className="btn btn-primary px-6">Cerrar Ficha</button></div>
              </div>
            </div> 
         )}
