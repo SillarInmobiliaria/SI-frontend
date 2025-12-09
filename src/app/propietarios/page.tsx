@@ -4,12 +4,12 @@ import { useForm } from 'react-hook-form';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { createPropietario } from '../../services/api';
 import Navbar from '../../components/Navbar';
-import Link from 'next/link'; // 👈 Importamos Link para la navegación
 import { 
   FaUser, FaIdCard, FaMapMarkerAlt, FaEnvelope, FaSave, 
   FaBuilding, FaCreditCard, FaSearch, FaEye, FaHome, FaBirthdayCake, 
   FaPhone, FaCalendarCheck, FaUserTie, FaStickyNote, FaExternalLinkAlt
 } from 'react-icons/fa';
+import Link from 'next/link';
 
 interface FormPropietario {
   nombre: string;
@@ -50,7 +50,8 @@ export default function PropietariosPage() {
       reset();
       alert('✅ Propietario registrado con éxito');
     } catch (error) {
-      alert('❌ Error al registrar');
+      console.error(error);
+      alert('❌ Error al registrar (Verifica que el DNI no esté duplicado)');
     }
   };
 
@@ -73,6 +74,7 @@ export default function PropietariosPage() {
     })
     : [];
 
+  // 👇 VALIDACIÓN: Solo permite números
   const handleNumberInput = (e: React.FormEvent<HTMLInputElement>) => {
     e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
   };
@@ -149,14 +151,44 @@ export default function PropietariosPage() {
               </div>
               <form onSubmit={handleSubmit(onSubmit)} className="p-8 bg-gray-50">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* COLUMNA IZQ */}
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Información Personal</h4>
-                    <div className="form-control w-full"><label className="label font-bold text-gray-700">Nombre Completo</label><input {...register('nombre', { required: true })} type="text" className="input input-bordered w-full bg-gray-50 focus:bg-white" /></div>
-                    <div className="grid grid-cols-2 gap-4"><div className="form-control w-full"><label className="label font-bold text-gray-700">DNI</label><input {...register('dni', { required: true, minLength: 8, maxLength: 8 })} type="text" className="input input-bordered w-full font-mono" maxLength={8} onInput={handleNumberInput} /></div><div className="form-control w-full"><label className="label font-bold text-gray-700">F. Nacimiento</label><input {...register('fechaNacimiento', { required: true })} type="date" className="input input-bordered w-full bg-gray-50 focus:bg-white" max={today} /></div></div>
-                    <div className="grid grid-cols-2 gap-4"><div className="form-control w-full"><label className="label font-bold text-gray-700">Celular 1 (Obligatorio)</label><input {...register('celular1', { required: true, minLength: 9, maxLength: 9 })} type="text" className="input input-bordered w-full" placeholder="999 999 999" maxLength={9} onInput={handleNumberInput} /></div><div className="form-control w-full"><label className="label font-bold text-gray-700">Celular 2 (Opcional)</label><input {...register('celular2')} type="text" className="input input-bordered w-full" placeholder="Otro número..." maxLength={9} onInput={handleNumberInput} /></div></div>
+                    
+                    <div className="form-control w-full">
+                        <label className="label font-bold text-gray-700">Nombre Completo</label>
+                        <input {...register('nombre', { required: true })} type="text" className="input input-bordered w-full bg-gray-50 focus:bg-white" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="form-control w-full">
+                            <label className="label font-bold text-gray-700">DNI (8 dígitos)</label>
+                            {/* VALIDACIÓN DNI: MAX 8, SOLO NÚMEROS */}
+                            <input {...register('dni', { required: true, minLength: 8, maxLength: 8 })} type="text" className="input input-bordered w-full font-mono" maxLength={8} onInput={handleNumberInput} placeholder="Ej: 12345678" />
+                        </div>
+                        <div className="form-control w-full">
+                            <label className="label font-bold text-gray-700">F. Nacimiento</label>
+                            <input {...register('fechaNacimiento', { required: true })} type="date" className="input input-bordered w-full bg-gray-50 focus:bg-white" max={today} />
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="form-control w-full">
+                            <label className="label font-bold text-gray-700">Celular 1 (9 dígitos)</label>
+                            {/* VALIDACIÓN CELULAR: MAX 9, SOLO NÚMEROS */}
+                            <input {...register('celular1', { required: true, minLength: 9, maxLength: 9 })} type="text" className="input input-bordered w-full" placeholder="999999999" maxLength={9} onInput={handleNumberInput} />
+                        </div>
+                        <div className="form-control w-full">
+                            <label className="label font-bold text-gray-700">Celular 2 (Opcional)</label>
+                            <input {...register('celular2')} type="text" className="input input-bordered w-full" placeholder="999999999" maxLength={9} onInput={handleNumberInput} />
+                        </div>
+                    </div>
+                    
                     <div className="form-control w-full"><label className="label font-bold text-gray-700">Dirección</label><input {...register('direccion', { required: true })} type="text" className="input input-bordered w-full pl-10 bg-gray-50 focus:bg-white" /></div>
                     <div className="form-control w-full"><label className="label font-bold text-gray-700">Email</label><input {...register('email')} type="email" className="input input-bordered w-full pl-10 bg-gray-50 focus:bg-white" /></div>
                   </div>
+                  
+                  {/* COLUMNA DER */}
                   <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Gestión Interna</h4>
@@ -176,7 +208,7 @@ export default function PropietariosPage() {
           </div>
         )}
 
-        {/* --- MODAL DE DETALLE (FICHA COMPLETA) --- */}
+        {/* MODAL DE DETALLE (EL OJITO) */}
         {isDetailOpen && selectedPropietario && (
            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
              <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -237,13 +269,12 @@ export default function PropietariosPage() {
                         </div>
                     </div>
 
-                    {/* PROPIEDADES (AHORA CLICABLES) */}
+                    {/* PROPIEDADES EN CARTERA */}
                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                         <h3 className="text-gray-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaHome /> Propiedades en Cartera ({propiedadesDelDueño.length})</h3>
                         {propiedadesDelDueño.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {propiedadesDelDueño.map((prop: any) => (
-                                    // 👇 AQUÍ ESTÁ LA MAGIA: ENVOLVER EN LINK
                                     <Link href={`/propiedades/${prop.id}`} key={prop.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group">
                                         <div className="bg-blue-100 p-3 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors"><FaBuilding className="text-2xl" /></div>
                                         <div className="flex-1">
@@ -253,11 +284,7 @@ export default function PropietariosPage() {
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1 truncate">{prop.direccion}</p>
                                             <p className="text-sm font-bold text-green-600 mt-1">$ {Number(prop.precio).toLocaleString()}</p>
-                                            
-                                            {/* Icono de enlace externo pequeño para indicar clic */}
-                                            <div className="flex justify-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <FaExternalLinkAlt className="text-xs text-blue-400"/>
-                                            </div>
+                                            <div className="flex justify-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity"><FaExternalLinkAlt className="text-xs text-blue-400"/></div>
                                         </div>
                                     </Link>
                                 ))}
