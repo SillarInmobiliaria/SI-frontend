@@ -1,72 +1,70 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
+import { useForm } from 'react-hook-form';
+import { login as loginService } from '../../services/api'; 
+import { useAuth } from '../../context/AuthContext';
+import { FaUserShield, FaLock, FaEnvelope } from 'react-icons/fa';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login } = useInmobiliariaStore();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const { register, handleSubmit } = useForm();
+  const { login } = useAuth();
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: any) => {
     setLoading(true);
+    setError('');
     try {
-      await login(formData);
-      alert('✅ ¡Bienvenido!');
-      router.push('/'); // Redirigir al Dashboard
-    } catch (error) {
-      alert('❌ Credenciales incorrectas');
+      // 1. Llamar al backend
+      const res = await loginService(data);
+      
+      // 2. Guardar sesión y redirigir (el AuthContext se encarga)
+      login(res.token, res.usuario);
+      
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Credenciales incorrectas');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-base-200">
-      <div className="card w-full max-w-sm shadow-2xl bg-base-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+      <div className="card w-full max-w-md bg-base-100 shadow-2xl">
         <div className="card-body">
-          <div className="text-center mb-4">
-            <div className="text-5xl mb-2">🏠</div>
-            <h2 className="text-2xl font-bold text-primary">Sillar Inmobiliaria</h2>
-            <p className="text-sm text-gray-500">Inicia sesión para gestionar</p>
+          <div className="text-center mb-6">
+            <div className="avatar placeholder mb-4">
+              <div className="bg-primary text-primary-content rounded-full w-20 h-20 text-4xl shadow-lg ring ring-primary ring-offset-base-100 ring-offset-2 flex items-center justify-center">
+                <FaUserShield />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-slate-800">Sillar Inmobiliaria</h1>
+            <p className="text-slate-500">Acceso al Sistema ERP</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && <div className="alert alert-error text-sm py-2 text-white font-bold">{error}</div>}
+            
             <div className="form-control">
-              <label className="label"><span className="label-text">Correo Electrónico</span></label>
-              <input 
-                type="email" 
-                placeholder="ejemplo@sillar.com" 
-                className="input input-bordered" 
-                required
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-              />
+              <label className="label"><span className="label-text font-bold">Correo Corporativo</span></label>
+              <div className="relative">
+                <FaEnvelope className="absolute left-3 top-3.5 text-gray-400"/>
+                <input {...register('email', { required: true })} type="email" placeholder="usuario@sillar.com" className="input input-bordered w-full pl-10" />
+              </div>
             </div>
+
             <div className="form-control">
-              <label className="label"><span className="label-text">Contraseña</span></label>
-              <input 
-                type="password" 
-                placeholder="******" 
-                className="input input-bordered" 
-                required
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-              />
+              <label className="label"><span className="label-text font-bold">Contraseña</span></label>
+              <div className="relative">
+                <FaLock className="absolute left-3 top-3.5 text-gray-400"/>
+                <input {...register('password', { required: true })} type="password" placeholder="••••••••" className="input input-bordered w-full pl-10" />
+              </div>
             </div>
-            <div className="form-control mt-6">
-              <button className="btn btn-primary" disabled={loading}>
-                {loading ? 'Entrando...' : 'Ingresar'}
-              </button>
-            </div>
+
+            <button type="submit" className="btn btn-primary w-full mt-6 text-lg" disabled={loading}>
+              {loading ? <span className="loading loading-spinner"></span> : 'Ingresar al Sistema'}
+            </button>
           </form>
-
-          <div className="divider">O</div>
-          
-          <div className="text-center text-sm">
-            ¿No tienes cuenta? <Link href="/registro" className="link link-primary">Regístrate aquí</Link>
-          </div>
         </div>
       </div>
     </div>

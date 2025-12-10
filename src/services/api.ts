@@ -11,13 +11,26 @@ import {
   AuthResponse
 } from '../types';
 
-// Configuramos la URL base
+// 1. Configuración Base
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  baseURL: 'http://localhost:4000/api', // Asegúrate de que coincida con tu backend
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// 2. Interceptor Mágico (Para que funcione el Login y Crear Usuario)
+api.interceptors.request.use((config: any) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ==========================================
+//            FUNCIONES DE DATOS
+// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -36,7 +49,6 @@ export const getPropiedades = async () => {
   return data;
 };
 
-// 👇 ESTA ES LA FUNCIÓN IMPORTANTE PARA SUBIR FOTOS
 export const createPropiedad = async (datos: FormData) => {
   const { data } = await api.post<ApiResponse<Propiedad>>('/propiedades', datos, {
     headers: { 'Content-Type': 'multipart/form-data' } 
@@ -66,7 +78,7 @@ export const createInteres = async (datos: { clienteId: string; propiedadId: str
   return data;
 };
 
-// --- OPERACIONES (GESTIÓN) --- 
+// --- OPERACIONES --- 
 export const getOperaciones = async () => {
   const { data } = await api.get<Operacion[]>('/operaciones');
   return data;
@@ -77,7 +89,7 @@ export const createOperacion = async (datos: any) => {
   return data;
 };
 
-// --- VISITAS FÍSICAS ---
+// --- VISITAS ---
 export const getVisitas = async () => {
   const { data } = await api.get<Visita[]>('/visitas');
   return data;
@@ -88,7 +100,7 @@ export const createVisita = async (datos: any) => {
   return data;
 };
 
-// --- SEGUIMIENTO (COMUNICACIÓN) ---
+// --- SEGUIMIENTO ---
 export const getSeguimientos = async () => {
   const { data } = await api.get<Seguimiento[]>('/seguimientos');
   return data;
@@ -99,15 +111,28 @@ export const createSeguimiento = async (datos: any) => {
   return data;
 };
 
-// --- AUTENTICACIÓN (LOGIN/REGISTRO) ---
-export const loginUser = async (credentials: { email: string; password: string }) => {
-  const { data } = await api.post<AuthResponse>('/auth/login', credentials);
-  return data;
+// ==========================================
+//           SEGURIDAD Y USUARIOS
+// ==========================================
+
+export const login = async (credenciales: { email: string; password: string }) => {
+  const response = await api.post('/auth/login', credenciales);
+  return response.data;
 };
 
-export const registerUser = async (credentials: { nombre: string; email: string; password: string }) => {
-  const { data } = await api.post<AuthResponse>('/auth/registro', credentials);
-  return data;
+export const cambiarPassword = async (datos: { userId: string; nuevaPassword: string }) => {
+  const response = await api.post('/auth/cambiar-password', datos);
+  return response.data;
+};
+
+export const createUsuario = async (datos: { nombre: string; email: string; rol: string }) => {
+  const response = await api.post('/usuarios', datos); 
+  return response.data;
+};
+
+export const fetchUsuarios = async () => {
+  const response = await api.get('/usuarios');
+  return response.data;
 };
 
 export default api;

@@ -1,58 +1,41 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useInmobiliariaStore } from '../store/useInmobiliariaStore';
+import { useAuth } from '../context/AuthContext';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  
-  // Traemos la función manual para "re-loguear" desde el store si recargan la página
-  // (Necesitaremos hacer un pequeño ajuste en el store para esto, ver abajo)
-  const { isAuthenticated } = useInmobiliariaStore();
+
+  // Lista de páginas públicas (donde no necesitas estar logueado)
+  const publicPages = ['/login', '/registro'];
 
   useEffect(() => {
-    const checkAuth = () => {
-      // 1. Buscamos si hay datos guardados en el navegador
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-
-      // 2. Definimos rutas públicas (donde cualquiera puede entrar)
-      const publicPaths = ['/login', '/registro'];
-      const isPublicPath = publicPaths.includes(pathname);
-
-      // CASO A: No hay token y quiere entrar a zona privada
-      if (!token && !isPublicPath) {
-        router.push('/login'); // 🚫 ¡Fuera! Al login.
-        return;
+    if (!loading) {
+      // Si NO hay usuario Y NO estamos en una página pública, mandar al login
+      if (!user && !publicPages.includes(pathname)) {
+        router.push('/login');
       }
-
-      // CASO B: Ya tiene token pero quiere ir al login (lo mandamos al home)
-      if (token && isPublicPath) {
-        router.push('/'); 
-        return;
+      
+      // Si YA hay usuario y trata de entrar al login, mandarlo al dashboard
+      if (user && publicPages.includes(pathname)) {
+        router.push('/dashboard');
       }
+    }
+  }, [user, loading, router, pathname]);
 
-      // CASO C: Todo correcto, recuperamos la sesión en el Store visualmente
-      if (token && user && !isAuthenticated) {
-        useInmobiliariaStore.setState({ 
-          currentUser: JSON.parse(user), 
-          isAuthenticated: true 
-        });
-      }
-
-      // Permitir ver la página
-      setIsAuthorized(true);
-    };
-
-    checkAuth();
-  }, [router, pathname, isAuthenticated]);
-
-  // Mientras verificamos, no mostramos nada (o podrías poner un spinner)
-  if (!isAuthorized) {
-    return null; 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
   }
 
-  return <>{children}</>;
+  if (user || publicPages.includes(pathname)) {
+    return <>{children}</>;
+  }
+
+  return null;
 }

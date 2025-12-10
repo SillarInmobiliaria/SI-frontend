@@ -1,80 +1,63 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { FaSun, FaMoon, FaCog, FaSignOutAlt } from 'react-icons/fa';
-import { useInmobiliariaStore } from '../store/useInmobiliariaStore';
+import { useAuth } from '../context/AuthContext'; // 👈 Conectamos al AuthContext
+import { FaHome, FaUserTie, FaBuilding, FaClipboardList, FaUsersCog, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 export default function Navbar() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const router = useRouter();
-  const { logout, currentUser } = useInmobiliariaStore();
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode ? 'dark' : 'light';
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
+  const { user, logout } = useAuth(); // 👈 Traemos al usuario y la función logout
 
   return (
-    <div className="navbar bg-base-100 shadow-md px-6 z-50 relative">
+    <div className="navbar bg-base-100 shadow-md sticky top-0 z-50 px-4 sm:px-8">
+      
+      {/* --- LOGO --- */}
       <div className="flex-1">
-        <Link href="/" className="btn btn-ghost text-xl text-primary font-bold gap-2">
-          🏠 <span className="hidden sm:inline">Sillar Inmobiliaria</span>
+        <Link href="/dashboard" className="btn btn-ghost normal-case text-xl text-blue-900 font-bold flex items-center gap-2">
+          🏠 Sillar Inmobiliaria
         </Link>
       </div>
 
-      <div className="flex-none gap-4">
-        <button className="btn btn-ghost btn-circle text-xl" onClick={toggleTheme} title="Cambiar tema">
-          {isDarkMode ? <FaSun className="text-yellow-400" /> : <FaMoon className="text-gray-600" />}
-        </button>
+      {/* --- MENÚ DE NAVEGACIÓN --- */}
+      <div className="flex-none gap-2">
+        {/* Solo mostramos el menú si hay usuario logueado */}
+        {user && (
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className="btn btn-ghost btn-circle avatar placeholder">
+              <div className="bg-neutral-focus text-neutral-content rounded-full w-10 border border-slate-300">
+                {/* Mostramos la inicial del usuario */}
+                <span className="text-xl font-bold text-slate-700">{user.nombre ? user.nombre.charAt(0).toUpperCase() : 'U'}</span>
+              </div>
+            </label>
+            
+            <ul tabIndex={0} className="mt-3 p-2 shadow-lg menu menu-sm dropdown-content bg-base-100 rounded-box w-64 border border-gray-200 z-50">
+              
+              {/* Info del Usuario */}
+              <li className="menu-title px-4 py-2 border-b border-gray-100 mb-2">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-800 text-base">{user.nombre}</span>
+                  <span className="badge badge-sm badge-primary">{user.rol}</span>
+                  <span className="text-xs text-gray-400 font-normal">{user.email}</span>
+                </div>
+              </li>
 
-        <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
-            <div className="bg-neutral text-neutral-content rounded-full w-10">
-              <span className="text-xl">{currentUser?.nombre?.charAt(0).toUpperCase() || 'A'}</span> 
-            </div>
+              {/* Enlaces Rápidos */}
+              <li><Link href="/dashboard"><FaHome className="text-blue-500"/> Inicio</Link></li>
+              
+              {/* Opciones de Admin */}
+              {user.rol === 'ADMIN' && (
+                <li><Link href="/usuarios"><FaUsersCog className="text-orange-500"/> Gestión Usuarios</Link></li>
+              )}
+
+              <div className="divider my-1"></div>
+
+              {/* 👇 AQUÍ ESTÁ EL BOTÓN QUE ARREGLA EL ERROR */}
+              <li>
+                <button onClick={logout} className="text-error font-bold hover:bg-error/10">
+                  <FaSignOutAlt /> Cerrar Sesión
+                </button>
+              </li>
+            </ul>
           </div>
-          <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow-lg menu menu-sm dropdown-content bg-base-100 rounded-box w-52 border border-base-200">
-            <li className="menu-title px-4 py-2 text-primary">
-              Hola, {currentUser?.nombre || 'Asesor'} 👋
-            </li>
-            <li>
-              <Link href="/perfil" className="justify-between">
-                Mi Perfil
-                <span className="badge badge-primary badge-sm">Ver</span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/configuracion"><FaCog /> Configuración</Link>
-            </li>
-            <div className="divider my-0"></div>
-            <li>
-              <button onClick={handleLogout} className="text-error font-semibold">
-                <FaSignOutAlt /> Cerrar Sesión
-              </button>
-            </li>
-          </ul>
-        </div>
+        )}
       </div>
     </div>
   );

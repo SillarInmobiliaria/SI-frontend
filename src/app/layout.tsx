@@ -1,37 +1,29 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import AuthGuard from "../components/AuthGuard";
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { AuthProvider } from '../context/AuthContext';
+import AuthGuard from '../components/AuthGuard';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ['latin'] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Sillar Inmobiliaria",
-  description: "Sistema de Gestión",
+export const metadata = {
+  title: 'Sillar Inmobiliaria CRM',
+  description: 'Sistema de Gestión Inmobiliaria',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* Envolver la app con el Guardia */}
-        <AuthGuard>
-          {children}
-        </AuthGuard>
+    <html lang="es" data-theme="light">
+      <body className={`${inter.className} bg-base-200 min-h-screen`}>
+        {/* 👇 EL PROVEEDOR ENVUELVE A LA APP ENTERA */}
+        <AuthProvider>
+          <AuthGuard>
+            {children}
+          </AuthGuard>
+        </AuthProvider>
       </body>
     </html>
   );
