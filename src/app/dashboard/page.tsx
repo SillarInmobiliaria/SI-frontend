@@ -3,17 +3,31 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
+import { FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, FaExclamationTriangle, FaCheckCircle, FaClock } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Verificamos si es Admin (para mostrar u ocultar la tarjeta naranja)
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
+  const mostrarAlerta = user?.mustChangePassword;
+
+  // --- CÁLCULO REAL DE DÍAS RESTANTES ---
+  let diasRestantes = 30;
   
-  // Verificamos si DEBE cambiar contraseña (para mostrar el aviso amarillo)
-  const debeCambiarPassword = user?.mustChangePassword;
+  if (user?.createdAt) {
+    const fechaCreacion = new Date(user.createdAt);
+    const fechaActual = new Date();
+    
+    // Calculamos la diferencia en milisegundos y la convertimos a días
+    const diferenciaTiempo = fechaActual.getTime() - fechaCreacion.getTime();
+    const diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
+    
+    diasRestantes = 30 - diasTranscurridos;
+  }
+
+  // Evitamos que muestre números negativos si ya pasaron los 30 días (aunque el backend ya lo habrá bloqueado)
+  if (diasRestantes < 0) diasRestantes = 0;
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -28,7 +42,7 @@ export default function DashboardPage() {
                     Hola, <span className="text-primary">{user?.nombre}</span> 👋
                 </h1>
                 <p className="text-slate-500 mt-2 text-lg">
-                    Bienvenido al panel de control de <span className="font-bold">Sillar Inmobiliaria</span>.
+                    Panel de Control - {isAdmin ? 'Administración General' : 'Gestión Comercial'}
                 </p>
             </div>
             
@@ -37,7 +51,7 @@ export default function DashboardPage() {
                     {isAdmin ? 'Administrador' : 'Asesor Comercial'}
                 </div>
                 
-                {/* Botón manual siempre visible por si acaso */}
+                {/* Botón manual siempre visible */}
                 <button 
                     onClick={() => router.push('/cambiar-password')}
                     className="btn btn-sm btn-ghost text-slate-500 gap-2"
@@ -47,18 +61,30 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- 🔔 AVISO DE SEGURIDAD CONDICIONAL --- */}
-        {/* Solo se muestra si debeCambiarPassword es TRUE (Usuarios Nuevos) */}
-        {debeCambiarPassword ? (
-            <div className="alert alert-warning shadow-lg mb-8 border-l-8 border-yellow-600 animate-pulse">
-                <FaExclamationTriangle className="text-4xl text-yellow-800"/>
-                <div>
-                    <h3 className="font-bold text-yellow-900 text-lg">¡Acción Requerida: Seguridad de la Cuenta!</h3>
+        {/* --- 🚨 ALERTA REAL DE SEGURIDAD --- */}
+        {mostrarAlerta ? (
+            <div className="alert alert-warning shadow-lg mb-8 border-l-8 border-yellow-600">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-yellow-900 font-bold text-lg">
+                        <FaExclamationTriangle />
+                        <h3>¡Acción Requerida!</h3>
+                    </div>
                     <div className="text-yellow-800">
-                        Estás usando una contraseña temporal. Tienes un plazo de <span className="font-bold badge badge-warning">30 días</span> para actualizarla.
-                        <br/>Si no lo haces, el sistema suspenderá el acceso a este asesor.
+                        Estás usando una contraseña temporal. Debes cambiarla antes de que expire el plazo.
                     </div>
                 </div>
+
+                {/* CONTADOR VISUAL REAL */}
+                <div className="flex items-center gap-4 bg-yellow-100/50 p-2 rounded-lg">
+                    <FaClock className="text-2xl text-yellow-700"/>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-yellow-700 uppercase">Tiempo Restante</span>
+                        <span className={`text-2xl font-black leading-none ${diasRestantes < 5 ? 'text-red-600' : 'text-yellow-900'}`}>
+                            {diasRestantes} días
+                        </span>
+                    </div>
+                </div>
+
                 <button 
                     onClick={() => router.push('/cambiar-password')} 
                     className="btn btn-active btn-warning text-yellow-900 font-bold"
@@ -67,7 +93,6 @@ export default function DashboardPage() {
                 </button>
             </div>
         ) : (
-            // Si ya la cambió, mostramos un mensaje sutil de "Todo bien" (Opcional)
             <div className="alert alert-success shadow-sm mb-8 bg-green-50 border border-green-200">
                 <FaCheckCircle className="text-green-500"/>
                 <span className="text-green-700 text-sm font-semibold">Tu cuenta está segura y activa. No hay acciones pendientes.</span>
@@ -107,7 +132,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* Solo visible para ADMIN */}
+            {/* Módulo EXCLUSIVO DE ADMIN */}
             {isAdmin && (
                 <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                     <div className="card-body">

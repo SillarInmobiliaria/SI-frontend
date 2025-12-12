@@ -13,13 +13,13 @@ import {
 
 // 1. Configuración Base
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api', // Asegúrate de que coincida con tu backend
+  baseURL: 'http://localhost:4000/api', 
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 2. Interceptor Mágico (Para que funcione el Login y Crear Usuario)
+// 2. Interceptor Mágico (Para que funcione el Login y el token)
 api.interceptors.request.use((config: any) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -28,9 +28,6 @@ api.interceptors.request.use((config: any) => {
   return config;
 });
 
-// ==========================================
-//            FUNCIONES DE DATOS
-// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -111,9 +108,6 @@ export const createSeguimiento = async (datos: any) => {
   return data;
 };
 
-// ==========================================
-//           SEGURIDAD Y USUARIOS
-// ==========================================
 
 export const login = async (credenciales: { email: string; password: string }) => {
   const response = await api.post('/auth/login', credenciales);
@@ -135,4 +129,18 @@ export const fetchUsuarios = async () => {
   return response.data;
 };
 
+export const toggleEstadoUsuario = async (id: string, activo: boolean, motivo?: string) => {
+  const response = await api.put(`/usuarios/${id}/estado`, { activo, motivo });
+  return response.data;
+};
+
+export const deleteUsuario = async (id: string) => {
+  const response = await api.delete(`/usuarios/${id}`);
+  return response.data;
+};
+
+export const getNotificaciones = async () => {
+  const response = await api.get('/usuarios/notificaciones'); // Asegúrate que la ruta coincida
+  return response.data;
+};
 export default api;

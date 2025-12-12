@@ -21,6 +21,7 @@ export interface Propietario {
 // Definición de Propiedad
 export interface Propiedad {
   id: string;
+  titulo?: string;
   direccion: string;
   ubicacion: string;
   precio: number;
@@ -41,20 +42,32 @@ export interface Propiedad {
   fotoPrincipal?: string;
   galeria?: string[];
   pdfUrl?: string;
+  
+  // -- LEGAL --
   partidaRegistral?: string;
   numeroPartida?: string;
+  partidaEstacionamiento?: string;
+  partidaDeposito?: string;
+  
   fechaInicioContrato?: string;
   fechaVencimientoContrato?: string;
   fechaCaptacion?: string;
   comision?: string;
   tipoContrato?: string;
+  
+  // -- CHECKS --
   testimonio?: boolean;
   hr?: boolean;
   pu?: boolean;
   impuestoPredial?: boolean;
   arbitrios?: boolean;
   copiaLiteral?: boolean;
+  
   plataforma?: string[]; 
+  
+  // -- AUDITORÍA --
+  observaciones?: any;
+
   [key: string]: any; 
 }
 
@@ -128,12 +141,16 @@ export interface Seguimiento {
   Propiedad?: Propiedad;
 }
 
-// Definición de Usuario
+// Definición de Usuario (Actualizada para el Dashboard)
 export interface Usuario {
   id: string;
   nombre: string;
   email: string;
   rol: string;
+  activo?: boolean;
+  mustChangePassword?: boolean;
+  createdAt?: string;
+  motivoSuspension?: string;
 }
 
 // Respuestas de API

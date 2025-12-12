@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
+import { useAuth } from '../../../context/AuthContext'; // 👈 Importamos Auth
+import api from '../../../services/api'; // 👈 Importamos API para guardar observaciones
 import { 
   FaBed, FaBath, FaCar, FaRulerCombined, FaMapMarkerAlt, 
   FaWhatsapp, FaHome, FaDollarSign, FaFilePdf, FaShareAlt, 
@@ -10,25 +12,55 @@ import {
   FaCheckCircle, FaTimesCircle, FaGlobe, FaExternalLinkAlt, FaCalendarAlt, 
   FaPercent, FaUserTie, FaEye, FaIdCard, FaUser, FaPhone, FaEnvelope, 
   FaBirthdayCake, FaStickyNote, FaCreditCard,
-  FaCalendarCheck
+  FaCalendarCheck, FaLock, FaSave, FaEdit
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'http://localhost:4000/';
 
 export default function PropiedadDetallePage() {
   const { id } = useParams();
+  const { user } = useAuth(); // 👈 Obtenemos el usuario actual
   const { propiedades, fetchPropiedades } = useInmobiliariaStore();
+  
   const [activeTab, setActiveTab] = useState('informacion');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  // Estado para el modal de detalle del propietario
   const [selectedOwner, setSelectedOwner] = useState<any>(null);
 
+  // Estados para la auditoría legal
+  const [observaciones, setObservaciones] = useState<any>({});
+  const [guardandoObs, setGuardandoObs] = useState(false);
+
   const propiedad = propiedades.find(p => p.id === id);
+
+  // 🔒 VERIFICAMOS SI ES ADMIN
+  const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
   useEffect(() => {
     if (propiedades.length === 0) fetchPropiedades();
   }, []);
+
+  // Cargar observaciones cuando la propiedad esté lista
+  useEffect(() => {
+    if (propiedad && propiedad.observaciones) {
+        setObservaciones(propiedad.observaciones);
+    }
+  }, [propiedad]);
+
+  // --- FUNCIÓN PARA GUARDAR OBSERVACIONES (SOLO ADMIN) ---
+  const handleGuardarObservaciones = async () => {
+    if (!propiedad) return;
+    setGuardandoObs(true);
+    try {
+        await api.put(`/propiedades/${id}`, { observaciones });
+        alert('✅ Revisión legal guardada correctamente.');
+        fetchPropiedades(); // Recargar datos para asegurar sincronización
+    } catch (error) {
+        console.error(error);
+        alert('❌ Error al guardar revisión.');
+    } finally {
+        setGuardandoObs(false);
+    }
+  };
 
   const images = propiedad ? [
     propiedad.fotoPrincipal,
@@ -77,12 +109,15 @@ export default function PropiedadDetallePage() {
 
   const wideContainerClass = "w-full max-w-[96%] mx-auto px-4 md:px-6";
 
-  const checkItemStyle = (isChecked: boolean | undefined) => `
-    p-3 rounded-lg border flex items-center gap-3 font-medium transition-colors
-    ${isChecked 
-      ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300' 
-      : 'bg-base-200 border-base-300 opacity-60 text-base-content/70'}
-  `;
+  // Lista de documentos para iterar en la tabla legal
+  const documentosList = [
+      { key: 'testimonio', label: 'Testimonio' },
+      { key: 'hr', label: 'Hoja Resumen (HR)' },
+      { key: 'pu', label: 'Predio Urbano (PU)' },
+      { key: 'impuestoPredial', label: 'Impuesto Predial' },
+      { key: 'arbitrios', label: 'Arbitrios' },
+      { key: 'copiaLiteral', label: 'Copia Literal' },
+  ];
 
   return (
     <div className="min-h-screen bg-base-200 font-sans text-base-content">
@@ -132,10 +167,39 @@ export default function PropiedadDetallePage() {
         )}
       </div>
 
-      {/* PESTAÑAS */}
+      {/* PESTAÑAS (Aquí aplicamos la seguridad) */}
       <div className="sticky top-0 z-30 bg-base-100 shadow-sm border-b border-base-300">
         <div className={`${wideContainerClass} flex overflow-x-auto gap-8`}>
-            {['INFORMACION', 'LEGAL Y DOCUMENTOS', 'DESCRIPCION', 'LOCALIZACION', 'VIDEO'].map((tab) => (
+            {/* Pestañas visibles para todos */}
+            {['INFORMACION'].map((tab) => (
+                <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab.toLowerCase())}
+                    className={`py-5 text-sm font-bold uppercase tracking-wider border-b-4 transition-colors whitespace-nowrap ${
+                        activeTab === tab.toLowerCase() 
+                        ? 'border-primary text-primary' 
+                        : 'border-transparent text-base-content/60 hover:text-primary'
+                    }`}
+                >
+                    {tab}
+                </button>
+            ))}
+
+            {/* 👇 PESTAÑA PROTEGIDA: Solo visible para ADMIN 👇 */}
+            {isAdmin && (
+                <button
+                    onClick={() => setActiveTab('legal y documentos')}
+                    className={`py-5 text-sm font-bold uppercase tracking-wider border-b-4 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                        activeTab === 'legal y documentos' 
+                        ? 'border-red-600 text-red-600 bg-red-50' 
+                        : 'border-transparent text-red-400 hover:text-red-600'
+                    }`}
+                >
+                    <FaLock className="text-xs mb-0.5" /> Legal y Documentos
+                </button>
+            )}
+
+            {['DESCRIPCION', 'LOCALIZACION', 'VIDEO'].map((tab) => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab.toLowerCase())}
@@ -174,72 +238,136 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* 2. LEGAL Y DOCUMENTOS */}
+            {/* 2. LEGAL Y DOCUMENTOS (SOLO ADMIN) */}
+            {/* Protegemos también el contenido por si acaso */}
+            {isAdmin && (
             <div className={`${activeTab === 'legal y documentos' ? 'block' : 'hidden'} animate-fade-in`}>
                 
-                {/* SECCIÓN PROPIETARIOS CON OJITO */}
-                <div className="bg-white p-6 rounded-xl border border-base-300 shadow-sm mb-8">
+                {/* CABECERA DE AUDITORÍA */}
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-red-800 font-bold text-lg flex items-center gap-2">
+                            <FaLock/> Auditoría Legal Privada
+                        </h3>
+                        <p className="text-red-600 text-sm">Espacio exclusivo para revisión de documentos por el abogado/admin.</p>
+                    </div>
+                    <button 
+                        onClick={handleGuardarObservaciones} 
+                        className="btn btn-error text-white gap-2 shadow-lg"
+                        disabled={guardandoObs}
+                    >
+                        {guardandoObs ? <span className="loading loading-spinner"></span> : <FaSave />} 
+                        Guardar Revisión
+                    </button>
+                </div>
+
+                {/* TABLA DE REVISIÓN DOCUMENTARIA */}
+                <div className="bg-white rounded-xl border border-base-300 shadow-sm mb-8 overflow-hidden">
+                    <div className="p-6 bg-base-100 border-b border-base-200">
+                        <h3 className="font-bold text-lg flex items-center gap-2"><FaFileContract className="text-primary"/> Checklist & Observaciones</h3>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead className="bg-base-200">
+                                <tr>
+                                    <th className="w-12 text-center">Estado</th>
+                                    <th className="w-1/4">Documento</th>
+                                    <th>Observaciones del Abogado 🧑‍⚖️</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {documentosList.map((doc) => {
+                                    const entregado = propiedad[doc.key]; // true/false desde BD
+                                    return (
+                                        <tr key={doc.key} className="hover:bg-base-50">
+                                            <td className="text-center">
+                                                {entregado ? (
+                                                    <div className="tooltip" data-tip="Entregado">
+                                                        <FaCheckCircle className="text-success text-2xl mx-auto"/>
+                                                    </div>
+                                                ) : (
+                                                    <div className="tooltip" data-tip="Pendiente">
+                                                        <FaTimesCircle className="text-error text-2xl mx-auto opacity-50"/>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="font-bold text-base-content/80">{doc.label}</div>
+                                                <div className={`text-xs font-bold uppercase ${entregado ? 'text-success' : 'text-error'}`}>
+                                                    {entregado ? 'Recibido' : 'Faltante'}
+                                                </div>
+                                            </td>
+                                            <td className="p-2">
+                                                <textarea 
+                                                    className={`textarea textarea-bordered w-full h-16 text-sm resize-none focus:border-primary transition-all ${
+                                                        observaciones[doc.key] ? 'bg-yellow-50 border-yellow-300' : 'bg-white'
+                                                    }`}
+                                                    placeholder={`Escribir observación para ${doc.label}...`}
+                                                    value={observaciones[doc.key] || ''}
+                                                    onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}
+                                                ></textarea>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* DATOS REGISTRALES (SOLO LECTURA) */}
+                <div className="bg-base-100 p-6 rounded-xl border border-base-300 shadow-sm mb-8">
+                    <h3 className="font-bold text-lg mb-4 border-b pb-2 border-base-200">Datos Registrales</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <p className="text-xs font-bold opacity-60 uppercase mb-1">Partida Registral</p>
+                            <p className="font-mono text-lg font-bold text-primary bg-base-200/50 p-2 rounded select-all">{propiedad.partidaRegistral || '---'}</p>
+                        </div>
+                        {propiedad.numeroPartida && (
+                            <div>
+                                <p className="text-xs font-bold opacity-60 uppercase mb-1">N° Adicional</p>
+                                <p className="font-mono text-lg font-bold text-secondary bg-base-200/50 p-2 rounded select-all">{propiedad.numeroPartida}</p>
+                            </div>
+                        )}
+                        {/* Campos de Departamento si existen */}
+                        {propiedad.partidaEstacionamiento && (
+                            <div>
+                                <p className="text-xs font-bold opacity-60 uppercase mb-1">P. Estacionamiento</p>
+                                <p className="font-mono text-lg font-bold text-info bg-base-200/50 p-2 rounded select-all">{propiedad.partidaEstacionamiento}</p>
+                            </div>
+                        )}
+                        {propiedad.partidaDeposito && (
+                            <div>
+                                <p className="text-xs font-bold opacity-60 uppercase mb-1">P. Depósito</p>
+                                <p className="font-mono text-lg font-bold text-info bg-base-200/50 p-2 rounded select-all">{propiedad.partidaDeposito}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* PROPIETARIOS (VISIBLE PARA ADMIN) */}
+                <div className="bg-white p-6 rounded-xl border border-base-300 shadow-sm">
                     <h3 className="font-bold text-lg mb-4 border-b pb-2 border-base-200 flex items-center gap-2">
                         <FaUserTie className="text-primary"/> Propietarios Registrados
                     </h3>
                     {propiedad.Propietarios && propiedad.Propietarios.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {propiedad.Propietarios.map((prop) => (
+                            {propiedad.Propietarios.map((prop: any) => (
                                 <div key={prop.id} className="flex items-center justify-between gap-3 p-3 bg-base-200/50 rounded-lg border border-base-200">
                                     <div className="flex items-center gap-3">
                                         <div className="avatar placeholder"><div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center font-bold">{prop.nombre.charAt(0)}</div></div>
                                         <div><p className="font-bold text-sm">{prop.nombre}</p><p className="text-xs opacity-70 font-mono">DNI: {prop.dni}</p></div>
                                     </div>
-                                    {/* BOTÓN OJITO */}
-                                    <button 
-                                        onClick={() => setSelectedOwner(prop)}
-                                        className="btn btn-sm btn-circle btn-ghost text-primary hover:bg-primary/10 tooltip" 
-                                        data-tip="Ver Ficha Completa"
-                                    >
-                                        <FaEye className="text-lg"/>
-                                    </button>
+                                    <button onClick={() => setSelectedOwner(prop)} className="btn btn-sm btn-circle btn-ghost text-primary hover:bg-primary/10 tooltip" data-tip="Ver Ficha"><FaEye className="text-lg"/></button>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <p className="text-sm italic opacity-60">No hay propietarios asignados.</p>
-                    )}
+                    ) : <p className="text-sm italic opacity-60">No hay propietarios asignados.</p>}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                     <div className="bg-base-100 p-6 rounded-xl border border-base-300 shadow-sm">
-                        <h3 className="font-bold text-lg mb-4 border-b pb-2 border-base-200">Datos Registrales</h3>
-                        <div className="space-y-4">
-                            <div><p className="text-xs font-bold opacity-60 uppercase mb-1">Partida Registral</p><p className="font-mono text-lg font-bold text-primary bg-base-200/50 p-2 rounded">{propiedad.partidaRegistral || 'No registrada'}</p></div>
-                            {propiedad.numeroPartida && <div><p className="text-xs font-bold opacity-60 uppercase mb-1">N° de Partida (Adicional)</p><p className="font-mono text-lg font-bold text-secondary bg-base-200/50 p-2 rounded">{propiedad.numeroPartida}</p></div>}
-                            <div><p className="text-xs font-bold opacity-60 uppercase mb-1">Fecha Captación</p><p className="font-medium flex items-center gap-2 text-base-content/80"><FaCalendarAlt className="text-primary"/> {propiedad.fechaCaptacion || '---'}</p></div>
-                        </div>
-                     </div>
-                     <div className="bg-base-100 p-6 rounded-xl border border-base-300 shadow-sm">
-                        <h3 className="font-bold text-lg mb-4 border-b pb-2 border-base-200">Contrato y Comisión</h3>
-                        <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><p className="text-xs font-bold opacity-60 uppercase mb-1">Inicio</p><p className="font-medium text-sm">{propiedad.fechaInicioContrato || '---'}</p></div>
-                                <div><p className="text-xs font-bold opacity-60 uppercase mb-1">Vencimiento</p><p className="font-medium text-sm text-error">{propiedad.fechaVencimientoContrato || '---'}</p></div>
-                            </div>
-                            <div className="pt-3 border-t border-base-200 mt-2">
-                                <p className="text-xs font-bold opacity-70 uppercase text-green-600 dark:text-green-400 mb-1">Comisión Pactada</p>
-                                <p className="font-black text-2xl text-green-600 dark:text-green-400 flex items-center gap-1"><FaPercent className="text-lg opacity-80"/> {propiedad.comision ? (propiedad.comision.includes('%') ? propiedad.comision.replace('%','') : propiedad.comision) : '---'}</p>
-                            </div>
-                        </div>
-                     </div>
-                </div>
-
-                <h3 className="font-bold text-lg mb-4 px-1">Checklist de Documentos</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                    <div className={checkItemStyle(propiedad.testimonio)}>{propiedad.testimonio ? <FaCheckCircle/> : <FaTimesCircle/>} Testimonio</div>
-                    <div className={checkItemStyle(propiedad.hr)}>{propiedad.hr ? <FaCheckCircle/> : <FaTimesCircle/>} Hoja Resumen (HR)</div>
-                    <div className={checkItemStyle(propiedad.pu)}>{propiedad.pu ? <FaCheckCircle/> : <FaTimesCircle/>} Predio Urbano (PU)</div>
-                    <div className={checkItemStyle(propiedad.impuestoPredial)}>{propiedad.impuestoPredial ? <FaCheckCircle/> : <FaTimesCircle/>} Imp. Predial</div>
-                    <div className={checkItemStyle(propiedad.arbitrios)}>{propiedad.arbitrios ? <FaCheckCircle/> : <FaTimesCircle/>} Arbitrios</div>
-                    <div className={checkItemStyle(propiedad.copiaLiteral)}>{propiedad.copiaLiteral ? <FaCheckCircle/> : <FaTimesCircle/>} Copia Literal</div>
-                </div>
             </div>
+            )}
 
             {/* 3. DESCRIPCIÓN */}
             <div className={`${activeTab === 'descripcion' ? 'block' : 'hidden'} animate-fade-in`}>
@@ -273,68 +401,66 @@ export default function PropiedadDetallePage() {
             </div>
         </div>
 
-        {/* 👇 MODAL DE DETALLE DEL PROPIETARIO (ESTILO PREMIUM) 👇 */}
+        {/* MODAL DEL PROPIETARIO (Se mantiene igual) */}
         {selectedOwner && (
            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
              <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                
-                {/* HEADER CON GRADIENTE */}
-                <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-800 text-white p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-                    <div className="relative flex justify-between items-start">
-                        <div className="flex items-start gap-6">
-                            <div className="avatar placeholder shadow-2xl">
-                                <div className="bg-gradient-to-br from-orange-400 to-pink-600 text-white rounded-2xl w-20 h-20 flex items-center justify-center text-3xl font-bold border-4 border-white/20">
-                                    {selectedOwner.nombre.charAt(0).toUpperCase()}
-                                </div>
-                            </div>
-                            <div>
-                                <h2 className="text-3xl font-bold mb-2">{selectedOwner.nombre}</h2>
-                                <div className="flex flex-wrap gap-3 text-white/90 font-mono text-sm">
-                                    <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaIdCard/> {selectedOwner.dni}</span>
-                                    <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaCalendarCheck/> Alta: {selectedOwner.fechaAlta || 'No registrada'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button onClick={() => setSelectedOwner(null)} className="btn btn-circle btn-ghost text-white hover:bg-white/20">✕</button>
-                    </div>
-                </div>
-
-                <div className="p-8 bg-gray-50/50">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                                <h3 className="text-blue-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUser /> Datos de Contacto</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                                    <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Principal</p><p className="font-bold text-gray-800 text-lg flex items-center gap-2"><FaPhone className="text-green-500"/> {selectedOwner.celular1}</p></div>
-                                    {selectedOwner.celular2 && <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Secundario</p><p className="font-medium text-gray-700 flex items-center gap-2"><FaPhone className="text-gray-400"/> {selectedOwner.celular2}</p></div>}
-                                    <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Email</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaEnvelope className="text-blue-500"/> {selectedOwner.email || 'No registrado'}</p></div>
-                                    <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección</p><p className="font-medium text-gray-800 flex items-start gap-2"><FaMapMarkerAlt className="text-red-500 mt-1"/> {selectedOwner.direccion}</p></div>
-                                    <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Fecha de Nacimiento</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaBirthdayCake className="text-pink-500"/> {selectedOwner.fechaNacimiento}</p></div>
-                                </div>
-                            </div>
-                            {selectedOwner.detalles && (<div className="mt-4 pt-4 border-t border-gray-100"><p className="text-xs font-bold text-gray-400 uppercase mb-2"><FaStickyNote className="inline mr-1"/> Notas Internas</p><p className="text-sm italic bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800">{selectedOwner.detalles}</p></div>)}
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                                <h3 className="text-purple-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUserTie /> Gestión Interna</h3>
-                                <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Asesor Captador</p><p className="font-bold text-purple-900 text-xl">{selectedOwner.asesor || 'No especificado'}</p></div>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                                <h3 className="text-green-700 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaCreditCard /> Información Bancaria</h3>
-                                {selectedOwner.banco ? (
-                                    <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                        <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-green-600 uppercase">Banco</span><span className="font-bold text-green-900 text-lg">{selectedOwner.banco}</span></div>
-                                        <div className="mb-2"><p className="text-xs text-green-600 font-bold uppercase">Cuenta</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cuenta}</p></div>
-                                        <div><p className="text-xs text-green-600 font-bold uppercase">CCI</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cci}</p></div>
-                                    </div>
-                                ) : (<div className="bg-gray-100 p-4 rounded-lg text-center text-gray-400 italic text-sm">Sin datos bancarios registrados.</div>)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-gray-50 p-6 flex justify-end border-t border-gray-100"><button onClick={() => setSelectedOwner(null)} className="btn btn-primary px-6">Cerrar Ficha</button></div>
+               {/* HEADER GRADIENTE */}
+               <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-800 text-white p-8 relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
+                   <div className="relative flex justify-between items-start">
+                       <div className="flex items-start gap-6">
+                           <div className="avatar placeholder shadow-2xl">
+                               <div className="bg-gradient-to-br from-orange-400 to-pink-600 text-white rounded-2xl w-20 h-20 flex items-center justify-center text-3xl font-bold border-4 border-white/20">
+                                   {selectedOwner.nombre.charAt(0).toUpperCase()}
+                               </div>
+                           </div>
+                           <div>
+                               <h2 className="text-3xl font-bold mb-2">{selectedOwner.nombre}</h2>
+                               <div className="flex flex-wrap gap-3 text-white/90 font-mono text-sm">
+                                   <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaIdCard/> {selectedOwner.dni}</span>
+                                   <span className="bg-white/20 px-3 py-1 rounded-lg flex items-center gap-2"><FaCalendarCheck/> Alta: {selectedOwner.fechaAlta || 'No registrada'}</span>
+                               </div>
+                           </div>
+                       </div>
+                       <button onClick={() => setSelectedOwner(null)} className="btn btn-circle btn-ghost text-white hover:bg-white/20">✕</button>
+                   </div>
+               </div>
+               {/* BODY DATOS */}
+               <div className="p-8 bg-gray-50/50">
+                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                       <div className="space-y-6">
+                           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                               <h3 className="text-blue-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUser /> Datos de Contacto</h3>
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                                   <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Principal</p><p className="font-bold text-gray-800 text-lg flex items-center gap-2"><FaPhone className="text-green-500"/> {selectedOwner.celular1}</p></div>
+                                   {selectedOwner.celular2 && <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Celular Secundario</p><p className="font-medium text-gray-700 flex items-center gap-2"><FaPhone className="text-gray-400"/> {selectedOwner.celular2}</p></div>}
+                                   <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Email</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaEnvelope className="text-blue-500"/> {selectedOwner.email || 'No registrado'}</p></div>
+                                   <div className="md:col-span-2"><p className="text-xs font-bold text-gray-400 uppercase mb-1">Dirección</p><p className="font-medium text-gray-800 flex items-start gap-2"><FaMapMarkerAlt className="text-red-500 mt-1"/> {selectedOwner.direccion}</p></div>
+                                   <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Fecha de Nacimiento</p><p className="font-medium text-gray-800 flex items-center gap-2"><FaBirthdayCake className="text-pink-500"/> {selectedOwner.fechaNacimiento}</p></div>
+                               </div>
+                           </div>
+                           {selectedOwner.detalles && (<div className="mt-4 pt-4 border-t border-gray-100"><p className="text-xs font-bold text-gray-400 uppercase mb-2"><FaStickyNote className="inline mr-1"/> Notas Internas</p><p className="text-sm italic bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800">{selectedOwner.detalles}</p></div>)}
+                       </div>
+                       <div className="space-y-6">
+                           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                               <h3 className="text-purple-800 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaUserTie /> Gestión Interna</h3>
+                               <div><p className="text-xs font-bold text-gray-400 uppercase mb-1">Asesor Captador</p><p className="font-bold text-purple-900 text-xl">{selectedOwner.asesor || 'No especificado'}</p></div>
+                           </div>
+                           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                               <h3 className="text-green-700 font-bold uppercase text-sm border-b pb-3 mb-4 flex items-center gap-2"><FaCreditCard /> Información Bancaria</h3>
+                               {selectedOwner.banco ? (
+                                   <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                                       <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-green-600 uppercase">Banco</span><span className="font-bold text-green-900 text-lg">{selectedOwner.banco}</span></div>
+                                       <div className="mb-2"><p className="text-xs text-green-600 font-bold uppercase">Cuenta</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cuenta}</p></div>
+                                       <div><p className="text-xs text-green-600 font-bold uppercase">CCI</p><p className="font-mono text-sm bg-white px-2 py-1 rounded border border-green-200 tracking-wide">{selectedOwner.cci}</p></div>
+                                   </div>
+                               ) : (<div className="bg-gray-100 p-4 rounded-lg text-center text-gray-400 italic text-sm">Sin datos bancarios registrados.</div>)}
+                           </div>
+                       </div>
+                   </div>
+               </div>
+               <div className="bg-gray-50 p-6 flex justify-end border-t border-gray-100"><button onClick={() => setSelectedOwner(null)} className="btn btn-primary px-6">Cerrar Ficha</button></div>
              </div>
            </div> 
         )}
