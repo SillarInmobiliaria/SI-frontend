@@ -19,15 +19,20 @@ const api = axios.create({
   },
 });
 
-// 2. Interceptor Mágico (Para que funcione el Login y el token)
+// 2. Interceptor (Token)
 api.interceptors.request.use((config: any) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
 
+// ==========================================
+//            FUNCIONES DE DATOS
+// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -39,6 +44,17 @@ export const createPropietario = async (datos: Omit<Propietario, 'id'>) => {
   const { data } = await api.post<ApiResponse<Propietario>>('/propietarios', datos);
   return data;
 };
+
+// 👇 NUEVO: Suspender y Eliminar Propietario
+export const toggleEstadoPropietario = async (id: string, activo: boolean) => {
+  const { data } = await api.put(`/propietarios/${id}/estado`, { activo });
+  return data;
+};
+export const eliminarPropietario = async (id: string) => {
+  const { data } = await api.delete(`/propietarios/${id}`);
+  return data;
+};
+
 
 // --- PROPIEDADES ---
 export const getPropiedades = async () => {
@@ -53,6 +69,22 @@ export const createPropiedad = async (datos: FormData) => {
   return data;
 };
 
+export const getPropiedad = async (id: string) => {
+    const { data } = await api.get(`/propiedades/${id}`);
+    return data;
+};
+
+// 👇 NUEVO: Suspender y Eliminar Propiedad
+export const toggleEstadoPropiedad = async (id: string, activo: boolean) => {
+  const { data } = await api.put(`/propiedades/${id}/estado`, { activo });
+  return data;
+};
+export const eliminarPropiedad = async (id: string) => {
+  const { data } = await api.delete(`/propiedades/${id}`);
+  return data;
+};
+
+
 // --- CLIENTES ---
 export const getClientes = async () => {
   const { data } = await api.get<Cliente[]>('/clientes');
@@ -63,6 +95,17 @@ export const createCliente = async (datos: Omit<Cliente, 'id'>) => {
   const { data } = await api.post<ApiResponse<Cliente>>('/clientes', datos);
   return data;
 };
+
+// 👇 NUEVO: Suspender y Eliminar Cliente
+export const toggleEstadoCliente = async (id: string, activo: boolean) => {
+  const { data } = await api.put(`/clientes/${id}/estado`, { activo });
+  return data;
+};
+export const eliminarCliente = async (id: string) => {
+  const { data } = await api.delete(`/clientes/${id}`);
+  return data;
+};
+
 
 // --- INTERESES ---
 export const getIntereses = async () => {
@@ -108,6 +151,9 @@ export const createSeguimiento = async (datos: any) => {
   return data;
 };
 
+// ==========================================
+//           SEGURIDAD Y USUARIOS
+// ==========================================
 
 export const login = async (credenciales: { email: string; password: string }) => {
   const response = await api.post('/auth/login', credenciales);
@@ -140,7 +186,8 @@ export const deleteUsuario = async (id: string) => {
 };
 
 export const getNotificaciones = async () => {
-  const response = await api.get('/usuarios/notificaciones'); // Asegúrate que la ruta coincida
+  const response = await api.get('/usuarios/notificaciones');
   return response.data;
 };
+
 export default api;

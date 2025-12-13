@@ -1,391 +1,423 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
-import { createPropiedad, fetchUsuarios } from '../../../services/api';
+import { createPropiedad } from '../../../services/api';
+import api from '../../../services/api'; // Necesitamos axios directo para buscar usuarios
 import { 
-  FaHome, FaImages, FaUserTie, FaSave, FaArrowLeft, 
-  FaFileContract, FaCheckSquare, FaGlobe, FaLink, FaUserPlus, FaTrash, FaSearch 
+  FaHome, FaDollarSign, FaBed, FaBath, FaCar, 
+  FaRulerCombined, FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
+  FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
-import Link from 'next/link';
-
-const UBICACIONES = [
-  "Arequipa", "Yanahuara", "Cayma", "Cerro Colorado", "Jose Luis Bustamante y Rivero",
-  "Sachaca", "Miraflores", "Mariano Melgar", "Paucarpata", "Socabaya", "Jacobo Hunter",
-  "Alto Selva Alegre", "Tiabaya", "Uchumayo", "Characato", "Sabandía", "Mollebaya",
-  "Yura", "La Joya", "Mollendo", "Camaná", "Mejía", "Pedregal"
-];
 
 export default function NuevaPropiedadPage() {
   const router = useRouter();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
   const { register, handleSubmit, watch, setValue } = useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [loading, setLoading] = useState(false);
-  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
-  const [currentOwnerId, setCurrentOwnerId] = useState("");
-  
-  // --- ESTADOS PARA EL BUSCADOR DE ASESORES ---
-  const [listaAsesores, setListaAsesores] = useState<any[]>([]);
+  // 1. ESTADO PARA MÚLTIPLES PROPIETARIOS
+  const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
+  const [propietarioSelectId, setPropietarioSelectId] = useState('');
+
+  // 2. ESTADO PARA BUSCADOR DE ASESORES
+  const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [asesorSeleccionado, setAsesorSeleccionado] = useState<any>(null);
-  const [mostrarListaAsesores, setMostrarListaAsesores] = useState(false);
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  // Previsualización de imágenes
+  const [previewMain, setPreviewMain] = useState<string | null>(null);
+  const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  // --- LÓGICA CONDICIONAL ---
-  const tipoSeleccionado = watch('tipo');
-  const esDepartamento = tipoSeleccionado === 'Departamento'; 
+  // Lógica condicional Departamento
+  const tipoInmueble = watch('tipo');
+  const esDepartamento = tipoInmueble === 'Departamento';
 
-  useEffect(() => { 
-      fetchPropietarios(); 
-      cargarAsesores();
+  useEffect(() => {
+    fetchPropietarios();
+    // Cargar usuarios para el buscador de asesores
+    const fetchUsuarios = async () => {
+        try {
+            const { data } = await api.get('/usuarios'); // Asumiendo que tienes esta ruta
+            setAsesoresDB(data);
+        } catch (error) {
+            console.error("Error cargando asesores", error);
+        }
+    };
+    fetchUsuarios();
   }, []);
 
-  const cargarAsesores = async () => {
-      try {
-          const users = await fetchUsuarios();
-          setListaAsesores(users);
-      } catch (error) {
-          console.error("Error cargando usuarios");
+  // --- LÓGICA PROPIETARIOS ---
+  const agregarPropietario = () => {
+      if (!propietarioSelectId) return;
+      const existe = propietariosSeleccionados.find(p => p.id === propietarioSelectId);
+      if (existe) return alert('Este propietario ya está agregado.');
+
+      const propObj = propietarios.find(p => p.id === propietarioSelectId);
+      if (propObj) {
+          setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+          setPropietarioSelectId(''); // Reset select
       }
   };
 
-  const asesoresFiltrados = listaAsesores.filter(u => 
-      u.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase()) ||
-      u.email.toLowerCase().includes(busquedaAsesor.toLowerCase())
-  );
-
-  const handleAddOwner = () => {
-    if (currentOwnerId && !selectedOwners.includes(currentOwnerId)) {
-      setSelectedOwners([...selectedOwners, currentOwnerId]);
-      setCurrentOwnerId(""); 
-    }
+  const quitarPropietario = (id: string) => {
+      setPropietariosSeleccionados(propietariosSeleccionados.filter(p => p.id !== id));
   };
 
-  const handleRemoveOwner = (id: string) => {
-    setSelectedOwners(selectedOwners.filter(ownerId => ownerId !== id));
+  // --- LÓGICA ASESORES ---
+  const filtrarAsesores = asesoresDB.filter(a => 
+      a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())
+  );
+
+  const seleccionarAsesor = (asesor: any) => {
+      setAsesorSeleccionado(asesor);
+      setBusquedaAsesor(asesor.nombre);
+      setMostrarSugerencias(false);
+      setValue('asesor', asesor.nombre); // Guardamos el nombre para el form
+      // Si necesitas el ID también: setValue('usuarioId', asesor.id);
+  };
+
+  // --- LÓGICA FOTOS ---
+  const handleMainPhotoChange = (e: any) => {
+      if (e.target.files && e.target.files[0]) {
+          setPreviewMain(URL.createObjectURL(e.target.files[0]));
+      }
+  };
+
+  const handleGalleryChange = (e: any) => {
+      if (e.target.files) {
+          const files = Array.from(e.target.files).map((file: any) => URL.createObjectURL(file));
+          setPreviewGallery(files);
+      }
   };
 
   const onSubmit = async (data: any) => {
-    // 1. VALIDAR PROPIETARIOS
-    if (selectedOwners.length === 0) {
-      alert("⚠️ Debes asignar al menos un propietario.");
-      return;
+    if (propietariosSeleccionados.length === 0) {
+        return alert('⚠️ Debes agregar al menos un propietario.');
     }
 
-    // 2. VALIDAR ASESOR (CANDADO DE SEGURIDAD 🔒)
-    // Si escribió algo en el buscador...
-    if (busquedaAsesor.trim()) {
-        // Buscamos si existe EXACTAMENTE ese nombre en la lista (ignorando mayúsculas/minúsculas)
-        const existe = listaAsesores.find(a => a.nombre.toLowerCase() === busquedaAsesor.trim().toLowerCase());
-        
-        // Si no seleccionó a nadie del dropdown Y el texto no coincide con nadie real
-        if (!asesorSeleccionado && !existe) {
-            alert("⚠️ El asesor escrito NO EXISTE en el sistema.\nPor favor selecciona uno válido de la lista desplegable.");
-            return; // ¡DETENEMOS TODO AQUÍ!
-        }
-    }
-    
-    setLoading(true);
+    setIsSubmitting(true);
     try {
-      const formData = new FormData();
+        const formData = new FormData();
+        
+        // Campos de texto simples
+        Object.keys(data).forEach(key => {
+            if (key !== 'fotoPrincipal' && key !== 'galeria' && key !== 'fichaTecnica') {
+                formData.append(key, data[key]);
+            }
+        });
 
-      // Datos Texto
-      formData.append('tipo', data.tipo);
-      formData.append('modalidad', data.modalidad);
-      formData.append('ubicacion', data.ubicacion);
-      formData.append('direccion', data.direccion);
-      formData.append('precio', data.precio);
-      formData.append('area', data.area);
-      formData.append('areaConstruida', data.areaConstruida);
-      formData.append('habitaciones', data.habitaciones);
-      formData.append('banos', data.banos);
-      formData.append('cocheras', data.cocheras);
-      formData.append('descripcion', data.descripcion);
-      formData.append('distribucion', data.distribucion);
+        // MONEDA FIJA
+        formData.append('moneda', 'USD');
 
-      formData.append('propietarios', JSON.stringify(selectedOwners));
+        // PROPIETARIOS (Array de IDs)
+        propietariosSeleccionados.forEach(p => {
+            formData.append('propietariosIds[]', p.id); // Ajusta según espere tu backend (array o repetido)
+        });
 
-      // Legal
-      formData.append('fechaCaptacion', data.fechaCaptacion);
-      formData.append('comision', data.comision);
-      formData.append('tipoContrato', data.tipoContrato);
-      
-      // GUARDAR ASESOR VALIDADO
-      if (asesorSeleccionado) {
-          formData.append('asesor', asesorSeleccionado.nombre);
-      } else if (busquedaAsesor) {
-          formData.append('asesor', busquedaAsesor); // Aquí ya sabemos que es válido por la validación de arriba
-      }
-      
-      // PARTIDA PRINCIPAL (SIEMPRE SE ENVÍA)
-      if(data.partidaRegistral) formData.append('partidaRegistral', data.partidaRegistral);
-      
-      // SOLO SI ES DEPARTAMENTO SE ENVÍAN ESTOS 3
-      if (esDepartamento) {
-          if(data.numeroPartida) formData.append('numeroPartida', data.numeroPartida);
-          if(data.partidaEstacionamiento) formData.append('partidaEstacionamiento', data.partidaEstacionamiento);
-          if(data.partidaDeposito) formData.append('partidaDeposito', data.partidaDeposito);
-      }
+        // ARCHIVOS
+        if (data.fotoPrincipal?.[0]) formData.append('fotoPrincipal', data.fotoPrincipal[0]);
+        if (data.fichaTecnica?.[0]) formData.append('pdf', data.fichaTecnica[0]);
+        if (data.galeria && data.galeria.length > 0) {
+            for (let i = 0; i < data.galeria.length; i++) {
+                formData.append('galeria', data.galeria[i]);
+            }
+        }
 
-      if(data.fechaInicioContrato) formData.append('fechaInicioContrato', data.fechaInicioContrato);
-      if(data.fechaVencimientoContrato) formData.append('fechaVencimientoContrato', data.fechaVencimientoContrato);
+        // CHECKBOXES
+        const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral'];
+        docs.forEach(doc => {
+            formData.append(doc, data[doc] ? 'true' : 'false');
+        });
 
-      const links = [data.link1, data.link2, data.link3, data.link4, data.link5].filter(l => l);
-      formData.append('plataforma', JSON.stringify(links));
-
-      ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral'].forEach(field => {
-          formData.append(field, data[field] ? 'true' : 'false');
-      });
-
-      // Archivos (Con validación de existencia)
-      if(data.fotoPrincipal && data.fotoPrincipal.length > 0) formData.append('fotoPrincipal', data.fotoPrincipal[0]);
-      if(data.pdf && data.pdf.length > 0) formData.append('pdf', data.pdf[0]);
-      if(data.galeria && data.galeria.length > 0) {
-        for (let i = 0; i < data.galeria.length; i++) formData.append('galeria', data.galeria[i]);
-      }
-      if(data.mapaUrl) formData.append('mapaUrl', data.mapaUrl);
-      if(data.videoUrl) formData.append('videoUrl', data.videoUrl);
-
-      await createPropiedad(formData);
-      alert('✅ Propiedad creada con éxito');
-      router.push('/propiedades');
+        await createPropiedad(formData);
+        
+        alert('✅ Propiedad registrada con éxito');
+        router.push('/propiedades');
     } catch (error) {
-      console.error(error);
-      alert('❌ Error al crear');
+        console.error(error);
+        alert('❌ Error al registrar. Revisa los datos.');
     } finally {
-      setLoading(false);
+        setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-base-200 pb-12">
+    <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-800">
       <Navbar />
-      <div className="container mx-auto p-6 max-w-5xl">
-        <div className="flex items-center gap-4 mb-8">
-            <Link href="/propiedades" className="btn btn-circle btn-ghost"><FaArrowLeft /></Link>
-            <h1 className="text-3xl font-bold text-primary">Ficha de Captación de Inmueble</h1>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          
-          {/* 1. PROPIETARIOS */}
-          <div className="card bg-base-100 shadow-xl border-t-4 border-primary">
-            <div className="card-body">
-              <h2 className="card-title flex items-center gap-2 mb-4"><FaUserTie className="text-primary"/> Propietarios (Captación)</h2>
-              <div className="flex gap-4 items-end">
-                <div className="form-control w-full">
-                    <label className="label font-bold">Buscar y Seleccionar Propietario</label>
-                    <select className="select select-bordered w-full" value={currentOwnerId} onChange={(e) => setCurrentOwnerId(e.target.value)}>
-                        <option value="">-- Seleccione --</option>
-                        {propietarios.map(p => (<option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>))}
-                    </select>
-                </div>
-                <button type="button" onClick={handleAddOwner} className="btn btn-primary"><FaUserPlus/> Agregar</button>
+      
+      {/* HEADER */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
+          <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                  <button onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
+                  <h1 className="text-xl font-bold text-indigo-900">Ficha de Captación</h1>
               </div>
-              <div className="mt-4 space-y-2">
-                {selectedOwners.map(id => {
-                    const owner = propietarios.find(p => p.id === id);
-                    return (
-                        <div key={id} className="flex justify-between items-center p-3 bg-base-200 rounded-lg">
-                            <span className="font-bold">{owner?.nombre}</span>
-                            <button type="button" onClick={() => handleRemoveOwner(id)} className="btn btn-xs btn-error btn-circle text-white"><FaTrash/></button>
-                        </div>
-                    )
-                })}
-              </div>
-            </div>
+              <button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2">
+                {isSubmitting ? 'Guardando...' : <><FaSave/> Publicar</>}
+              </button>
           </div>
+      </div>
 
-          {/* 2. DATOS DEL INMUEBLE */}
-          <div className="card bg-base-100 shadow-xl border-t-4 border-secondary">
-             <div className="card-body">
-                <h2 className="card-title mb-4"><FaHome className="text-secondary"/> Datos del Inmueble</h2>
-                <div className="grid grid-cols-3 gap-4">
+      <main className="container mx-auto px-6 max-w-5xl mt-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            
+            {/* 1. MÚLTIPLES PROPIETARIOS */}
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2">
+                    <FaUserTie className="text-indigo-600 text-lg"/> 1. Propietarios (Captación)
+                </h3>
+                
+                <div className="flex gap-4 items-end mb-4">
+                    <div className="form-control flex-1">
+                        <label className="label font-bold text-gray-600">Buscar Propietario</label>
+                        <select 
+                            className="select select-bordered w-full bg-white"
+                            value={propietarioSelectId}
+                            onChange={(e) => setPropietarioSelectId(e.target.value)}
+                        >
+                            <option value="">-- Seleccione --</option>
+                            {propietarios.map(p => (
+                                <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>
+                            ))}
+                        </select>
+                    </div>
+                    <button type="button" onClick={agregarPropietario} className="btn btn-primary bg-indigo-600 text-white"><FaPlus/> Agregar</button>
+                </div>
+
+                {/* Lista de Propietarios Agregados */}
+                <div className="space-y-2">
+                    {propietariosSeleccionados.length === 0 && <p className="text-sm text-gray-400 italic">No hay propietarios seleccionados.</p>}
+                    {propietariosSeleccionados.map((p, index) => (
+                        <div key={index} className="flex justify-between items-center bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                            <div>
+                                <p className="font-bold text-indigo-900">{p.nombre}</p>
+                                <p className="text-xs text-indigo-600">DNI: {p.dni} | Cel: {p.celular1}</p>
+                            </div>
+                            <button type="button" onClick={() => quitarPropietario(p.id)} className="btn btn-ghost btn-sm text-red-500"><FaTrash/></button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* 2. DATOS DEL INMUEBLE */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
+                    <FaHome className="text-indigo-500 text-lg"/> 2. Datos del Inmueble
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control">
-                        <label className="label font-bold">Tipo</label>
-                        <select {...register('tipo')} className="select select-bordered">
+                        <label className="label font-bold text-gray-600">Tipo *</label>
+                        <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white">
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Terreno">Terreno</option>
-                            <option value="Local">Local</option>
+                            <option value="Local">Local Comercial</option>
+                            <option value="Oficina">Oficina</option>
                         </select>
                     </div>
-                    <div className="form-control"><label className="label font-bold">Categoría</label><select {...register('modalidad')} className="select select-bordered"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option></select></div>
-                    <div className="form-control"><label className="label font-bold">Ubicación</label><select {...register('ubicacion')} className="select select-bordered">{UBICACIONES.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Categoría *</label>
+                        <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white">
+                            <option value="Venta">Venta</option>
+                            <option value="Alquiler">Alquiler</option>
+                            <option value="Anticresis">Anticresis</option>
+                        </select>
+                    </div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Ubicación *</label>
+                        <select {...register('ubicacion', {required:true})} className="select select-bordered w-full bg-white">
+                            <option value="">-- Seleccione --</option>
+                            <option value="Arequipa">Arequipa</option>
+                            <option value="Yanahuara">Yanahuara</option>
+                            <option value="Cayma">Cayma</option>
+                            <option value="Cerro Colorado">Cerro Colorado</option>
+                            <option value="Sachaca">Sachaca</option>
+                            <option value="JLByR">J.L.B y Rivero</option>
+                            <option value="Socabaya">Socabaya</option>
+                            <option value="Miraflores">Miraflores</option>
+                        </select>
+                    </div>
                 </div>
-                <div className="form-control mt-4"><label className="label font-bold">Dirección</label><input {...register('direccion')} className="input input-bordered" /></div>
-                <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div className="form-control"><label className="label font-bold">Precio ($)</label><input {...register('precio')} type="number" className="input input-bordered" /></div>
-                    <div className="form-control"><label className="label font-bold">Área T.</label><input {...register('area')} type="number" className="input input-bordered" /></div>
-                    <div className="form-control"><label className="label font-bold">Área C.</label><input {...register('areaConstruida')} type="number" className="input input-bordered" /></div>
+
+                <div className="form-control mb-6">
+                    <label className="label font-bold text-gray-600">Dirección Exacta</label>
+                    <input {...register('direccion')} className="input input-bordered w-full bg-white"/>
                 </div>
-             </div>
-          </div>
 
-           {/* 3. CARACTERÍSTICAS */}
-           <div className="card bg-base-100 shadow-xl border-t-4 border-accent">
-             <div className="card-body">
-               <h2 className="card-title flex items-center gap-2 mb-4">📝 Detalles</h2>
-               <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="form-control"><label className="label font-bold text-center">🛏️ Dorm</label><input {...register('habitaciones')} type="number" className="input input-bordered text-center" defaultValue={0} /></div>
-                  <div className="form-control"><label className="label font-bold text-center">🚿 Baños</label><input {...register('banos')} type="number" className="input input-bordered text-center" defaultValue={0} /></div>
-                  <div className="form-control"><label className="label font-bold text-center">🚗 Coch</label><input {...register('cocheras')} type="number" className="input input-bordered text-center" defaultValue={0} /></div>
-               </div>
-               <div className="flex flex-col gap-6">
-                  <div className="form-control w-full"><label className="label font-bold">Descripción</label><textarea {...register('descripcion')} className="textarea textarea-bordered h-24" /></div>
-                  <div className="form-control w-full"><label className="label font-bold">Distribución</label><textarea {...register('distribucion')} className="textarea textarea-bordered h-24" /></div>
-               </div>
-             </div>
-           </div>
-          
-          {/* 4. GESTIÓN LEGAL */}
-          <div className="card bg-base-100 shadow-xl border-t-4 border-info">
-              <div className="card-body">
-                  <h2 className="card-title mb-4"><FaFileContract className="text-info"/> Datos Legales</h2>
-                  
-                  {/* SIEMPRE VISIBLE */}
-                  <div className="form-control mb-6">
-                     <label className="label font-bold">Partida Registral (Principal)</label>
-                     <textarea {...register('partidaRegistral')} className="textarea textarea-bordered w-full font-mono h-16" placeholder="N° Partida Principal..." />
-                  </div>
-
-                  {/* 👇 SOLO DEPARTAMENTO: 3 CAMPOS EXTRA 👇 */}
-                  {esDepartamento && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 animate-fade-in mb-6">
-                        <h3 className="text-sm font-bold text-blue-800 mb-3">🏙️ Exclusivo Departamento</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="form-control">
-                                <label className="label font-bold text-blue-800 text-xs">N° Partida (Adicional)</label>
-                                <input {...register('numeroPartida')} type="text" className="input input-bordered bg-white" placeholder="Opcional" />
-                            </div>
-                            <div className="form-control">
-                                <label className="label font-bold text-blue-800 text-xs">N° Partida Estacionamiento</label>
-                                <input {...register('partidaEstacionamiento')} type="text" className="input input-bordered bg-white" placeholder="Opcional" />
-                            </div>
-                            <div className="form-control">
-                                <label className="label font-bold text-blue-800 text-xs">N° Partida Depósito</label>
-                                <input {...register('partidaDeposito')} type="text" className="input input-bordered bg-white" placeholder="Opcional" />
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Precio (Solo Dólares) *</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-3 text-gray-500 font-bold">$</span>
+                            <input type="number" step="0.01" {...register('precio', {required:true})} className="input input-bordered w-full pl-8 bg-white font-bold text-lg"/>
                         </div>
                     </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="form-control"><label className="label font-bold">Fecha Captación</label><input {...register('fechaCaptacion')} type="date" className="input input-bordered w-full" defaultValue={today} /></div>
-                      <div className="form-control"><label className="label font-bold">Inicio Contrato</label><input {...register('fechaInicioContrato')} type="date" className="input input-bordered w-full" /></div>
-                      <div className="form-control"><label className="label font-bold">Vencimiento</label><input {...register('fechaVencimientoContrato')} type="date" className="input input-bordered w-full" /></div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <div className="form-control"><label className="label font-bold">Tipo Contrato</label><select {...register('tipoContrato')} className="select select-bordered w-full"><option>Sin Exclusiva</option><option>Con Exclusiva</option></select></div>
-                      <div className="form-control">
-                          <label className="label font-bold">Comisión (%)</label>
-                          <input {...register('comision')} type="number" step="0.1" className="input input-bordered w-full" placeholder="Ej: 3" />
-                      </div>
-                  </div>
-
-                  <div className="bg-base-200 p-4 rounded-lg mb-6">
-                      <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><FaCheckSquare/> Docs en Regla</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('testimonio')} className="checkbox checkbox-sm" /> <span className="label-text">Testimonio</span></label>
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('hr')} className="checkbox checkbox-sm" /> <span className="label-text">HR</span></label>
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('pu')} className="checkbox checkbox-sm" /> <span className="label-text">PU</span></label>
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('impuestoPredial')} className="checkbox checkbox-sm" /> <span className="label-text">Predial</span></label>
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('arbitrios')} className="checkbox checkbox-sm" /> <span className="label-text">Arbitrios</span></label>
-                         <label className="cursor-pointer label justify-start gap-2"><input type="checkbox" {...register('copiaLiteral')} className="checkbox checkbox-sm" /> <span className="label-text">Copia Literal</span></label>
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-3">
-                        <label className="label font-bold flex items-center gap-2"><FaGlobe className="text-info"/> Links</label>
-                        {[1,2,3].map(i => (<input key={i} {...register(`link${i}`)} type="text" className="input input-bordered w-full" placeholder={`Link ${i}`} />))}
-                      </div>
-                      
-                      {/* 👇 BUSCADOR DE ASESOR VALIDADO 👇 */}
-                      <div className="form-control relative">
-                        <label className="label font-bold">Asesor Encargado <span className="text-error">*</span></label>
-                        <div className="relative">
-                            <FaSearch className="absolute left-3 top-3.5 text-gray-400"/>
-                            <input 
-                                type="text"
-                                className="input input-bordered w-full pl-10"
-                                placeholder="Escribe para buscar..."
-                                value={busquedaAsesor}
-                                onChange={(e) => {
-                                    setBusquedaAsesor(e.target.value);
-                                    setMostrarListaAsesores(true);
-                                    setAsesorSeleccionado(null); // Al editar, se pierde la selección segura
-                                }}
-                                onFocus={() => setMostrarListaAsesores(true)}
-                            />
-                        </div>
-                        {asesorSeleccionado && <div className="text-xs text-green-600 mt-1 font-bold">✅ Asignado correctamente: {asesorSeleccionado.nombre}</div>}
-                        
-                        {mostrarListaAsesores && busquedaAsesor && !asesorSeleccionado && (
-                            <div className="absolute top-20 z-50 w-full bg-base-100 shadow-xl border rounded-lg max-h-40 overflow-y-auto">
-                                {asesoresFiltrados.map((asesor) => (
-                                    <div 
-                                        key={asesor.id}
-                                        className="p-2 hover:bg-base-200 cursor-pointer border-b text-sm"
-                                        onClick={() => {
-                                            setAsesorSeleccionado(asesor);
-                                            setBusquedaAsesor(asesor.nombre);
-                                            setMostrarListaAsesores(false);
-                                        }}
-                                    >
-                                        <p className="font-bold">{asesor.nombre}</p>
-                                        <p className="text-xs opacity-70">{asesor.email}</p>
-                                    </div>
-                                ))}
-                                {asesoresFiltrados.length === 0 && <div className="p-2 text-center text-xs opacity-50 text-error">No encontrado</div>}
-                            </div>
-                        )}
-                      </div>
-                  </div>
-              </div>
-          </div>
-
-          {/* 5. MULTIMEDIA */}
-          <div className="card bg-base-100 shadow-xl border-t-4 border-warning">
-            <div className="card-body">
-              <h2 className="card-title flex items-center gap-2 mb-4"><FaImages className="text-warning" /> Multimedia</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="form-control">
-                    <label className="label font-bold">Foto Principal</label>
-                    <input {...register('fotoPrincipal')} type="file" accept="image/*" className="file-input file-input-bordered file-input-primary w-full" />
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Área Total (m²)</label>
+                        <input type="number" {...register('area')} className="input input-bordered w-full bg-white"/>
+                    </div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Área Construida (m²)</label>
+                        <input type="number" {...register('areaConstruida')} className="input input-bordered w-full bg-white"/>
+                    </div>
                 </div>
-                
-                <div className="form-control">
-                    <label className="label font-bold">Galería</label>
-                    <input {...register('galeria')} type="file" multiple accept="image/*" className="file-input file-input-bordered file-input-secondary w-full" />
-                </div>
-
-                {/* 👇 PDF RECUPERADO 👇 */}
-                <div className="form-control md:col-span-2">
-                    <label className="label font-bold">Ficha Técnica (PDF)</label>
-                    <input {...register('pdf')} type="file" accept=".pdf" className="file-input file-input-bordered file-input-error w-full" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div className="form-control"><label className="label font-bold">Video URL</label><input {...register('videoUrl')} type="text" className="input input-bordered w-full" /></div>
-                <div className="form-control"><label className="label font-bold">Mapa Iframe</label><input {...register('mapaUrl')} type="text" className="input input-bordered w-full" /></div>
-              </div>
             </div>
-          </div>
 
-          <div className="flex gap-4 justify-end pt-6">
-            <Link href="/propiedades" className="btn btn-lg btn-ghost">Cancelar</Link>
-            <button type="submit" disabled={loading} className="btn btn-primary btn-lg px-10"><FaSave/> Guardar Ficha</button>
-          </div>
+            {/* 3. DETALLES */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
+                    <FaBed className="text-orange-500 text-lg"/> 3. Detalles y Distribución
+                </h3>
+                
+                <div className="grid grid-cols-3 gap-6 mb-6 text-center">
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white"/></div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="form-control"><label className="label font-bold text-gray-600">Descripción (Marketing)</label><textarea {...register('descripcion')} className="textarea textarea-bordered h-32 bg-white"></textarea></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600">Distribución Interna</label><textarea {...register('detalles')} className="textarea textarea-bordered h-32 bg-white"></textarea></div>
+                </div>
+            </div>
+
+            {/* 4. DATOS LEGALES */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
+                    <FaGavel className="text-blue-500 text-lg"/> 4. Datos Legales
+                </h3>
+
+                <div className="form-control mb-6">
+                    <label className="label font-bold text-gray-600">Partida Registral (Principal)</label>
+                    <input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/>
+                </div>
+
+                {esDepartamento && (
+                    <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-100">
+                        <h4 className="text-xs font-bold text-blue-700 uppercase mb-4 flex items-center gap-2"><FaHome/> Exclusivo Departamento</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-xs">Partida Adicional</label><input {...register('partidaAdicional')} className="input input-bordered input-sm w-full bg-white"/></div>
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-xs">Partida Estacionamiento</label><input {...register('partidaCochera')} className="input input-bordered input-sm w-full bg-white"/></div>
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-xs">Partida Depósito</label><input {...register('partidaDeposito')} className="input input-bordered input-sm w-full bg-white"/></div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div className="form-control"><label className="label font-bold text-gray-600">Fecha Captación</label><input type="date" {...register('fechaCaptacion')} className="input input-bordered w-full bg-white"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600">Inicio Contrato</label><input type="date" {...register('inicioContrato')} className="input input-bordered w-full bg-white"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600">Vencimiento</label><input type="date" {...register('finContrato')} className="input input-bordered w-full bg-white"/></div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="form-control"><label className="label font-bold text-gray-600">Tipo Contrato</label><select {...register('tipoContrato')} className="select select-bordered w-full bg-white"><option value="Sin Exclusiva">Sin Exclusiva</option><option value="Exclusiva">Exclusiva</option></select></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600">Comisión (%)</label><input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white"/></div>
+                </div>
+
+                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
+                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2">Documentación en Regla</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('testimonio')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Testimonio</span></label>
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('hr')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">HR</span></label>
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('pu')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">PU</span></label>
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('impuestoPredial')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Predial</span></label>
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('arbitrios')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Arbitrios</span></label>
+                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('copiaLiteral')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Copia Lit.</span></label>
+                    </div>
+                </div>
+
+                {/* 5 LINKS EXTERNOS */}
+                <div className="space-y-4 mb-6">
+                    <h4 className="font-bold text-gray-600 flex gap-2 items-center"><FaLink className="text-blue-400"/> 5 Links Externos</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                        <input {...register('link1')} className="input input-bordered input-sm w-full bg-white" placeholder="Link 1 (Ej: Drive)"/>
+                        <input {...register('link2')} className="input input-bordered input-sm w-full bg-white" placeholder="Link 2"/>
+                        <input {...register('link3')} className="input input-bordered input-sm w-full bg-white" placeholder="Link 3"/>
+                        <input {...register('link4')} className="input input-bordered input-sm w-full bg-white" placeholder="Link 4"/>
+                        <input {...register('link5')} className="input input-bordered input-sm w-full bg-white" placeholder="Link 5"/>
+                    </div>
+                </div>
+
+                {/* BUSCADOR DE ASESOR (AUTOCOMPLETE) */}
+                <div className="form-control relative">
+                    <label className="label font-bold text-gray-600 text-sm">Asesor Encargado (Buscar)</label>
+                    <div className="flex items-center">
+                        <FaSearch className="absolute left-3 text-gray-400 z-10"/>
+                        <input 
+                            type="text" 
+                            className="input input-bordered w-full bg-white pl-10" 
+                            placeholder="Escribe el nombre del asesor..."
+                            value={busquedaAsesor}
+                            onChange={(e) => {
+                                setBusquedaAsesor(e.target.value);
+                                setMostrarSugerencias(true);
+                            }}
+                            onFocus={() => setMostrarSugerencias(true)}
+                        />
+                    </div>
+                    {/* Lista desplegable de sugerencias */}
+                    {mostrarSugerencias && busquedaAsesor.length > 0 && (
+                        <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-40 overflow-y-auto mt-1">
+                            {filtrarAsesores.length > 0 ? (
+                                filtrarAsesores.map((asesor) => (
+                                    <div 
+                                        key={asesor.id} 
+                                        className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col"
+                                        onClick={() => seleccionarAsesor(asesor)}
+                                    >
+                                        <span className="font-bold text-gray-800">{asesor.nombre}</span>
+                                        <span className="text-xs text-gray-500">{asesor.email}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-3 text-gray-400 text-sm">No se encontraron asesores.</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 5. MULTIMEDIA */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
+                    <FaImages className="text-yellow-500 text-lg"/> 5. Multimedia
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Foto Principal</label>
+                        <input type="file" accept="image/*" {...register('fotoPrincipal')} onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white" />
+                        {previewMain && <img src={previewMain} alt="Preview" className="mt-4 h-48 w-full object-cover rounded-lg border border-gray-200"/>}
+                    </div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600">Galería de Fotos</label>
+                        <input type="file" multiple accept="image/*" {...register('galeria')} onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white" />
+                        {previewGallery.length > 0 && <div className="mt-4 flex gap-2 overflow-x-auto pb-2">{previewGallery.map((src, i) => <img key={i} src={src} className="h-20 w-20 object-cover rounded-lg border"/>)}</div>}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="form-control"><label className="label font-bold text-gray-600 gap-2"><FaVideo className="text-red-500"/> Video URL (YouTube)</label><input type="text" {...register('videoUrl')} className="input input-bordered w-full bg-white"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 gap-2"><FaFilePdf className="text-red-700"/> Ficha Técnica (PDF)</label><input type="file" accept="application/pdf" {...register('fichaTecnica')} className="file-input file-input-bordered file-input-sm w-full bg-white"/></div>
+                    <div className="form-control md:col-span-2"><label className="label font-bold text-gray-600 gap-2"><FaMapMarkerAlt className="text-green-600"/> Mapa (Iframe URL)</label><input type="text" {...register('mapaUrl')} className="input input-bordered w-full bg-white"/></div>
+                </div>
+            </div>
+
+            {/* BOTÓN FINAL */}
+            <div className="flex justify-end pt-4">
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-12 py-3 h-auto text-lg shadow-xl hover:shadow-indigo-300 hover:-translate-y-1 transition-all">
+                    {isSubmitting ? 'Publicando...' : <><FaSave className="mr-2"/> Publicar Propiedad</>}
+                </button>
+            </div>
+
         </form>
-      </div>
+      </main>
     </div>
   );
 }

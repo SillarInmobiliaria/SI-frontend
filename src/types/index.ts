@@ -1,5 +1,7 @@
 // Definición de Propietario
 export interface Propietario {
+  usuarioId: any;
+  activo: any;
   id: string;
   nombre: string;
   dni: string;
@@ -73,6 +75,8 @@ export interface Propiedad {
 
 // Definición de Cliente
 export interface Cliente {
+  activo: any;
+  usuarioId: any;
   id: string;
   nombre: string;
   dni: string;
@@ -155,6 +159,7 @@ export interface Usuario {
 
 // Respuestas de API
 export interface ApiResponse<T> {
+  id: string;
   message: string;
   data: T;
   error?: string;
