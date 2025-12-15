@@ -1,171 +1,326 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
-import { createVisita } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { visitaService } from '../../services/visitaService';
+import { Visita } from '../../types';
 import Navbar from '../../components/Navbar';
-import Modal from '../../components/Modal';
-
-interface FormVisita {
-  asesor: string;
-  clienteId: string;
-  propiedadId: string;
-  fecha: string;
-  hora: string;
-  resultado: string;
-  comentario: string;
-}
 
 export default function VisitasPage() {
-  const { visitas, fetchVisitas, clientes, fetchClientes, propiedades, fetchPropiedades } = useInmobiliariaStore();
-  const [isModalOpen, setModalOpen] = useState(false);
-  const { register, handleSubmit, reset } = useForm<FormVisita>();
-  const [hora, setHora] = useState('09');
-  const [minutos, setMinutos] = useState('00');
-  const [ampm, setAmpm] = useState('AM');
+  const router = useRouter();
+  const [visitas, setVisitas] = useState<Visita[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(new Date());
 
-  useEffect(() => {
-    fetchVisitas();
-    fetchClientes();
-    fetchPropiedades();
-  }, []);
-
-  const onSubmit = async (data: FormVisita) => {
+  const fetchDatos = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) { router.push('/login'); return; }
     try {
-      const minutosFinal = minutos.padStart(2, '0') || '00';
-      let hora24 = parseInt(hora);
-      if (ampm === 'PM' && hora24 !== 12) hora24 += 12;
-      if (ampm === 'AM' && hora24 === 12) hora24 = 0;
-      data.hora = `${hora24.toString().padStart(2, '0')}:${minutosFinal}`;
-      await createVisita(data);
-      await fetchVisitas();
-      setModalOpen(false);
-      reset();
-      setMinutos('00');
-      alert('✅ Visita registrada');
+      const data = await visitaService.obtenerVisitas(token);
+      setVisitas(data);
     } catch (error) {
-      alert('❌ Error al registrar');
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMinutosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (/^\d{0,2}$/.test(val) && (val === '' || parseInt(val) < 60)) setMinutos(val);
+  useEffect(() => {
+    fetchDatos();
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, [router]);
+
+  const isSameDay = (d1: Date, d2: Date) => 
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+  const vencidas = visitas.filter(v => {
+    const fechaVisita = new Date(v.fechaProgramada);
+    return fechaVisita < now && v.estado === 'PENDIENTE';
+  });
+
+  const paraHoy = visitas.filter(v => {
+    const fechaVisita = new Date(v.fechaProgramada);
+    return fechaVisita >= now && isSameDay(fechaVisita, now) && v.estado === 'PENDIENTE';
+  });
+
+  const proximas = visitas.filter(v => {
+    const fechaVisita = new Date(v.fechaProgramada);
+    const hoyFin = new Date(now);
+    hoyFin.setHours(23, 59, 59, 999);
+    return fechaVisita > hoyFin && v.estado === 'PENDIENTE';
+  });
+
+  const procesarVisita = async (id: string, nuevoEstado: 'COMPLETADA' | 'CANCELADA') => {
+    const mensaje = nuevoEstado === 'COMPLETADA' 
+        ? "¿Confirmas que la visita se realizó? Pasará a Seguimiento."
+        : "¿Seguro que quieres CANCELAR esta visita?";
+        
+    if(!confirm(mensaje)) return;
+
+    try {
+        const token = localStorage.getItem('token') || '';
+        await visitaService.actualizarVisita(token, id, { estado: nuevoEstado });
+        fetchDatos();
+    } catch (e) { 
+      alert('Error al actualizar'); 
+    }
   };
-  const handleBlurMinutos = () => {
-    if (minutos === '') setMinutos('00');
-    else setMinutos(minutos.padStart(2, '0'));
-  };
-  const formatTime12h = (timeString: string) => {
-    if (!timeString) return '';
-    const [hoursStr, minutesStr] = timeString.split(':');
-    let hours = parseInt(hoursStr, 10);
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${hours}:${minutesStr} ${ampm}`;
-  };
-  const getBadgeColor = (resultado: string) => {
-    if (resultado === 'Listo para comprar') return 'badge-success text-white font-bold';
-    if (resultado === 'Posible comprador') return 'badge-info text-white font-bold';
-    return 'badge-error text-white font-bold';
-  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-lg font-semibold text-slate-700">Cargando Agenda... 📅</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
-      <main className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-primary">Bitácora de Visitas Físicas</h1>
-          
-          {/* 👇 BOTÓN CORREGIDO */}
-          <button 
-            onClick={() => setModalOpen(true)} 
-            className="btn px-10 text-lg font-bold border-0 border-b-4 border-purple-600 shadow-lg backdrop-blur-md bg-white/80 text-gray-900 hover:bg-white dark:bg-black/40 dark:text-white dark:hover:bg-black/60"
-          >
-            + Registrar Visita
-          </button>
-        </div>
+      
+      <div className="container mx-auto p-4 md:p-8">
+        {/* HEADER MEJORADO */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-3xl">📅</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-800">Agenda de Visitas</h1>
+                <p className="text-slate-500">Gestiona tus salidas a campo en tiempo real</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => router.push('/visitas/nueva')}
+              className="btn bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all gap-2"
+            >
+              <span className="text-lg">➕</span>
+              Agendar Nueva Visita
+            </button>
+          </div>
 
-        {/* 👇 TABLA TRANSPARENTE */}
-        <div className="bg-transparent my-4 overflow-hidden rounded-xl">
-          <div className="card-body p-0">
-            <table className="table">
-              <thead className="bg-base-300/30 backdrop-blur-sm text-base-content">
-                <tr><th>Fecha / Hora</th><th>Cliente</th><th>Propiedad Visitada</th><th>Asesor</th><th>Resultado</th><th>Comentario</th></tr>
-              </thead>
-              <tbody>
-                {visitas.map((v) => (
-                  <tr key={v.id} className="border-b border-base-300/20 hover:bg-base-300/10 transition-all">
-                    <td><div className="font-bold">{v.fecha}</div><div className="text-xs text-gray-500 font-bold">{formatTime12h(v.hora)}</div></td>
-                    <td className="font-bold text-secondary">{v.Cliente?.nombre}</td>
-                    <td className="text-sm">{v.Propiedad?.direccion || '---'}</td>
-                    <td>{v.asesor}</td>
-                    <td><div className={`badge ${getBadgeColor(v.resultado)} p-3`}>{v.resultado}</div></td>
-                    <td className="italic text-gray-500 text-xs max-w-xs truncate">{v.comentario}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* RESUMEN RÁPIDO */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200 text-center">
+              <div className="text-3xl font-bold text-red-700">{vencidas.length}</div>
+              <div className="text-xs text-red-600 font-semibold mt-1">Vencidas</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 text-center">
+              <div className="text-3xl font-bold text-green-700">{paraHoy.length}</div>
+              <div className="text-xs text-green-600 font-semibold mt-1">Para Hoy</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 text-center">
+              <div className="text-3xl font-bold text-blue-700">{proximas.length}</div>
+              <div className="text-xs text-blue-600 font-semibold mt-1">Próximas</div>
+            </div>
           </div>
         </div>
 
-        <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title="Registrar Nueva Visita">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-4">
-             {/* ... (Formulario intacto) ... */}
-            <div className="form-control w-full">
-              <label className="label pb-2"><span className="label-text font-bold text-base">Cliente Visitado</span></label>
-              <select {...register('clienteId', { required: true })} className="select select-bordered w-full h-12 text-lg">
-                <option value="">Seleccione cliente...</option>
-                {clientes.map(c => (<option key={c.id} value={c.id}>{c.nombre}</option>))}
-              </select>
-            </div>
-            <div className="form-control w-full">
-              <label className="label pb-2"><span className="label-text font-bold text-base">Propiedad Visitada</span></label>
-              <select {...register('propiedadId', { required: true })} className="select select-bordered w-full h-12 text-lg">
-                <option value="">Seleccione la propiedad...</option>
-                {propiedades.map(p => (<option key={p.id} value={p.id}>{p.tipo}: {p.direccion}</option>))}
-              </select>
-            </div>
-            <div className="form-control w-full">
-              <label className="label pb-2"><span className="label-text font-bold text-base">Asesor(a)</span></label>
-              <input {...register('asesor', { required: true })} type="text" className="input input-bordered w-full h-12 px-4 text-lg" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="form-control">
-                <label className="label pb-2"><span className="label-text font-bold text-base">Fecha Visita</span></label>
-                <input {...register('fecha', { required: true })} type="date" className="input input-bordered w-full h-12 px-4 text-lg" />
-              </div>
-              <div className="form-control">
-                <label className="label pb-2"><span className="label-text font-bold text-base">Hora</span></label>
-                <div className="flex gap-1 items-center h-12">
-                  <select value={hora} onChange={(e) => setHora(e.target.value)} className="select select-bordered w-20 px-2 text-center h-full text-lg">
-                    {['01','02','03','04','05','06','07','08','09','10','11','12'].map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                  <span className="text-xl font-bold">:</span>
-                  <input type="text" value={minutos} onChange={handleMinutosChange} onBlur={handleBlurMinutos} className="input input-bordered w-20 px-2 text-center h-full text-lg" placeholder="00"/>
-                  <select value={ampm} onChange={(e) => setAmpm(e.target.value)} className="select select-bordered w-24 px-2 bg-base-200 h-full text-lg"><option value="AM">AM</option><option value="PM">PM</option></select>
+        {/* TABLEROS DE VISITAS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+          {/* VENCIDAS (ROJO) */}
+          <div className="flex flex-col gap-4">
+            <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white p-4 rounded-xl shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🚨</span>
+                  <div>
+                    <h2 className="font-bold text-lg">Vencidas</h2>
+                    <p className="text-xs opacity-90">Por regularizar</p>
+                  </div>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="font-bold text-lg">{vencidas.length}</span>
                 </div>
               </div>
             </div>
-            <div className="form-control w-full">
-              <label className="label pb-2"><span className="label-text font-bold text-base text-primary">Resultado</span></label>
-              <select {...register('resultado', { required: true })} className="select select-bordered w-full h-12 text-lg">
-                <option value="Listo para comprar">🟢 Listo para comprar</option>
-                <option value="Posible comprador">🔵 Posible comprador</option>
-                <option value="No le interesa">🔴 No le interesa</option>
-              </select>
+            
+            <div className="space-y-3">
+              {vencidas.map(v => <CardVisita key={v.id} visita={v} onAction={procesarVisita} tipo="vencida"/>)}
+              {vencidas.length === 0 && (
+                <div className="bg-white/70 backdrop-blur-sm rounded-xl p-8 text-center border-2 border-dashed border-slate-200">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p className="text-sm text-slate-500 font-medium">¡Estás al día!</p>
+                  <p className="text-xs text-slate-400">No hay visitas vencidas</p>
+                </div>
+              )}
             </div>
-            <div className="form-control w-full mt-2">
-              <label className="label pb-2"><span className="label-text font-bold text-base">Comentario</span></label>
-              <textarea {...register('comentario')} className="textarea textarea-bordered w-full h-24 resize-none text-lg p-4" placeholder="Detalles..." />
+          </div>
+
+          {/* HOY (VERDE) */}
+          <div className="flex flex-col gap-4">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔥</span>
+                  <div>
+                    <h2 className="font-bold text-lg">Próximas de Hoy</h2>
+                    <p className="text-xs opacity-90">Programadas para hoy</p>
+                  </div>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="font-bold text-lg">{paraHoy.length}</span>
+                </div>
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary w-full mt-6 text-lg h-12 shadow-lg font-bold bg-gradient-to-r from-blue-600 to-violet-600 border-none">
-              Guardar Bitácora
-            </button>
-          </form>
-        </Modal>
-      </main>
+            
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-2xl border-2 border-green-200 min-h-[300px]">
+              <div className="space-y-3">
+                {paraHoy.map(v => <CardVisita key={v.id} visita={v} onAction={procesarVisita} tipo="hoy"/>)}
+                {paraHoy.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-64">
+                    <div className="text-6xl mb-4">😴</div>
+                    <p className="text-slate-600 font-medium">Nada pendiente</p>
+                    <p className="text-xs text-slate-400">para el resto del día</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* PRÓXIMAS (AZUL) */}
+          <div className="flex flex-col gap-4">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-xl shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📆</span>
+                  <div>
+                    <h2 className="font-bold text-lg">Días Siguientes</h2>
+                    <p className="text-xs opacity-90">Programadas futuras</p>
+                  </div>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="font-bold text-lg">{proximas.length}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              {proximas.map(v => <CardVisita key={v.id} visita={v} onAction={procesarVisita} tipo="futuro"/>)}
+              {proximas.length === 0 && (
+                <div className="bg-white/70 backdrop-blur-sm rounded-xl p-8 text-center border-2 border-dashed border-slate-200">
+                  <div className="text-4xl mb-2">📭</div>
+                  <p className="text-sm text-slate-500 font-medium">Sin visitas programadas</p>
+                  <p className="text-xs text-slate-400">para los próximos días</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
+
+// --- COMPONENTE DE TARJETA MEJORADO ---
+const CardVisita = ({ visita, onAction, tipo }: { visita: Visita, onAction: any, tipo: string }) => {
+  const fecha = new Date(visita.fechaProgramada);
+  const hora = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dia = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+
+  let cardStyle = "bg-white/90 backdrop-blur-sm border-l-4 border-blue-400";
+  let headerBg = "bg-blue-50";
+  
+  if (tipo === 'vencida') {
+    cardStyle = "bg-gradient-to-br from-red-50 to-rose-50 border-l-4 border-red-500";
+    headerBg = "bg-red-100";
+  }
+  
+  if (tipo === 'hoy') {
+    cardStyle = "bg-white border-l-4 border-green-500 shadow-lg ring-2 ring-green-200";
+    headerBg = "bg-green-50";
+  }
+
+  return (
+    <div className={`${cardStyle} rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group`}>
+      {/* HEADER CON HORA Y FECHA */}
+      <div className={`${headerBg} px-4 py-3 flex justify-between items-center border-b border-slate-200`}>
+        <div className="flex items-center gap-3">
+          <div className="text-2xl font-bold text-slate-800">{hora}</div>
+          {tipo !== 'hoy' && (
+            <div className="text-xs text-slate-500 font-semibold bg-white px-2 py-1 rounded-md">
+              {dia}
+            </div>
+          )}
+        </div>
+        
+        {tipo === 'vencida' && (
+          <span className="badge badge-error text-white font-bold text-xs animate-pulse">
+            ⚠️ VENCIDA
+          </span>
+        )}
+        
+        {tipo === 'hoy' && (
+          <span className="badge bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold text-xs">
+            ⏰ HOY
+          </span>
+        )}
+      </div>
+
+      {/* CONTENIDO */}
+      <div className="p-4 space-y-3">
+        {/* PROPIEDAD */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🏠</span>
+            <span className="font-bold text-slate-800 text-base uppercase">{visita.propiedad.tipo}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-slate-500 ml-7">
+            <span>📍</span>
+            <span className="truncate">{visita.propiedad.ubicacion}</span>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200"></div>
+
+        {/* CLIENTE */}
+        <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center shadow-md">
+            <span className="text-white font-bold text-lg">{visita.cliente.nombre.charAt(0)}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] text-slate-400 uppercase font-bold">Cliente</div>
+            <div className="text-sm font-bold text-slate-700 truncate">{visita.cliente.nombre}</div>
+          </div>
+        </div>
+
+        {/* ASESOR */}
+        <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-lg">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+            <span className="text-xl">👔</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] text-blue-400 uppercase font-bold">Asesor</div>
+            <div className="text-sm font-bold text-blue-700 truncate">
+              {visita.asesor?.nombre || 'Yo'}
+            </div>
+          </div>
+        </div>
+
+        {/* BOTONES DE ACCIÓN */}
+        <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <button 
+            onClick={() => onAction(visita.id, 'COMPLETADA')}
+            className="flex-1 btn btn-sm bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all"
+          >
+            <span>✅</span> Realizada
+          </button>
+          <button 
+            onClick={() => onAction(visita.id, 'CANCELADA')}
+            className="flex-1 btn btn-sm bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-0 shadow-md hover:shadow-lg transition-all"
+          >
+            <span>🚫</span> Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

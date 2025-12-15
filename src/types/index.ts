@@ -119,18 +119,31 @@ export interface Operacion {
   Cliente?: Cliente;
 }
 
-// Definición de Visita
+// Definición de Visita (ACTUALIZADA CORRECTAMENTE)
 export interface Visita {
   id: string;
-  asesor: string;
-  fecha: string;
-  hora: string;
-  resultado: string;
-  comentario?: string;
+  fechaProgramada: string;
+  estado: 'PENDIENTE' | 'COMPLETADA' | 'CANCELADA';
+  comentariosPrevios?: string;
+  resultadoSeguimiento?: string;
+  
   clienteId: string;
   propiedadId: string;
-  Cliente?: Cliente;
-  Propiedad?: Propiedad;
+  asesorId?: string;
+
+  cliente: {
+      nombre: string;
+      email?: string;
+      telefono?: string;
+  };
+  propiedad: {
+      tipo: string;
+      ubicacion: string;
+      precio: number;
+  };
+  asesor?: {
+      nombre: string;
+  };
 }
 
 // Definición de Seguimiento
@@ -145,7 +158,7 @@ export interface Seguimiento {
   Propiedad?: Propiedad;
 }
 
-// Definición de Usuario (Actualizada para el Dashboard)
+// Definición de Usuario
 export interface Usuario {
   id: string;
   nombre: string;

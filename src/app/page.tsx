@@ -14,15 +14,24 @@ export default function Home() {
             <div className="max-w-md">
               <h1 className="text-5xl font-bold text-primary">🏠 Panel de Control</h1>
               <p className="py-6 text-lg text-gray-500">
-                Bienvenido al sistema Sillar Inmobiliaria. Selecciona un módulo para gestionar.
+                Bienvenido al sistema Sillar Inmobiliaria. Selecciona un módulo.
               </p>
             </div>
           </div>
         </div>
 
-        {/* GRID DE TARJETAS (3 columnas para que queden 2 filas perfectas de 3) */}
+        {/* GRID DE TARJETAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
+          {/* ⭐ NUEVO: DASHBOARD ADMIN (Estadísticas y Excel) */}
+          <Link href="/admin/dashboard" className="card bg-white shadow-xl hover:scale-105 transition-transform cursor-pointer border-l-8 border-purple-600">
+            <div className="card-body items-center text-center">
+              <div className="text-5xl mb-2">📊</div>
+              <h2 className="card-title text-2xl font-bold text-purple-700">Dashboard Admin</h2>
+              <p className="text-gray-500">Estadísticas, Reportes y Excel</p>
+            </div>
+          </Link>
+
           {/* 1. PROPIETARIOS */}
           <Link href="/propietarios" className="card bg-base-100 shadow-xl hover:scale-105 transition-transform cursor-pointer border-b-4 border-info">
             <div className="card-body items-center text-center">
@@ -77,7 +86,7 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* 7: SEGUIMIENTO */}
+          {/* 7. SEGUIMIENTO */}
           <Link href="/seguimiento" className="card bg-base-100 shadow-xl hover:scale-105 transition-transform cursor-pointer border-b-4 border-accent">
             <div className="card-body items-center text-center">
               <div className="text-5xl mb-2">📞</div> 
