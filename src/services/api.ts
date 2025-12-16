@@ -190,4 +190,14 @@ export const getNotificaciones = async () => {
   return response.data;
 };
 
+export const getCumpleanos = (mes: number) => {
+  return api.get(`/admin/cumpleanos?mes=${mes}`);
+};
+
+export const downloadExcelCumpleanos = (mes: number) => {
+  return api.get(`/admin/cumpleanos/excel?mes=${mes}`, {
+    responseType: 'blob', // Importante para que el navegador sepa que es un archivo
+  });
+};
+
 export default api;

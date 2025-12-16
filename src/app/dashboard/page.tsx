@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, FaCalendarCheck, FaRoute } from 'react-icons/fa';
+import { FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -89,7 +89,7 @@ export default function DashboardPage() {
         {/* --- GRID DE MÓDULOS --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             
-            {/* 1. AGENDA DE VISITAS (NUEVO) - TEAL */}
+            {/* 1. AGENDA DE VISITAS */}
             <Link href="/visitas" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-teal-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-2">
@@ -100,7 +100,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 2. SEGUIMIENTO (NUEVO) - ROSA */}
+            {/* 2. SEGUIMIENTO */}
             <Link href="/seguimiento" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-pink-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-2">
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 3. PROPIEDADES - AZUL */}
+            {/* 3. PROPIEDADES */}
             <Link href="/propiedades" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-blue-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-2">
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 4. PROPIETARIOS - VERDE */}
+            {/* 4. PROPIETARIOS */}
             <Link href="/propietarios" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-green-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-2">
@@ -133,7 +133,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 5. CLIENTES - MORADO */}
+            {/* 5. CLIENTES */}
             <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-purple-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-2">
@@ -147,7 +147,7 @@ export default function DashboardPage() {
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN (OSCURO) --- */}
             {isAdmin && (
                 <>
-                    {/* 6. USUARIOS (OSCURO) */}
+                    {/* 6. USUARIOS */}
                     <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-2">
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 7. REPORTES (OSCURO - CORREGIDO) */}
+                    {/* 7. REPORTES */}
                     <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-2">
@@ -168,6 +168,19 @@ export default function DashboardPage() {
                                 <h2 className="card-title">Reportes</h2>
                             </div>
                             <p className="text-slate-400 text-sm">Estadísticas, métricas y exportación a Excel.</p>
+                        </div>
+                    </Link>
+
+                    {/* 8. CUMPLEAÑOS */}
+                    <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
+                        <div className="card-body">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="bg-pink-500/20 p-3 rounded-full text-pink-400 group-hover:scale-110 transition-transform">
+                                    <FaBirthdayCake className="text-2xl"/>
+                                </div>
+                                <h2 className="card-title">Cumpleaños</h2>
+                            </div>
+                            <p className="text-slate-400 text-sm">Calendario de clientes y propietarios.</p>
                         </div>
                     </Link>
                 </>
