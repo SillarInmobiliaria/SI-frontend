@@ -40,10 +40,10 @@ export default function ClientesPage() {
 
   const { register, handleSubmit, reset, watch } = useForm<FormClienteCompleto>();
   
-  // 1. OBTENEMOS EL ID SELECCIONADO EN TIEMPO REAL
+  // 1. OBTENEMOS EL ID SELECCIONADO EN TIEMPO REAL (FORMULARIO)
   const selectedPropiedadId = watch('propiedadId');
   
-  // 2. BUSCAMOS LOS DATOS COMPLETOS DE ESA PROPIEDAD
+  // 2. BUSCAMOS LOS DATOS COMPLETOS PARA LA TARJETA AZUL (FORMULARIO)
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const today = new Date().toISOString().split('T')[0];
@@ -101,6 +101,8 @@ export default function ClientesPage() {
       }
 
       await fetchClientes();
+      await fetchIntereses();
+      
       setModalOpen(false);
       reset();
       alert('✅ Cliente Registrado');
@@ -127,17 +129,24 @@ export default function ClientesPage() {
     return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
+  // --- LÓGICA PARA EL MODAL DE DETALLE ---
   let interesPrincipal = null;
+  let datosPropiedadInteres = null;
   let asesorClienteGuardado = 'No especificado';
   let observacionesGuardadas = '';
 
   if (selectedCliente) {
       interesPrincipal = intereses.find(i => i.clienteId === selectedCliente.id);
-      if (interesPrincipal?.nota) {
-          const partes = interesPrincipal.nota.split('. Notas: ');
-          if (partes[0].includes('Asesor: ')) asesorClienteGuardado = partes[0].replace('Asesor: ', '');
-          if (partes.length > 1) observacionesGuardadas = partes[1];
-          else observacionesGuardadas = interesPrincipal.nota;
+      
+      if (interesPrincipal) {
+          datosPropiedadInteres = interesPrincipal.Propiedad || interesPrincipal.Propiedad;
+          
+          if (interesPrincipal.nota) {
+              const partes = interesPrincipal.nota.split('. Notas: ');
+              if (partes[0].includes('Asesor: ')) asesorClienteGuardado = partes[0].replace('Asesor: ', '');
+              if (partes.length > 1) observacionesGuardadas = partes[1];
+              else observacionesGuardadas = interesPrincipal.nota;
+          }
       }
   }
 
@@ -212,7 +221,6 @@ export default function ClientesPage() {
                                 <option value="">-- Seleccionar --</option>
                                 {propiedades.map(p => (
                                     <option key={p.id} value={p.id}>
-                                        {/* Mostramos Tipo y Dirección en el desplegable */}
                                         {p.tipo} - {p.direccion} ({p.moneda} {p.precio})
                                     </option>
                                 ))}
@@ -221,7 +229,7 @@ export default function ClientesPage() {
                         
                         <div className="form-control"><label className="label font-bold text-gray-700">Asesor</label><input {...register('asesorCliente')} className="input input-bordered w-full bg-white"/></div>
                         
-                        {/* --- TARJETA DE DETALLES (NUEVO) --- */}
+                        {/* --- TARJETA DE DETALLES AZUL (FORMULARIO) --- */}
                         {propiedadSeleccionada && (
                             <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 animate-fade-in-down">
                                 <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">
@@ -396,20 +404,22 @@ export default function ClientesPage() {
                                         </div>
                                         <h3 className="text-sm font-bold uppercase">Interés Principal</h3>
                                     </div>
-                                    {interesPrincipal && interesPrincipal.Propiedad ? (
+                                    
+                                    {/* --- TARJETA MORADA DE DETALLES --- */}
+                                    {datosPropiedadInteres ? (
                                         <div className="space-y-3.5">
                                             <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
                                                 <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Propiedad</p>
-                                                <p className="font-bold text-lg">{interesPrincipal.Propiedad.direccion}</p>
+                                                <p className="font-bold text-lg">{datosPropiedadInteres.direccion}</p>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
                                                     <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Precio</p>
-                                                    <p className="font-bold text-base">{interesPrincipal.Propiedad.moneda} {interesPrincipal.Propiedad.precio}</p>
+                                                    <p className="font-bold text-base">{datosPropiedadInteres.moneda} {datosPropiedadInteres.precio}</p>
                                                 </div>
                                                 <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
                                                     <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Operación</p>
-                                                    <p className="font-bold text-base">{interesPrincipal.Propiedad.modalidad}</p>
+                                                    <p className="font-bold text-base">{datosPropiedadInteres.modalidad}</p>
                                                 </div>
                                             </div>
                                             <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">

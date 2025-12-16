@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-// Importamos todos los iconos necesarios, incluyendo los nuevos
 import { FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, FaCalendarCheck, FaRoute } from 'react-icons/fa';
 
 export default function DashboardPage() {
