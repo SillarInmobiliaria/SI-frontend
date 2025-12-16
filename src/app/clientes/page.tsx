@@ -39,7 +39,13 @@ export default function ClientesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, handleSubmit, reset, watch } = useForm<FormClienteCompleto>();
+  
+  // 1. OBTENEMOS EL ID SELECCIONADO EN TIEMPO REAL
   const selectedPropiedadId = watch('propiedadId');
+  
+  // 2. BUSCAMOS LOS DATOS COMPLETOS DE ESA PROPIEDAD
+  const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
+
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -198,11 +204,57 @@ export default function ClientesPage() {
                         <div className="form-control"><label className="label font-bold text-gray-700">Fecha Alta *</label><input {...register('fechaAlta')} type="date" defaultValue={today} className="input input-bordered w-full bg-white"/></div>
 
                         <div className="md:col-span-2 pb-2 border-b mt-4 mb-2"><h4 className="text-xs font-bold text-gray-500 uppercase flex gap-2"><FaHome/> Interés (Opcional)</h4></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Propiedad</label><select {...register('propiedadId')} className="select select-bordered w-full bg-white"><option value="">-- Seleccionar --</option>{propiedades.map(p => <option key={p.id} value={p.id}>{p.direccion}</option>)}</select></div>
+                        
+                        {/* SELECTOR DE PROPIEDAD */}
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700">Propiedad</label>
+                            <select {...register('propiedadId')} className="select select-bordered w-full bg-white">
+                                <option value="">-- Seleccionar --</option>
+                                {propiedades.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {/* Mostramos Tipo y Dirección en el desplegable */}
+                                        {p.tipo} - {p.direccion} ({p.moneda} {p.precio})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        
                         <div className="form-control"><label className="label font-bold text-gray-700">Asesor</label><input {...register('asesorCliente')} className="input input-bordered w-full bg-white"/></div>
                         
+                        {/* --- TARJETA DE DETALLES (NUEVO) --- */}
+                        {propiedadSeleccionada && (
+                            <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 animate-fade-in-down">
+                                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">
+                                    📋 Datos de la Propiedad Seleccionada
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 text-sm text-slate-700">
+                                    <p className="col-span-2">
+                                        <span className="font-semibold">📍 Dirección:</span> {propiedadSeleccionada.direccion}, {propiedadSeleccionada.ubicacion}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">💰 Precio:</span> <span className="text-green-700 font-bold">{propiedadSeleccionada.moneda} {propiedadSeleccionada.precio}</span>
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">🏠 Tipo:</span> {propiedadSeleccionada.tipo}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">📏 Área:</span> {propiedadSeleccionada.area} m²
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">👔 Asesor Captador:</span> {propiedadSeleccionada.asesor || 'No registrado'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="md:col-span-2 pb-2 border-b mt-4 mb-2"><h4 className="text-xs font-bold text-gray-500 uppercase flex gap-2"><FaStickyNote/> Observaciones</h4></div>
-                        <div className="form-control md:col-span-2"><textarea {...register('observaciones')} className="textarea textarea-bordered h-20 bg-white"></textarea></div>
+                        <div className="form-control md:col-span-2 w-full">
+                            <textarea 
+                                {...register('observaciones')} 
+                                className="textarea textarea-bordered h-24 w-full bg-white resize-none" 
+                                placeholder="Escribe aquí notas adicionales..."
+                            ></textarea>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-4 mt-8 pt-6 border-t"><button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost text-gray-500">Cancelar</button><button type="submit" disabled={isSubmitting} className="btn btn-primary px-8 bg-indigo-600 border-none">{isSubmitting?'...':'Guardar'}</button></div>
                 </form>
@@ -210,12 +262,10 @@ export default function ClientesPage() {
           </div>
         )}
 
-        {/* MODAL DETALLE - MEJORADO VISUALMENTE */}
+        {/* MODAL DETALLE */}
         {isDetailOpen && selectedCliente && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
                 <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-4 max-h-[95vh] overflow-y-auto">
-                    
-                    {/* CABECERA PREMIUM */}
                     <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 p-6 text-white relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-12 -mt-12"></div>
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
@@ -254,13 +304,9 @@ export default function ClientesPage() {
                         </div>
                     </div>
 
-                    {/* CUERPO EN 2 COLUMNAS */}
                     <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                            
-                            {/* COLUMNA IZQUIERDA */}
                             <div className="space-y-5">
-                                {/* INFORMACIÓN PERSONAL */}
                                 <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
                                     <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-green-100">
                                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
@@ -308,7 +354,6 @@ export default function ClientesPage() {
                                     </div>
                                 </div>
 
-                                {/* INFORMACIÓN DE CONTACTO */}
                                 <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
                                     <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-blue-100">
                                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
@@ -343,9 +388,7 @@ export default function ClientesPage() {
                                 </div>
                             </div>
 
-                            {/* COLUMNA DERECHA */}
                             <div className="space-y-5">
-                                {/* INTERÉS PRINCIPAL */}
                                 <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-600 p-5 rounded-2xl shadow-xl text-white">
                                     <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-white/20">
                                         <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
@@ -381,7 +424,6 @@ export default function ClientesPage() {
                                     )}
                                 </div>
 
-                                {/* OBSERVACIONES */}
                                 {observacionesGuardadas && (
                                     <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-5 rounded-2xl shadow-xl text-white">
                                         <div className="flex items-center gap-2.5 mb-3.5">

@@ -8,7 +8,8 @@ import {
   FaCheckCircle, FaTimesCircle, FaExclamationCircle, FaSave, 
   FaMapMarkerAlt, FaBed, FaBath, FaCar, FaRulerCombined, 
   FaImages, FaUserTie, FaWhatsapp, FaFileContract, FaTag, FaBuilding,
-  FaYoutube, FaFilePdf, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers, FaCalendarAlt
+  FaYoutube, FaFilePdf, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers, FaCalendarAlt,
+  FaAlignLeft, FaShareAlt
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'http://localhost:4000/';
@@ -33,10 +34,8 @@ export default function PropiedadDetallePage() {
         if(!id) return;
         try {
             const { data } = await api.get(`/propiedades/${id}`);
-            console.log("Datos recibidos:", data); // Para depurar
             setPropiedad(data);
             
-            // Cargar datos de auditoría
             setObservaciones(data.observaciones || {});
             setEstadosDocs({
                 testimonio: data.testimonio,
@@ -73,6 +72,20 @@ export default function PropiedadDetallePage() {
     finally { setGuardandoObs(false); }
   };
 
+  // --- FUNCIÓN PARA COMPARTIR FICHA (CLIENTE) ---
+  const handleShare = () => {
+    if (!propiedad) return;
+    const currentUrl = window.location.href;
+    const text = `🏡 *Oportunidad Sillar Inmobiliaria*\n\n` +
+                 `📍 ${propiedad.tipo} en ${propiedad.ubicacion}\n` +
+                 `💰 Precio: ${propiedad.moneda} ${Number(propiedad.precio).toLocaleString()}\n` +
+                 `📏 Área: ${propiedad.area} m²\n\n` +
+                 `🔗 *Ver detalles y fotos aquí:* \n${currentUrl}`;
+
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold">No se cargaron los datos. Revisa la consola.</div>;
 
@@ -93,7 +106,6 @@ export default function PropiedadDetallePage() {
       return <FaTimesCircle className="text-red-500 text-2xl"/>;
   };
 
-  // Filtrar links vacíos
   const linksExternos = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
@@ -152,7 +164,7 @@ export default function PropiedadDetallePage() {
                                 </div>
                             ) : <div className="text-center py-10 text-gray-400">Sin imágenes</div>}
 
-                            {/* Links Externos (NUEVO) */}
+                            {/* Links Externos */}
                             {linksExternos.length > 0 && (
                                 <div className="flex flex-wrap gap-3">
                                     {linksExternos.map((link: string, i: number) => (
@@ -171,11 +183,25 @@ export default function PropiedadDetallePage() {
                                 <div className="text-center"><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.cocheras}</p><p className="text-xs font-bold text-gray-400 uppercase">Cocheras</p></div>
                             </div>
 
-                            {/* Descripción */}
+                            {/* Descripción Marketing */}
                             {propiedad.descripcion && (
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><FaTag className="text-indigo-500"/> Descripción</h3>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><FaTag className="text-indigo-500"/> Descripción Comercial</h3>
                                     <p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p>
+                                </div>
+                            )}
+
+                            {/* DESCRIPCIÓN TÉCNICA / DETALLADA */}
+                            {(propiedad.detalles || propiedad.observaciones) && (
+                                <div className="mt-8 pt-6 border-t border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <FaAlignLeft className="text-purple-600"/> Detalles Técnicos y Acabados
+                                    </h3>
+                                    <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm">
+                                        <p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg">
+                                            {propiedad.detalles || propiedad.observaciones}
+                                        </p>
+                                    </div>
                                 </div>
                             )}
 
@@ -212,11 +238,9 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* TAB LEGAL (ADMIN) */}
+                    {/* TAB LEGAL */}
                     {activeTab === 'legal' && isAdmin && (
                         <div className="animate-fade-in space-y-8">
-                            
-                            {/* 1. PROPIETARIOS (LISTA) */}
                             <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
                                 <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2"><FaUsers/> Propietarios (Captación)</h3>
                                 {propiedad.Propietarios && propiedad.Propietarios.length > 0 ? (
@@ -236,7 +260,6 @@ export default function PropiedadDetallePage() {
                                 ) : <p className="text-gray-500 italic">No hay propietarios vinculados.</p>}
                             </div>
 
-                            {/* 2. DATOS DEPARTAMENTO */}
                             {propiedad.tipo === 'Departamento' && (
                                 <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
                                     <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2"><FaBuilding/> Datos Departamento</h3>
@@ -248,14 +271,12 @@ export default function PropiedadDetallePage() {
                                 </div>
                             )}
 
-                            {/* 3. CONTRATO Y COMISIÓN */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center"><p className="text-xs font-bold text-gray-400 uppercase">Inicio Contrato</p><p className="font-bold">{propiedad.inicioContrato || '--'}</p></div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center"><p className="text-xs font-bold text-gray-400 uppercase">Vencimiento</p><p className="font-bold text-red-500">{propiedad.finContrato || '--'}</p></div>
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-center"><p className="text-xs font-bold text-gray-400 uppercase">Comisión</p><p className="font-bold text-green-600">{propiedad.comision}%</p></div>
                             </div>
 
-                            {/* 4. AUDITORÍA DOCUMENTOS */}
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><FaFileContract className="text-emerald-600"/> Checklist Legal</h3>
@@ -286,7 +307,7 @@ export default function PropiedadDetallePage() {
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Precio de {propiedad.modalidad}</p>
                     <div className="flex items-baseline gap-1 text-indigo-900 mb-6">
-                        <span className="text-5xl font-black tracking-tighter">$ {Number(propiedad.precio).toLocaleString()}</span>
+                        <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
                     
                     <div className="divider my-6"></div>
@@ -299,8 +320,26 @@ export default function PropiedadDetallePage() {
                         </div>
                     </div>
                     
-                    <button className="btn btn-success w-full text-white font-bold gap-2 shadow-xl shadow-green-100 hover:shadow-green-200 transition-all h-14 text-lg">
-                        <FaWhatsapp className="text-2xl"/> Contactar Ahora
+                    {/* BOTONES DE ACCIÓN (FINAL) */}
+                    
+                    {/* 1. CONTACTAR DUEÑO (VERDE) - Solo si hay propietarios */}
+                    {propiedad.Propietarios && propiedad.Propietarios.length > 0 ? (
+                        <a 
+                            href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion} (Sillar Inmobiliaria).`}
+                            target="_blank"
+                            className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-bold gap-2 shadow-xl shadow-green-100 hover:shadow-green-200 transition-all h-14 text-lg mb-3 flex items-center justify-center"
+                        >
+                            <FaUserTie className="text-2xl"/> Contactar Dueño
+                        </a>
+                    ) : (
+                        <button disabled className="btn bg-gray-200 text-gray-400 border-none w-full font-bold gap-2 h-14 text-lg mb-3">
+                            <FaUserTie className="text-2xl"/> Sin Propietario
+                        </button>
+                    )}
+
+                    {/* 2. COMPARTIR FICHA (MORADO) - Para Clientes */}
+                    <button onClick={handleShare} className="btn bg-purple-600 hover:bg-purple-700 text-white w-full font-bold gap-2 shadow-lg h-12 border-none">
+                        <FaShareAlt/> Compartir Ficha
                     </button>
                     
                     <div className="mt-4 text-center">

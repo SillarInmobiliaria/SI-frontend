@@ -1,86 +1,134 @@
 'use client';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Navbar from '../../components/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { cambiarPassword } from '../../services/api';
-import { FaLock, FaKey, FaArrowLeft } from 'react-icons/fa';
-import Link from 'next/link'; // Para el botón de volver
 
 export default function CambiarPasswordPage() {
-  const { user, logout } = useAuth();
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const router = useRouter();
+  const { user } = useAuth();
+  
+  const [passwords, setPasswords] = useState({
+    nueva: '',
+    confirmar: ''
+  });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const onSubmit = async (data: any) => {
-    if (!user) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // 1. Validaciones básicas
+    if (passwords.nueva.length < 6) {
+        setError('La contraseña debe tener al menos 6 caracteres.');
+        return;
+    }
+    if (passwords.nueva !== passwords.confirmar) {
+        setError('Las contraseñas no coinciden.');
+        return;
+    }
+
     setLoading(true);
+
     try {
-        await cambiarPassword({ 
-            userId: user.id, 
-            nuevaPassword: data.password 
-        });
-        alert('✅ Contraseña actualizada. Inicia sesión de nuevo.');
-        logout(); 
-    } catch (error) {
-        alert('❌ Error al actualizar contraseña');
+      const token = localStorage.getItem('token');
+      if (!token) { 
+          router.push('/login'); 
+          return; 
+      }
+
+      // 2. Petición al Backend
+      const res = await fetch('http://localhost:4000/api/auth/cambiar-password', {
+        method: 'POST', // O PUT, dependiendo de tu backend
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: passwords.nueva })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Error al actualizar contraseña');
+      }
+
+      // 3. Éxito
+      alert('¡Contraseña actualizada correctamente! Por favor inicia sesión nuevamente.');
+      localStorage.removeItem('token'); // Cerramos sesión para forzar re-ingreso
+      localStorage.removeItem('user');
+      router.push('/login');
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Ocurrió un error inesperado.');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  const password = watch("password");
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-      <div className="card w-full max-w-lg bg-base-100 shadow-2xl">
-        <div className="card-body">
-            
-            {/* Botón para volver si te arrepientes */}
-            <Link href="/dashboard" className="btn btn-ghost btn-sm w-fit mb-2 gap-2">
-                <FaArrowLeft /> Volver al Dashboard
-            </Link>
+    <div className="min-h-screen bg-base-200">
+      <Navbar />
+      
+      <div className="container mx-auto p-4 flex justify-center items-center h-[80vh]">
+        <div className="card w-full max-w-md bg-white shadow-xl">
+          <div className="card-body">
+            <button 
+                onClick={() => router.back()} 
+                className="btn btn-sm btn-ghost absolute left-4 top-4"
+            >
+                ← Volver
+            </button>
 
-            <h2 className="text-2xl font-bold text-center mb-2">🔐 Cambiar Contraseña</h2>
-            <p className="text-center text-slate-500 mb-6">
-                Hola <b>{user?.nombre}</b>. Ingresa tu nueva clave personal.
+            <h2 className="card-title text-2xl font-bold text-center justify-center mt-6">
+                🔐 Cambiar Contraseña
+            </h2>
+            <p className="text-center text-slate-500 mb-4">
+                Hola <span className="font-bold text-primary">{user?.nombre}</span>. Ingresa tu nueva clave personal.
             </p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="form-control">
-                    <label className="label font-bold">Nueva Contraseña</label>
-                    <div className="relative">
-                        <FaKey className="absolute left-3 top-3.5 text-gray-400"/>
-                        <input 
-                            {...register('password', { required: true, minLength: 6 })} 
-                            type="password" 
-                            className="input input-bordered w-full pl-10" 
-                            placeholder="Mínimo 6 caracteres"
-                        />
-                    </div>
-                    {errors.password && <span className="text-error text-xs mt-1">Mínimo 6 caracteres</span>}
+            {error && (
+                <div className="alert alert-error text-sm py-2 mb-4 text-white font-bold">
+                    ⚠️ {error}
                 </div>
+            )}
 
-                <div className="form-control">
-                    <label className="label font-bold">Confirmar Contraseña</label>
-                    <div className="relative">
-                        <FaLock className="absolute left-3 top-3.5 text-gray-400"/>
-                        <input 
-                            {...register('confirmPassword', { 
-                                required: true, 
-                                validate: (val) => val === password || "Las contraseñas no coinciden"
-                            })} 
-                            type="password" 
-                            className="input input-bordered w-full pl-10" 
-                            placeholder="Repite la contraseña"
-                        />
-                    </div>
-                    {errors.confirmPassword && <span className="text-error text-xs mt-1">{errors.confirmPassword.message as string}</span>}
-                </div>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="form-control">
+                <label className="label font-bold text-slate-600">Nueva Contraseña</label>
+                <input 
+                  type="password" 
+                  className="input input-bordered w-full"
+                  placeholder="Mínimo 6 caracteres"
+                  value={passwords.nueva}
+                  onChange={(e) => setPasswords({...passwords, nueva: e.target.value})}
+                  required 
+                />
+              </div>
 
-                <button type="submit" disabled={loading} className="btn btn-primary w-full mt-6">
-                    {loading ? 'Actualizando...' : 'Confirmar Cambio'}
-                </button>
+              <div className="form-control">
+                <label className="label font-bold text-slate-600">Confirmar Contraseña</label>
+                <input 
+                  type="password" 
+                  className="input input-bordered w-full"
+                  placeholder="Repite la contraseña"
+                  value={passwords.confirmar}
+                  onChange={(e) => setPasswords({...passwords, confirmar: e.target.value})}
+                  required 
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className={`btn btn-primary w-full mt-4 ${loading ? 'loading' : ''}`}
+                disabled={loading}
+              >
+                {loading ? 'Actualizando...' : 'Guardar Nueva Contraseña'}
+              </button>
             </form>
+          </div>
         </div>
       </div>
     </div>
