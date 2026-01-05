@@ -1,26 +1,27 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation'; 
 import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
-import { createCliente, createInteres, eliminarCliente, toggleEstadoCliente } from '../../services/api'; 
+import { createCliente, createInteres, eliminarCliente } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { 
-  FaUser, FaSearch, FaEye, FaPhone, FaEnvelope, FaMapMarkerAlt, 
-  FaTrash, FaBan, FaCheck, FaIdCard, FaRing, FaBriefcase, FaHome, FaStickyNote, FaUserTie,
-  FaBirthdayCake, FaCalendarAlt, FaUserPlus
+  FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
+  FaInfoCircle, FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter
 } from 'react-icons/fa';
 
+// Interface del formulario de Cliente
 interface FormClienteCompleto {
   nombre: string;
-  dni: string;
-  fechaNacimiento: string;
-  direccion: string;
   telefono1: string; 
+  dni?: string;
+  email?: string;
+  direccion?: string;
+  fechaNacimiento?: string;
   telefono2?: string; 
-  email: string;
-  estadoCivil: string;
-  ocupacion: string;
+  estadoCivil?: string;
+  ocupacion?: string;
   fechaAlta: string;
   propiedadId?: string;
   asesorCliente?: string;
@@ -28,25 +29,30 @@ interface FormClienteCompleto {
 }
 
 export default function ClientesPage() {
+  const router = useRouter(); 
   const { clientes, fetchClientes, propiedades, fetchPropiedades, intereses, fetchIntereses, loading } = useInmobiliariaStore();
   const { user } = useAuth();
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
+  const today = new Date().toISOString().split('T')[0];
+
+  // --- FILTROS ---
+  const [filterDate, setFilterDate] = useState(today);
+  const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); // 🟢 NUEVO FILTRO
+
+  // Modales
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
+
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, watch } = useForm<FormClienteCompleto>();
-  
-  // 1. OBTENEMOS EL ID SELECCIONADO EN TIEMPO REAL (FORMULARIO)
-  const selectedPropiedadId = watch('propiedadId');
-  
-  // 2. BUSCAMOS LOS DATOS COMPLETOS PARA LA TARJETA AZUL (FORMULARIO)
-  const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
+  // Forms
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormClienteCompleto>();
 
-  const today = new Date().toISOString().split('T')[0];
+  const selectedPropiedadId = watch('propiedadId');
+  const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   useEffect(() => {
     fetchClientes();
@@ -54,17 +60,43 @@ export default function ClientesPage() {
     fetchIntereses();
   }, []);
 
-  const handleEliminar = async (id: string) => {
-      if(!confirm('⚠️ ¿Estás seguro de eliminar este cliente?')) return;
-      try { await eliminarCliente(id); alert('✅ Eliminado'); fetchClientes(); } 
-      catch (e) { alert('❌ Error al eliminar'); }
-  };
+  // --- LÓGICA DE FILTRADO (Buscador + Fecha + Tipo) ---
+  const clientesFiltrados = useMemo(() => {
+      // 1. Filtro por Texto
+      let filtrados = clientes.filter(c => 
+        c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (c.dni && c.dni.includes(searchTerm)) ||
+        c.telefono1.includes(searchTerm)
+      );
 
-  const handleSuspender = async (id: string, estadoActual: boolean) => {
-      const nuevo = !estadoActual;
-      if(!confirm(`¿Deseas ${nuevo ? 'activar' : 'suspender'} este cliente?`)) return;
-      try { await toggleEstadoCliente(id, nuevo); fetchClientes(); } 
-      catch (e) { alert('❌ Error al cambiar estado'); }
+      // 2. Filtro por Fecha
+      filtrados = filtrados.filter(c => {
+          const fechaRegistro = (c.fechaAlta || (c as any).createdAt || '').split('T')[0];
+          return fechaRegistro === filterDate;
+      });
+
+      // 3. FILTRO POR TIPO (Interesado vs Cliente)
+      if (filterType !== 'TODOS') {
+          filtrados = filtrados.filter(c => c.tipo === filterType);
+      }
+
+      // Ordenar por hora (más reciente primero)
+      filtrados.sort((a, b) => {
+          const dateA = new Date(a.fechaAlta || (a as any).createdAt || new Date().toISOString());
+          const dateB = new Date(b.fechaAlta || (b as any).createdAt || new Date().toISOString());
+          return dateB.getTime() - dateA.getTime();
+      });
+
+      return filtrados;
+  }, [clientes, searchTerm, filterDate, filterType]);
+
+
+  // --- ACCIONES ---
+
+  const handleEliminar = async (id: string) => {
+      if(!confirm('⚠️ ¿Estás seguro de eliminar este registro?')) return;
+      try { await eliminarCliente(id); fetchClientes(); } 
+      catch (e) { alert('❌ Error al eliminar'); }
   };
 
   const handleViewDetail = (c: any) => { 
@@ -72,23 +104,31 @@ export default function ClientesPage() {
       setDetailOpen(true); 
   };
 
-  const onSubmit = async (data: FormClienteCompleto) => {
+  const handleOpenAgendarVisita = (c: any) => {
+      const interes = intereses.find(i => i.clienteId === c.id);
+      const propiedadId = interes ? interes.propiedadId : '';
+      const url = `/visitas?clienteId=${c.id}&clienteNombre=${encodeURIComponent(c.nombre)}&propiedadId=${propiedadId}`;
+      router.push(url);
+  };
+
+  const onSubmitCliente = async (data: FormClienteCompleto) => {
     setIsSubmitting(true);
     try {
       const resp = await createCliente({
           nombre: data.nombre,
-          dni: data.dni,
-          fechaNacimiento: data.fechaNacimiento,
-          direccion: data.direccion,
           telefono1: data.telefono1,
-          telefono2: data.telefono2,
-          email: data.email,
-          estadoCivil: data.estadoCivil,
-          ocupacion: data.ocupacion,
-          fechaAlta: data.fechaAlta,
+          dni: data.dni || undefined,
+          email: data.email || undefined,
+          direccion: data.direccion || undefined,
+          fechaNacimiento: data.fechaNacimiento || undefined,
+          telefono2: data.telefono2 || undefined,
+          estadoCivil: data.estadoCivil || undefined,
+          ocupacion: data.ocupacion || undefined,
+          fechaAlta: data.fechaAlta, 
           activo: undefined,
-          usuarioId: undefined
-      });
+          usuarioId: undefined,
+          tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO' 
+      } as any);
 
       const nuevoId = (resp as any).data?.id || (resp as any).id; 
       
@@ -102,10 +142,16 @@ export default function ClientesPage() {
 
       await fetchClientes();
       await fetchIntereses();
-      
       setModalOpen(false);
       reset();
-      alert('✅ Cliente Registrado');
+      alert('✅ Registrado Exitosamente');
+  
+      if (data.fechaAlta === today) {
+          setFilterDate(today);
+      } else {
+          setFilterDate(data.fechaAlta); 
+      }
+
     } catch (error) {
       console.error(error);
       alert('❌ Error al registrar');
@@ -118,153 +164,275 @@ export default function ClientesPage() {
     e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
   };
 
-  const filtered = clientes.filter(c => 
-    c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.dni?.includes(searchTerm)
-  );
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'No registrada';
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const formatDateLabel = (dateStr: string) => {
+      const d = new Date(dateStr + 'T00:00:00'); 
+      return d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
-
-  // --- LÓGICA PARA EL MODAL DE DETALLE ---
-  let interesPrincipal = null;
-  let datosPropiedadInteres = null;
-  let asesorClienteGuardado = 'No especificado';
-  let observacionesGuardadas = '';
-
-  if (selectedCliente) {
-      interesPrincipal = intereses.find(i => i.clienteId === selectedCliente.id);
-      
-      if (interesPrincipal) {
-          datosPropiedadInteres = interesPrincipal.Propiedad || interesPrincipal.Propiedad;
-          
-          if (interesPrincipal.nota) {
-              const partes = interesPrincipal.nota.split('. Notas: ');
-              if (partes[0].includes('Asesor: ')) asesorClienteGuardado = partes[0].replace('Asesor: ', '');
-              if (partes.length > 1) observacionesGuardadas = partes[1];
-              else observacionesGuardadas = interesPrincipal.nota;
-          }
-      }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
       <main className="container mx-auto p-6 max-w-7xl">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-xl shadow-sm">
-          <div><h1 className="text-3xl font-bold text-blue-900">Cartera de Clientes</h1><p className="text-gray-500 mt-1">Gestiona a tus compradores potenciales.</p></div>
-          <div className="flex gap-4 w-full md:w-auto">
-             <div className="relative w-full md:w-64"><FaSearch className="absolute left-3 top-3.5 text-gray-400"/><input type="text" placeholder="Buscar..." className="input input-bordered w-full pl-10 bg-gray-50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-             <button onClick={() => setModalOpen(true)} className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 border-none px-6">+ Nuevo</button>
+        
+        {/* HEADER & BUSCADOR */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-600">
+          <div>
+              <h1 className="text-3xl font-bold text-gray-900">Módulo de Atención</h1>
+              <p className="text-gray-500 mt-1">Gestiona tus interesados y citas.</p>
+          </div>
+          <div className="flex gap-4 w-full md:w-auto items-center">
+             <div className="relative w-full md:w-64">
+                 <FaSearch className="absolute left-3 top-3.5 text-gray-400"/>
+                 <input type="text" placeholder="Buscar..." className="input input-bordered w-full pl-10 bg-gray-50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+             </div>
+             <button onClick={() => setModalOpen(true)} className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 border-none px-6 shadow-md">
+                 <FaUserPlus className="text-lg"/> Nuevo
+             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="table w-full">
-              <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-bold tracking-wider">
-                <tr><th className="py-4 pl-6">CLIENTE</th><th>CONTACTO</th><th>ESTADO</th><th className="text-center">ACCIONES</th></tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? <tr><td colSpan={4} className="text-center py-8">Cargando...</td></tr> : filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-blue-50/30">
-                    <td className="pl-6 py-4"><div className="font-bold text-gray-900 text-lg">{c.nombre}</div><div className="flex items-center gap-2 mt-1"><span className="badge badge-ghost badge-sm font-mono">{c.dni}</span></div></td>
-                    <td><div className="flex flex-col gap-1"><span className="flex items-center gap-2 font-bold text-green-600"><FaPhone/> {c.telefono1 || '---'}</span>{c.email && <span className="text-xs text-gray-500">{c.email}</span>}</div></td>
-                    <td>{c.activo ? <span className="badge badge-success text-white">Activo</span> : <span className="badge badge-error text-white">Susp.</span>}</td>
-                    <td>
-                        <div className="flex justify-center gap-2">
-                            <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-blue-500 hover:bg-blue-50"><FaEye /></button>
-                            {isAdmin && (
-                                <><button onClick={() => handleSuspender(c.id, c.activo)} className={`btn btn-square btn-sm btn-ghost ${c.activo ? 'text-orange-400' : 'text-green-600'}`}>{c.activo ? <FaBan/> : <FaCheck/>}</button>
-                                <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-red-500"><FaTrash /></button></>
+        {/* BARRA DE FILTROS (FECHA + TIPO) */}
+        <div className="flex flex-col xl:flex-row items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 gap-4">
+            
+            {/* SELECCIÓN DE FECHA */}
+            <div className="flex items-center gap-4 w-full xl:w-auto">
+                <div className="bg-indigo-50 p-3 rounded-full text-indigo-600 hidden sm:block">
+                    <FaCalendarAlt className="text-xl"/>
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Viendo registros del:</h3>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="date" 
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="input input-bordered input-sm font-bold text-gray-700"
+                        />
+                        {filterDate !== today && (
+                            <button 
+                                onClick={() => setFilterDate(today)}
+                                className="btn btn-sm btn-ghost text-indigo-600 hover:bg-indigo-50"
+                                title="Volver a Hoy"
+                            >
+                                <FaUndo/>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* NUEVO: FILTRO POR TIPO (INTERESADOS vs CLIENTES) */}
+            <div className="flex bg-gray-100 p-1 rounded-lg w-full xl:w-auto">
+                <button 
+                    onClick={() => setFilterType('TODOS')}
+                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all ${filterType === 'TODOS' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Todos ({clientesFiltrados.length + (filterType !== 'TODOS' ? clientes.filter(c => (c.fechaAlta || (c as any).createdAt || '').split('T')[0] === filterDate && c.tipo !== filterType).length : 0)})
+                </button>
+                <button 
+                    onClick={() => setFilterType('PROSPECTO')}
+                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'PROSPECTO' ? 'bg-white shadow text-orange-500' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <FaTrafficLight/> Interesados
+                </button>
+                <button 
+                    onClick={() => setFilterType('CLIENTE')}
+                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'CLIENTE' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <FaUserTie/> Clientes
+                </button>
+            </div>
+        </div>
+
+        {/* LISTA FILTRADA */}
+        {loading ? (
+            <div className="text-center py-10">Cargando datos...</div>
+        ) : (
+            <div className="animate-fade-in-up">
+                
+                {/* TÍTULO DE LA SECCIÓN (Dinámico) */}
+                <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-500 font-medium text-sm">
+                            Mostrando <span className="font-bold text-gray-800">{filterType === 'TODOS' ? 'todos los registros' : filterType === 'PROSPECTO' ? 'solo interesados' : 'solo clientes formales'}</span> del {formatDateLabel(filterDate)}
+                        </span>
+                    </div>
+                    <span className="badge badge-lg bg-indigo-100 text-indigo-800 border-none font-bold">
+                        {clientesFiltrados.length} resultados
+                    </span>
+                </div>
+
+                {/* TABLA O MENSAJE VACÍO */}
+                {clientesFiltrados.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                        <FaFilter className="text-4xl text-gray-200 mx-auto mb-3"/>
+                        <p className="text-gray-400 font-medium">No se encontraron {filterType === 'PROSPECTO' ? 'interesados' : filterType === 'CLIENTE' ? 'clientes' : 'registros'} en esta fecha.</p>
+                        <div className="flex gap-2 justify-center mt-3">
+                            {filterType !== 'TODOS' && (
+                                <button onClick={() => setFilterType('TODOS')} className="btn btn-sm btn-ghost text-indigo-500">Ver Todos</button>
+                            )}
+                            {filterDate !== today && (
+                                <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-500">Ir a Hoy</button>
                             )}
                         </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="table w-full">
+                                <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-wider">
+                                    <tr>
+                                        <th className="pl-6 w-10">Nivel</th>
+                                        <th>Nombre</th>
+                                        <th>Contacto</th>
+                                        <th>Interés</th>
+                                        <th className="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {clientesFiltrados.map((c: any) => {
+                                        const interesC = intereses.find(i => i.clienteId === c.id);
+                                        const propC = interesC?.Propiedad;
 
-        {/* MODAL NUEVO CLIENTE */}
+                                        return (
+                                            <tr key={c.id} className="hover:bg-indigo-50/30 transition-colors">
+                                                <td className="pl-6">
+                                                    {c.tipo === 'CLIENTE' ? (
+                                                        <div className="tooltip" data-tip="Cliente Formal">
+                                                            <FaUserTie className="text-green-600 text-lg"/>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="tooltip" data-tip="Interesado">
+                                                            <FaTrafficLight className="text-orange-400 text-lg"/>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <div className="font-bold text-gray-800">{c.nombre}</div>
+                                                    <div className="text-xs text-gray-400 font-mono flex gap-2">
+                                                        <span className={`font-bold ${c.tipo === 'CLIENTE' ? 'text-green-600' : 'text-orange-400'}`}>
+                                                            {c.tipo === 'CLIENTE' ? 'CLIENTE' : 'INTERESADO'}
+                                                        </span>
+                                                        {c.dni && <span className="text-gray-500">| DNI: {c.dni}</span>}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                                                        <FaPhone className="text-xs text-indigo-400"/> {c.telefono1}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {propC ? (
+                                                        <div className="text-xs">
+                                                            <span className="font-bold text-gray-700">{propC.tipo}</span>
+                                                            <span className="text-gray-500"> - {propC.ubicacion}</span>
+                                                            <div className="text-green-600 font-bold text-[10px]">{propC.moneda} {propC.precio}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-300 italic">Sin interés marcado</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <div className="flex justify-center gap-2">
+                                                        <button 
+                                                            onClick={() => handleOpenAgendarVisita(c)}
+                                                            className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium"
+                                                            title="Agendar en Calendario"
+                                                        >
+                                                            <FaCalendarCheck /> Visita
+                                                        </button>
+
+                                                        <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500"><FaEye /></button>
+                                                        
+                                                        {isAdmin && (
+                                                            <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* MODAL NUEVO CONTACTO */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
                 <div className="bg-indigo-900 text-white p-6 flex justify-between items-center">
-                  <h3 className="font-bold text-2xl flex items-center gap-3"><FaUserPlus/> Nuevo Cliente</h3>
+                  <h3 className="font-bold text-xl flex items-center gap-2"><FaUserPlus/> Nuevo Interesado</h3>
                   <button onClick={() => setModalOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white">✕</button>
                 </div>
-                <form onSubmit={handleSubmit(onSubmit)} className="p-8 bg-gray-50">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <div className="md:col-span-2 pb-2 border-b mb-2"><h4 className="text-xs font-bold text-gray-500 uppercase flex gap-2"><FaUserTie/> Datos Personales</h4></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Nombre *</label><input {...register('nombre', { required: true })} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">DNI *</label><input {...register('dni', { required: true, maxLength: 8 })} onInput={handleNumberInput} maxLength={8} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Celular 1 *</label><input {...register('telefono1', { required: true, maxLength: 9 })} onInput={handleNumberInput} maxLength={9} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Celular 2</label><input {...register('telefono2', { maxLength: 9 })} onInput={handleNumberInput} maxLength={9} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Email</label><input {...register('email')} type="email" className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Dirección</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Nacimiento *</label><input {...register('fechaNacimiento')} type="date" className="input input-bordered w-full bg-white" defaultValue={today}/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Estado Civil</label><select {...register('estadoCivil')} className="select select-bordered w-full bg-white"><option value="">--</option><option value="Soltero">Soltero</option><option value="Casado">Casado</option><option value="Divorciado">Divorciado</option><option value="Viudo">Viudo</option></select></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Ocupación</label><input {...register('ocupacion')} className="input input-bordered w-full bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-700">Fecha Alta *</label><input {...register('fechaAlta')} type="date" defaultValue={today} className="input input-bordered w-full bg-white"/></div>
-
-                        <div className="md:col-span-2 pb-2 border-b mt-4 mb-2"><h4 className="text-xs font-bold text-gray-500 uppercase flex gap-2"><FaHome/> Interés (Opcional)</h4></div>
-                        
-                        {/* SELECTOR DE PROPIEDAD */}
-                        <div className="form-control">
-                            <label className="label font-bold text-gray-700">Propiedad</label>
-                            <select {...register('propiedadId')} className="select select-bordered w-full bg-white">
-                                <option value="">-- Seleccionar --</option>
-                                {propiedades.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.tipo} - {p.direccion} ({p.moneda} {p.precio})
-                                    </option>
-                                ))}
-                            </select>
+                
+                <form onSubmit={handleSubmit(onSubmitCliente)} className="p-8 bg-gray-50">
+                    <div className="bg-white p-5 rounded-xl border border-indigo-100 shadow-sm mb-6">
+                        <div className="pb-2 border-b mb-4 flex justify-between items-center">
+                            <h4 className="text-sm font-bold text-indigo-600 uppercase">Datos Básicos</h4>
+                            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold">Registro Rápido</span>
                         </div>
-                        
-                        <div className="form-control"><label className="label font-bold text-gray-700">Asesor</label><input {...register('asesorCliente')} className="input input-bordered w-full bg-white"/></div>
-                        
-                        {/* --- TARJETA DE DETALLES AZUL (FORMULARIO) --- */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Nombre Completo *</label>
+                                <input {...register('nombre', { required: true })} className="input input-bordered w-full"/>
+                                {errors.nombre && <span className="text-red-500 text-xs">Requerido</span>}
+                            </div>
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Celular (9 dígitos) *</label>
+                                <input 
+                                    {...register('telefono1', { required: true, minLength: 9, maxLength: 9 })} 
+                                    maxLength={9} 
+                                    onInput={handleNumberInput} 
+                                    className="input input-bordered w-full"
+                                    placeholder="900000000"
+                                />
+                                {errors.telefono1 && <span className="text-red-500 text-xs">Debe tener 9 dígitos</span>}
+                            </div>
+                            
+                            {/* Selector de Propiedad */}
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Propiedad de Interés</label>
+                                <select {...register('propiedadId')} className="select select-bordered w-full">
+                                    <option value="">-- Seleccionar --</option>
+                                    {propiedades.map(p => (
+                                        <option key={p.id} value={p.id}>{p.tipo} - {p.direccion}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Fecha Registro</label>
+                                <input {...register('fechaAlta')} type="date" defaultValue={filterDate} className="input input-bordered w-full"/>
+                            </div>
+                        </div>
+
                         {propiedadSeleccionada && (
-                            <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-200 mt-2 animate-fade-in-down">
-                                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">
-                                    📋 Datos de la Propiedad Seleccionada
-                                </h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 text-sm text-slate-700">
-                                    <p className="col-span-2">
-                                        <span className="font-semibold">📍 Dirección:</span> {propiedadSeleccionada.direccion}, {propiedadSeleccionada.ubicacion}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">💰 Precio:</span> <span className="text-green-700 font-bold">{propiedadSeleccionada.moneda} {propiedadSeleccionada.precio}</span>
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">🏠 Tipo:</span> {propiedadSeleccionada.tipo}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">📏 Área:</span> {propiedadSeleccionada.area} m²
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">👔 Asesor Captador:</span> {propiedadSeleccionada.asesor || 'No registrado'}
-                                    </p>
+                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 animate-fade-in flex gap-4 items-start">
+                                <div className="text-blue-500 text-xl mt-1"><FaInfoCircle/></div>
+                                <div className="text-sm w-full">
+                                    <h5 className="font-bold text-blue-900 mb-1">Información de la Propiedad</h5>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <p><span className="font-semibold">Tipo:</span> {propiedadSeleccionada.tipo}</p>
+                                        <p className="col-span-2"><span className="font-semibold">Ubicación:</span> {propiedadSeleccionada.ubicacion}</p>
+                                        <p><span className="font-semibold">Área:</span> {propiedadSeleccionada.area} m²</p>
+                                        <p className="col-span-2">
+                                            <span className="font-semibold">Precio:</span> 
+                                            <span className="text-green-600 font-bold ml-1">{propiedadSeleccionada.moneda} {propiedadSeleccionada.precio}</span>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
-
-                        <div className="md:col-span-2 pb-2 border-b mt-4 mb-2"><h4 className="text-xs font-bold text-gray-500 uppercase flex gap-2"><FaStickyNote/> Observaciones</h4></div>
-                        <div className="form-control md:col-span-2 w-full">
-                            <textarea 
-                                {...register('observaciones')} 
-                                className="textarea textarea-bordered h-24 w-full bg-white resize-none" 
-                                placeholder="Escribe aquí notas adicionales..."
-                            ></textarea>
-                        </div>
                     </div>
-                    <div className="flex justify-end gap-4 mt-8 pt-6 border-t"><button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost text-gray-500">Cancelar</button><button type="submit" disabled={isSubmitting} className="btn btn-primary px-8 bg-indigo-600 border-none">{isSubmitting?'...':'Guardar'}</button></div>
+                    
+                    <div className="flex justify-end gap-3">
+                        <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost">Cancelar</button>
+                        <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600">{isSubmitting ? 'Guardando...' : 'Registrar Interesado'}</button>
+                    </div>
                 </form>
              </div>
           </div>
@@ -272,183 +440,15 @@ export default function ClientesPage() {
 
         {/* MODAL DETALLE */}
         {isDetailOpen && selectedCliente && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
-                <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-4 max-h-[95vh] overflow-y-auto">
-                    <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 p-6 text-white relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-12 -mt-12"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
-                        
-                        <div className="flex justify-between items-start relative z-10">
-                            <div className="flex gap-4 items-center">
-                                <div className="avatar placeholder">
-                                    <div className="bg-white/20 backdrop-blur-sm text-white rounded-2xl w-16 h-16 flex items-center justify-center text-3xl font-bold shadow-2xl border-2 border-white/30">
-                                        {selectedCliente.nombre.charAt(0).toUpperCase()}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold mb-1.5">{selectedCliente.nombre}</h2>
-                                    <div className="flex gap-2 flex-wrap">
-                                        <div className="badge bg-white/20 backdrop-blur-sm border-white/30 text-white font-mono gap-1 px-2.5 py-2.5 text-xs">
-                                            <FaIdCard className="text-xs"/> {selectedCliente.dni}
-                                        </div>
-                                        {selectedCliente.activo ? (
-                                            <div className="badge badge-success gap-1 text-white px-2.5 py-2.5 border-none shadow-lg text-xs">
-                                                <FaCheck/> Activo
-                                            </div>
-                                        ) : (
-                                            <div className="badge badge-error gap-1 text-white px-2.5 py-2.5 border-none shadow-lg text-xs">
-                                                <FaBan/> Suspendido
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={()=>setDetailOpen(false)} 
-                                className="btn btn-sm btn-circle bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:border-white/30 text-lg"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="p-6 bg-gradient-to-br from-gray-50 via-white to-gray-50">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                            <div className="space-y-5">
-                                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
-                                    <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-green-100">
-                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
-                                            <FaUserTie className="text-base"/>
-                                        </div>
-                                        <h3 className="text-sm font-bold text-gray-700 uppercase">Información Personal</h3>
-                                    </div>
-                                    <div className="space-y-3.5">
-                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3.5 rounded-xl border border-green-100">
-                                            <p className="text-xs text-green-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaUserTie className="text-green-500"/> Nombre Completo
-                                            </p>
-                                            <p className="font-bold text-gray-900 text-base">{selectedCliente.nombre}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-3.5 rounded-xl border border-purple-100">
-                                            <p className="text-xs text-purple-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaIdCard className="text-purple-500"/> Documento DNI
-                                            </p>
-                                            <p className="font-mono font-bold text-gray-900 text-base">{selectedCliente.dni}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-3.5 rounded-xl border border-pink-100">
-                                            <p className="text-xs text-pink-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaBirthdayCake className="text-pink-500"/> Fecha de Nacimiento
-                                            </p>
-                                            <p className="text-gray-800 font-medium text-sm">{formatDate(selectedCliente.fechaNacimiento)}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-3.5 rounded-xl border border-orange-100">
-                                            <p className="text-xs text-orange-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaCalendarAlt className="text-orange-500"/> Fecha de Alta
-                                            </p>
-                                            <p className="text-gray-800 font-medium text-sm">{formatDate(selectedCliente.fechaAlta)}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-3.5 rounded-xl border border-blue-100">
-                                            <p className="text-xs text-blue-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaRing className="text-blue-500"/> Estado Civil
-                                            </p>
-                                            <p className="text-gray-800 font-medium text-sm">{selectedCliente.estadoCivil || 'No registrado'}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-3.5 rounded-xl border border-cyan-100">
-                                            <p className="text-xs text-cyan-700 font-bold uppercase mb-1.5 flex items-center gap-1">
-                                                <FaBriefcase className="text-cyan-500"/> Ocupación
-                                            </p>
-                                            <p className="text-gray-800 font-medium text-sm">{selectedCliente.ocupacion || 'No registrada'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
-                                    <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-blue-100">
-                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-                                            <FaPhone className="text-base"/>
-                                        </div>
-                                        <h3 className="text-sm font-bold text-gray-700 uppercase">Información de Contacto</h3>
-                                    </div>
-                                    <div className="space-y-3.5">
-                                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3.5 rounded-xl border border-green-100">
-                                            <p className="text-xs text-green-700 font-bold uppercase mb-1.5">Celular Principal</p>
-                                            <p className="font-bold text-lg text-green-600 flex items-center gap-2">
-                                                <FaPhone className="text-xl"/> {selectedCliente.telefono1}
-                                            </p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-3.5 rounded-xl border border-teal-100">
-                                            <p className="text-xs text-teal-700 font-bold uppercase mb-1.5">Celular Secundario</p>
-                                            <p className="text-gray-800 text-base font-medium">{selectedCliente.telefono2 || 'No registrado'}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-blue-50 to-sky-50 p-3.5 rounded-xl border border-blue-100">
-                                            <p className="text-xs text-blue-700 font-bold uppercase mb-1.5">Correo Electrónico</p>
-                                            <p className="text-gray-700 flex items-center gap-2 text-xs break-all">
-                                                <FaEnvelope className="text-blue-500 flex-shrink-0 text-sm"/> {selectedCliente.email || 'No registrado'}
-                                            </p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-red-50 to-orange-50 p-3.5 rounded-xl border border-red-100">
-                                            <p className="text-xs text-red-700 font-bold uppercase mb-1.5">Dirección</p>
-                                            <p className="text-gray-700 flex items-center gap-2 text-xs">
-                                                <FaMapMarkerAlt className="text-red-500 flex-shrink-0 text-sm"/> {selectedCliente.direccion || 'No registrada'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-5">
-                                <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-600 p-5 rounded-2xl shadow-xl text-white">
-                                    <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b-2 border-white/20">
-                                        <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                                            <FaHome className="text-base"/>
-                                        </div>
-                                        <h3 className="text-sm font-bold uppercase">Interés Principal</h3>
-                                    </div>
-                                    
-                                    {/* --- TARJETA MORADA DE DETALLES --- */}
-                                    {datosPropiedadInteres ? (
-                                        <div className="space-y-3.5">
-                                            <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
-                                                <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Propiedad</p>
-                                                <p className="font-bold text-lg">{datosPropiedadInteres.direccion}</p>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
-                                                    <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Precio</p>
-                                                    <p className="font-bold text-base">{datosPropiedadInteres.moneda} {datosPropiedadInteres.precio}</p>
-                                                </div>
-                                                <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
-                                                    <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Operación</p>
-                                                    <p className="font-bold text-base">{datosPropiedadInteres.modalidad}</p>
-                                                </div>
-                                            </div>
-                                            <div className="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/20">
-                                                <p className="text-xs font-bold uppercase mb-1.5 text-white/80">Asesor Cliente</p>
-                                                <p className="font-bold text-base">{asesorClienteGuardado}</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white/10 backdrop-blur-sm p-5 rounded-xl border border-white/20 text-center">
-                                            <p className="text-white/70 italic text-base">Sin interés registrado</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {observacionesGuardadas && (
-                                    <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-5 rounded-2xl shadow-xl text-white">
-                                        <div className="flex items-center gap-2.5 mb-3.5">
-                                            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                                                <FaStickyNote className="text-base"/>
-                                            </div>
-                                            <h3 className="text-sm font-bold uppercase">Observaciones</h3>
-                                        </div>
-                                        <div className="bg-white/20 backdrop-blur-sm p-3.5 rounded-xl border border-white/30">
-                                            <p className="text-white leading-relaxed text-sm">{observacionesGuardadas}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+                <div className="bg-white w-full max-w-2xl rounded-2xl p-6 relative">
+                    <button onClick={()=>setDetailOpen(false)} className="btn btn-sm btn-circle absolute right-4 top-4">✕</button>
+                    <h2 className="text-2xl font-bold mb-4 text-indigo-900">{selectedCliente.nombre}</h2>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <p><strong>Celular:</strong> {selectedCliente.telefono1}</p>
+                        <p><strong>Tipo:</strong> {selectedCliente.tipo === 'CLIENTE' ? 'CLIENTE FORMAL' : 'INTERESADO'}</p>
+                        <p><strong>Email:</strong> {selectedCliente.email || '---'}</p>
+                        <p><strong>DNI:</strong> {selectedCliente.dni || '---'}</p>
                     </div>
                 </div>
             </div>

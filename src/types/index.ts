@@ -73,21 +73,31 @@ export interface Propiedad {
   [key: string]: any; 
 }
 
-// Definición de Cliente
+// Definición de Cliente (ACTUALIZADO PARA PROSPECTOS)
 export interface Cliente {
-  activo: any;
-  usuarioId: any;
+  createdAt: string | undefined;
   id: string;
+  // Nuevo campo para saber su nivel
+  tipo: 'PROSPECTO' | 'CLIENTE'; 
+  
   nombre: string;
-  dni: string;
-  fechaNacimiento: string;
-  direccion: string;
+  
+  // Datos Opcionales
+  dni?: string; 
+  fechaNacimiento?: string;
+  direccion?: string;
   email?: string;
-  telefono1?: string;
+  
+  // Contacto (Vital)
+  telefono1: string; 
   telefono2?: string;
+  
   estadoCivil?: string;
   ocupacion?: string;
   fechaAlta?: string;
+  
+  activo: boolean;
+  usuarioId?: string;
 }
 
 // Definición de Interés
@@ -119,7 +129,7 @@ export interface Operacion {
   Cliente?: Cliente;
 }
 
-// Definición de Visita (ACTUALIZADA CORRECTAMENTE)
+// Definición de Visita
 export interface Visita {
   id: string;
   fechaProgramada: string;
@@ -131,16 +141,9 @@ export interface Visita {
   propiedadId: string;
   asesorId?: string;
 
-  cliente: {
-      nombre: string;
-      email?: string;
-      telefono?: string;
-  };
-  propiedad: {
-      tipo: string;
-      ubicacion: string;
-      precio: number;
-  };
+  // Relaciones completas
+  cliente: Cliente;
+  propiedad: Propiedad;
   asesor?: {
       nombre: string;
   };
