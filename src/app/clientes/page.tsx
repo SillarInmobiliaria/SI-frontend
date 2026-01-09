@@ -384,7 +384,7 @@ export default function ClientesPage() {
                             </div>
                         </div>
 
-                        {/* 🟢 TARJETA DE PROPIEDAD INTELIGENTE Y UNIFICADA */}
+                        {/* TARJETA DE PROPIEDAD INTELIGENTE Y UNIFICADA */}
                         {propiedadSeleccionada && (
                             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-5 animate-fade-in-up">
                                 {/* Header de la tarjeta */}
