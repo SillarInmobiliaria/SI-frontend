@@ -1,17 +1,17 @@
 'use client';
 import Link from 'next/link';
-import { useAuth } from '../context/AuthContext'; // 👈 Conectamos al AuthContext
+import { useAuth } from '../context/AuthContext'; 
 import { FaHome, FaUserTie, FaBuilding, FaClipboardList, FaUsersCog, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 export default function Navbar() {
-  const { user, logout } = useAuth(); // 👈 Traemos al usuario y la función logout
+  const { user, logout } = useAuth(); 
 
   return (
     <div className="navbar bg-base-100 shadow-md sticky top-0 z-50 px-4 sm:px-8">
       
       {/* --- LOGO --- */}
       <div className="flex-1">
-        <Link href="/dashboard" className="btn btn-ghost normal-case text-xl text-blue-900 font-bold flex items-center gap-2">
+        <Link href="/" className="btn btn-ghost normal-case text-xl text-blue-900 font-bold flex items-center gap-2">
           🏠 Sillar Inmobiliaria
         </Link>
       </div>
@@ -40,7 +40,7 @@ export default function Navbar() {
               </li>
 
               {/* Enlaces Rápidos */}
-              <li><Link href="/dashboard"><FaHome className="text-blue-500"/> Inicio</Link></li>
+              <li><Link href="/"><FaHome className="text-blue-500"/> Inicio</Link></li>
               
               {/* Opciones de Admin */}
               {user.rol === 'ADMIN' && (
@@ -49,7 +49,6 @@ export default function Navbar() {
 
               <div className="divider my-1"></div>
 
-              {/* 👇 AQUÍ ESTÁ EL BOTÓN QUE ARREGLA EL ERROR */}
               <li>
                 <button onClick={logout} className="text-error font-bold hover:bg-error/10">
                   <FaSignOutAlt /> Cerrar Sesión
