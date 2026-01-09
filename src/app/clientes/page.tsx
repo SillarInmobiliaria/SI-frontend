@@ -8,7 +8,7 @@ import { createCliente, createInteres, eliminarCliente } from '../../services/ap
 import { useAuth } from '../../context/AuthContext'; 
 import { 
   FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
-  FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter,
+  FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter, FaHistory,
   FaInfoCircle
 } from 'react-icons/fa';
 
@@ -46,6 +46,7 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Forms
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormClienteCompleto>();
 
   const selectedPropiedadId = watch('propiedadId');
@@ -57,25 +58,32 @@ export default function ClientesPage() {
     fetchIntereses();
   }, []);
 
+  // --- 🟢 LÓGICA INTELIGENTE DE BÚSQUEDA ---
   const clientesFiltrados = useMemo(() => {
+      // 1. Filtro por Texto (Nombre, DNI, Teléfono)
       let filtrados = clientes.filter(c => 
         c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
         (c.dni && c.dni.includes(searchTerm)) ||
         c.telefono1.includes(searchTerm)
       );
 
-      filtrados = filtrados.filter(c => {
-          // 🟢 CORRECCIÓN TS: Usamos createdAt si fechaAlta no existe, con validación
-          const fechaRaw = c.fechaAlta || c.createdAt || '';
-          const fechaRegistro = fechaRaw.split('T')[0];
-          return fechaRegistro === filterDate;
-      });
+      // 2. Lógica de Fecha:
+      // SI HAY TEXTO EN EL BUSCADOR -> IGNORAMOS LA FECHA (Buscamos en todo el historial)
+      // SI NO HAY TEXTO -> Aplicamos el filtro de fecha (Solo mostramos lo de ese día)
+      if (searchTerm === '') {
+          filtrados = filtrados.filter(c => {
+              const fechaRaw = c.fechaAlta || c.createdAt || '';
+              const fechaRegistro = fechaRaw.split('T')[0];
+              return fechaRegistro === filterDate;
+          });
+      }
 
+      // 3. Filtro por Tipo (Siempre aplica, para poder buscar "solo clientes llamados Moises")
       if (filterType !== 'TODOS') {
           filtrados = filtrados.filter(c => c.tipo === filterType);
       }
 
-      // 🟢 CORRECCIÓN TS: Validación de fechas segura para el sort
+      // Ordenar por hora (más reciente primero)
       filtrados.sort((a, b) => {
           const dateA = new Date(a.fechaAlta || a.createdAt || new Date().toISOString());
           const dateB = new Date(b.fechaAlta || b.createdAt || new Date().toISOString());
@@ -84,6 +92,9 @@ export default function ClientesPage() {
 
       return filtrados;
   }, [clientes, searchTerm, filterDate, filterType]);
+
+
+  // --- ACCIONES ---
 
   const handleEliminar = async (id: string) => {
       if(!confirm('⚠️ ¿Estás seguro de eliminar este registro?')) return;
@@ -166,6 +177,7 @@ export default function ClientesPage() {
       <Navbar />
       <main className="container mx-auto p-6 max-w-7xl">
         
+        {/* HEADER & BUSCADOR */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-600">
           <div>
               <h1 className="text-3xl font-bold text-gray-900">Módulo de Atención</h1>
@@ -173,8 +185,14 @@ export default function ClientesPage() {
           </div>
           <div className="flex gap-4 w-full md:w-auto items-center">
              <div className="relative w-full md:w-64">
-                 <FaSearch className="absolute left-3 top-3.5 text-gray-400"/>
-                 <input type="text" placeholder="Buscar..." className="input input-bordered w-full pl-10 bg-gray-50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                 <FaSearch className={`absolute left-3 top-3.5 ${searchTerm ? 'text-indigo-600' : 'text-gray-400'}`}/>
+                 <input 
+                    type="text" 
+                    placeholder="Buscar por nombre..." 
+                    className={`input input-bordered w-full pl-10 ${searchTerm ? 'border-indigo-500 bg-indigo-50' : 'bg-gray-50'}`}
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                 />
              </div>
              <button onClick={() => setModalOpen(true)} className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 border-none px-6 shadow-md">
                  <FaUserPlus className="text-lg"/> Nuevo
@@ -182,33 +200,47 @@ export default function ClientesPage() {
           </div>
         </div>
 
-        <div className="flex flex-col xl:flex-row items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 gap-4">
+        {/* 🟢 BARRA DE FILTROS (FECHA + TIPO) */}
+        {/* Si hay búsqueda, cambiamos visualmente esta barra para indicar que se busca en todo el historial */}
+        <div className="flex flex-col xl:flex-row items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 gap-4 transition-all">
+            
+            {/* SELECCIÓN DE FECHA O AVISO DE BÚSQUEDA GLOBAL */}
             <div className="flex items-center gap-4 w-full xl:w-auto">
-                <div className="bg-indigo-50 p-3 rounded-full text-indigo-600 hidden sm:block">
-                    <FaCalendarAlt className="text-xl"/>
+                <div className={`p-3 rounded-full hidden sm:block ${searchTerm ? 'bg-orange-100 text-orange-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                    {searchTerm ? <FaHistory className="text-xl"/> : <FaCalendarAlt className="text-xl"/>}
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Viendo registros del:</h3>
-                    <div className="flex items-center gap-2">
-                        <input 
-                            type="date" 
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                            className="input input-bordered input-sm font-bold text-gray-700"
-                        />
-                        {filterDate !== today && (
-                            <button 
-                                onClick={() => setFilterDate(today)}
-                                className="btn btn-sm btn-ghost text-indigo-600 hover:bg-indigo-50"
-                                title="Volver a Hoy"
-                            >
-                                <FaUndo/>
-                            </button>
-                        )}
-                    </div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                        {searchTerm ? 'MODO BÚSQUEDA GLOBAL' : 'VIENDO REGISTROS DEL:'}
+                    </h3>
+                    
+                    {searchTerm ? (
+                        <div className="text-sm font-bold text-orange-600 animate-pulse">
+                            Buscando "{searchTerm}" en todo el historial...
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="date" 
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="input input-bordered input-sm font-bold text-gray-700"
+                            />
+                            {filterDate !== today && (
+                                <button 
+                                    onClick={() => setFilterDate(today)}
+                                    className="btn btn-sm btn-ghost text-indigo-600 hover:bg-indigo-50"
+                                    title="Volver a Hoy"
+                                >
+                                    <FaUndo/>
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
+            {/* FILTRO POR TIPO */}
             <div className="flex bg-gray-100 p-1 rounded-lg w-full xl:w-auto">
                 <button 
                     onClick={() => setFilterType('TODOS')}
@@ -231,15 +263,21 @@ export default function ClientesPage() {
             </div>
         </div>
 
+        {/* LISTA FILTRADA */}
         {loading ? (
             <div className="text-center py-10">Cargando datos...</div>
         ) : (
             <div className="animate-fade-in-up">
                 
+                {/* TÍTULO DE LA SECCIÓN (Dinámico) */}
                 <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-500 font-medium text-sm">
-                            Mostrando <span className="font-bold text-gray-800">{filterType === 'TODOS' ? 'todos' : filterType === 'PROSPECTO' ? 'interesados' : 'clientes'}</span> del {formatDateLabel(filterDate)}
+                            {searchTerm ? (
+                                <>Resultados para <b>"{searchTerm}"</b> en el historial</>
+                            ) : (
+                                <>Registros del <b>{formatDateLabel(filterDate)}</b></>
+                            )}
                         </span>
                     </div>
                     <span className="badge badge-lg bg-indigo-100 text-indigo-800 border-none font-bold">
@@ -247,25 +285,28 @@ export default function ClientesPage() {
                     </span>
                 </div>
 
+                {/* TABLA O MENSAJE VACÍO */}
                 {clientesFiltrados.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
                         <FaFilter className="text-4xl text-gray-200 mx-auto mb-3"/>
                         <p className="text-gray-400 font-medium">No se encontraron registros.</p>
                         <div className="flex gap-2 justify-center mt-3">
-                            {filterDate !== today && <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-500">Ir a Hoy</button>}
+                            {searchTerm && <button onClick={() => setSearchTerm('')} className="btn btn-sm btn-ghost text-red-500">Borrar Búsqueda</button>}
+                            {!searchTerm && filterDate !== today && <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-500">Ir a Hoy</button>}
                         </div>
                     </div>
                 ) : (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="table w-full">
-                                {/* 🟢 CORRECCIÓN HYDRATION ERROR: Eliminados espacios vacíos en thead */}
                                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-wider">
                                     <tr>
                                         <th className="pl-6 w-32">Nivel</th>
                                         <th>Nombre</th>
                                         <th>Contacto</th>
                                         <th>Interés</th>
+                                        {/* Si busco en historial, muestro la fecha de registro */}
+                                        {searchTerm && <th>Fecha Reg.</th>} 
                                         <th className="text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -273,6 +314,8 @@ export default function ClientesPage() {
                                     {clientesFiltrados.map((c: any) => {
                                         const interesC = intereses.find(i => i.clienteId === c.id);
                                         const propC = interesC?.Propiedad;
+                                        // Fecha legible si estamos buscando en historial
+                                        const fechaReg = new Date(c.fechaAlta || c.createdAt).toLocaleDateString();
 
                                         return (
                                             <tr key={c.id} className="hover:bg-indigo-50/30 transition-colors">
@@ -305,6 +348,10 @@ export default function ClientesPage() {
                                                         <span className="text-xs text-gray-300 italic">Sin interés</span>
                                                     )}
                                                 </td>
+                                                {/* Mostrar fecha si es búsqueda global */}
+                                                {searchTerm && (
+                                                    <td className="text-xs font-bold text-gray-500">{fechaReg}</td>
+                                                )}
                                                 <td>
                                                     <div className="flex justify-center gap-2">
                                                         <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium" title="Agendar en Calendario"><FaCalendarCheck /> Visita</button>
