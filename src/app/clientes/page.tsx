@@ -8,8 +8,8 @@ import { createCliente, createInteres, eliminarCliente } from '../../services/ap
 import { useAuth } from '../../context/AuthContext'; 
 import { 
   FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
-  FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter, FaHistory,
-  FaInfoCircle
+  FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter, FaHistory, FaInfoCircle, FaBullhorn,
+  FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer
 } from 'react-icons/fa';
 
 // Interface del formulario de Cliente
@@ -27,6 +27,7 @@ interface FormClienteCompleto {
   propiedadId?: string;
   asesorCliente?: string;
   observaciones?: string;
+  origen?: string;
 }
 
 export default function ClientesPage() {
@@ -58,18 +59,14 @@ export default function ClientesPage() {
     fetchIntereses();
   }, []);
 
-  // --- 🟢 LÓGICA INTELIGENTE DE BÚSQUEDA ---
+  // --- LÓGICA INTELIGENTE DE BÚSQUEDA ---
   const clientesFiltrados = useMemo(() => {
-      // 1. Filtro por Texto (Nombre, DNI, Teléfono)
       let filtrados = clientes.filter(c => 
         c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
         (c.dni && c.dni.includes(searchTerm)) ||
         c.telefono1.includes(searchTerm)
       );
 
-      // 2. Lógica de Fecha:
-      // SI HAY TEXTO EN EL BUSCADOR -> IGNORAMOS LA FECHA (Buscamos en todo el historial)
-      // SI NO HAY TEXTO -> Aplicamos el filtro de fecha (Solo mostramos lo de ese día)
       if (searchTerm === '') {
           filtrados = filtrados.filter(c => {
               const fechaRaw = c.fechaAlta || c.createdAt || '';
@@ -78,12 +75,10 @@ export default function ClientesPage() {
           });
       }
 
-      // 3. Filtro por Tipo (Siempre aplica, para poder buscar "solo clientes llamados Moises")
       if (filterType !== 'TODOS') {
           filtrados = filtrados.filter(c => c.tipo === filterType);
       }
 
-      // Ordenar por hora (más reciente primero)
       filtrados.sort((a, b) => {
           const dateA = new Date(a.fechaAlta || a.createdAt || new Date().toISOString());
           const dateB = new Date(b.fechaAlta || b.createdAt || new Date().toISOString());
@@ -128,6 +123,7 @@ export default function ClientesPage() {
           estadoCivil: data.estadoCivil || undefined,
           ocupacion: data.ocupacion || undefined,
           fechaAlta: data.fechaAlta, 
+          origen: data.origen,
           activo: undefined,
           usuarioId: undefined,
           tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO' 
@@ -200,11 +196,8 @@ export default function ClientesPage() {
           </div>
         </div>
 
-        {/* 🟢 BARRA DE FILTROS (FECHA + TIPO) */}
-        {/* Si hay búsqueda, cambiamos visualmente esta barra para indicar que se busca en todo el historial */}
+        {/* BARRA DE FILTROS */}
         <div className="flex flex-col xl:flex-row items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 gap-4 transition-all">
-            
-            {/* SELECCIÓN DE FECHA O AVISO DE BÚSQUEDA GLOBAL */}
             <div className="flex items-center gap-4 w-full xl:w-auto">
                 <div className={`p-3 rounded-full hidden sm:block ${searchTerm ? 'bg-orange-100 text-orange-600' : 'bg-indigo-50 text-indigo-600'}`}>
                     {searchTerm ? <FaHistory className="text-xl"/> : <FaCalendarAlt className="text-xl"/>}
@@ -227,57 +220,29 @@ export default function ClientesPage() {
                                 className="input input-bordered input-sm font-bold text-gray-700"
                             />
                             {filterDate !== today && (
-                                <button 
-                                    onClick={() => setFilterDate(today)}
-                                    className="btn btn-sm btn-ghost text-indigo-600 hover:bg-indigo-50"
-                                    title="Volver a Hoy"
-                                >
-                                    <FaUndo/>
-                                </button>
+                                <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-600 hover:bg-indigo-50" title="Volver a Hoy"><FaUndo/></button>
                             )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* FILTRO POR TIPO */}
             <div className="flex bg-gray-100 p-1 rounded-lg w-full xl:w-auto">
-                <button 
-                    onClick={() => setFilterType('TODOS')}
-                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all ${filterType === 'TODOS' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    Todos
-                </button>
-                <button 
-                    onClick={() => setFilterType('PROSPECTO')}
-                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'PROSPECTO' ? 'bg-white shadow text-orange-500' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    <FaTrafficLight/> Interesados
-                </button>
-                <button 
-                    onClick={() => setFilterType('CLIENTE')}
-                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'CLIENTE' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                    <FaUserTie/> Clientes
-                </button>
+                <button onClick={() => setFilterType('TODOS')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all ${filterType === 'TODOS' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>Todos</button>
+                <button onClick={() => setFilterType('PROSPECTO')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'PROSPECTO' ? 'bg-white shadow text-orange-500' : 'text-gray-500 hover:text-gray-700'}`}><FaTrafficLight/> Interesados</button>
+                <button onClick={() => setFilterType('CLIENTE')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'CLIENTE' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}><FaUserTie/> Clientes</button>
             </div>
         </div>
 
-        {/* LISTA FILTRADA */}
+        {/* LISTA */}
         {loading ? (
             <div className="text-center py-10">Cargando datos...</div>
         ) : (
             <div className="animate-fade-in-up">
-                
-                {/* TÍTULO DE LA SECCIÓN (Dinámico) */}
                 <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-500 font-medium text-sm">
-                            {searchTerm ? (
-                                <>Resultados para <b>"{searchTerm}"</b> en el historial</>
-                            ) : (
-                                <>Registros del <b>{formatDateLabel(filterDate)}</b></>
-                            )}
+                            {searchTerm ? (<>Resultados para <b>"{searchTerm}"</b> en el historial</>) : (<>Registros del <b>{formatDateLabel(filterDate)}</b></>)}
                         </span>
                     </div>
                     <span className="badge badge-lg bg-indigo-100 text-indigo-800 border-none font-bold">
@@ -285,7 +250,6 @@ export default function ClientesPage() {
                     </span>
                 </div>
 
-                {/* TABLA O MENSAJE VACÍO */}
                 {clientesFiltrados.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
                         <FaFilter className="text-4xl text-gray-200 mx-auto mb-3"/>
@@ -305,7 +269,6 @@ export default function ClientesPage() {
                                         <th>Nombre</th>
                                         <th>Contacto</th>
                                         <th>Interés</th>
-                                        {/* Si busco en historial, muestro la fecha de registro */}
                                         {searchTerm && <th>Fecha Reg.</th>} 
                                         <th className="text-center">Acciones</th>
                                     </tr>
@@ -314,7 +277,6 @@ export default function ClientesPage() {
                                     {clientesFiltrados.map((c: any) => {
                                         const interesC = intereses.find(i => i.clienteId === c.id);
                                         const propC = interesC?.Propiedad;
-                                        // Fecha legible si estamos buscando en historial
                                         const fechaReg = new Date(c.fechaAlta || c.createdAt).toLocaleDateString();
 
                                         return (
@@ -348,13 +310,10 @@ export default function ClientesPage() {
                                                         <span className="text-xs text-gray-300 italic">Sin interés</span>
                                                     )}
                                                 </td>
-                                                {/* Mostrar fecha si es búsqueda global */}
-                                                {searchTerm && (
-                                                    <td className="text-xs font-bold text-gray-500">{fechaReg}</td>
-                                                )}
+                                                {searchTerm && <td className="text-xs font-bold text-gray-500">{fechaReg}</td>}
                                                 <td>
                                                     <div className="flex justify-center gap-2">
-                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium" title="Agendar en Calendario"><FaCalendarCheck /> Visita</button>
+                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium" title="Agendar"><FaCalendarCheck /> Visita</button>
                                                         <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500"><FaEye /></button>
                                                         {isAdmin && <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>}
                                                     </div>
@@ -393,15 +352,10 @@ export default function ClientesPage() {
                             </div>
                             <div className="form-control">
                                 <label className="label font-bold text-gray-700">Celular (9 dígitos) *</label>
-                                <input 
-                                    {...register('telefono1', { required: true, minLength: 9, maxLength: 9 })} 
-                                    maxLength={9} 
-                                    onInput={handleNumberInput} 
-                                    className="input input-bordered w-full"
-                                    placeholder="900000000"
-                                />
+                                <input {...register('telefono1', { required: true, minLength: 9, maxLength: 9 })} maxLength={9} onInput={handleNumberInput} className="input input-bordered w-full" placeholder="900000000"/>
                                 {errors.telefono1 && <span className="text-red-500 text-xs">Debe tener 9 dígitos</span>}
                             </div>
+                            
                             <div className="form-control">
                                 <label className="label font-bold text-gray-700">Propiedad de Interés</label>
                                 <select {...register('propiedadId')} className="select select-bordered w-full">
@@ -411,25 +365,77 @@ export default function ClientesPage() {
                                     ))}
                                 </select>
                             </div>
+
                             <div className="form-control">
                                 <label className="label font-bold text-gray-700">Fecha Registro</label>
                                 <input {...register('fechaAlta')} type="date" defaultValue={filterDate} className="input input-bordered w-full"/>
                             </div>
+
+                            <div className="form-control md:col-span-2">
+                                <label className="label font-bold text-gray-700 flex items-center gap-2"><FaBullhorn className="text-orange-500"/> Medio de Captación</label>
+                                <select {...register('origen')} className="select select-bordered w-full">
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Letrero">Letrero</option>
+                                    <option value="Urbania">Urbania</option>
+                                    <option value="Redes Sociales">Redes Sociales</option>
+                                    <option value="Llamada">Llamada</option>
+                                    <option value="Referido">Referido</option>
+                                </select>
+                            </div>
                         </div>
+
+                        {/* 🟢 TARJETA DE PROPIEDAD INTELIGENTE Y UNIFICADA */}
                         {propiedadSeleccionada && (
-                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-4 items-start">
-                                <div className="text-blue-500 text-xl mt-1"><FaInfoCircle/></div>
-                                <div className="text-sm w-full">
-                                    <h5 className="font-bold text-blue-900 mb-1">Información de la Propiedad</h5>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                        <p><span className="font-semibold">Tipo:</span> {propiedadSeleccionada.tipo}</p>
-                                        <p className="col-span-2"><span className="font-semibold">Ubicación:</span> {propiedadSeleccionada.ubicacion}</p>
-                                        <p><span className="font-semibold">Área:</span> {propiedadSeleccionada.area} m²</p>
-                                        <p className="col-span-2">
-                                            <span className="font-semibold">Precio:</span> 
-                                            <span className="text-green-600 font-bold ml-1">{propiedadSeleccionada.moneda} {propiedadSeleccionada.precio}</span>
-                                        </p>
+                            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-5 animate-fade-in-up">
+                                {/* Header de la tarjeta */}
+                                <div className="flex items-center gap-3 mb-4 border-b border-blue-200 pb-3">
+                                    <div className="bg-blue-600 text-white p-2 rounded-lg shadow-sm"><FaInfoCircle /></div>
+                                    <h5 className="font-bold text-blue-900 text-lg">Información de la Propiedad</h5>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-sm">
+                                    
+                                    {/* Fila 1 */}
+                                    <div className="flex justify-between sm:justify-start sm:gap-2 items-center">
+                                        <span className="font-semibold text-gray-600 flex items-center gap-1"><FaHome className="text-gray-400"/> Tipo:</span>
+                                        <span className="font-bold text-gray-800">{propiedadSeleccionada.tipo}</span>
                                     </div>
+                                    <div className="flex justify-between sm:justify-start sm:gap-2 items-center">
+                                        <span className="font-semibold text-gray-600 flex items-center gap-1"><FaMapMarkerAlt className="text-gray-400"/> Ubicación:</span>
+                                        <span className="font-bold text-gray-800">{propiedadSeleccionada.ubicacion}</span>
+                                    </div>
+
+                                    {/* Fila 2 - ÁREAS PARA TODOS (SIEMPRE VISIBLES) */}
+                                    <div className="flex justify-between sm:justify-start sm:gap-2 items-center">
+                                        <span className="font-semibold text-gray-600 flex items-center gap-1"><FaRulerCombined className="text-gray-400"/> Área Terreno:</span>
+                                        <span className="font-bold text-gray-800">{propiedadSeleccionada.area} m²</span>
+                                    </div>
+                                    <div className="flex justify-between sm:justify-start sm:gap-2 items-center">
+                                        <span className="font-semibold text-gray-600 flex items-center gap-1"><FaHammer className="text-gray-400"/> Área Construida:</span>
+                                        <span className="font-bold text-gray-800">{propiedadSeleccionada.areaConstruida || 0} m²</span>
+                                    </div>
+
+                                    {/* Fila 3 - Precio */}
+                                    <div className="flex justify-between sm:justify-start sm:gap-2 sm:col-span-2 items-center border-t border-blue-200 pt-2 mt-1">
+                                        <span className="font-semibold text-gray-600 flex items-center gap-1"><FaDollarSign className="text-gray-400"/> Precio:</span>
+                                        <span className="font-bold text-green-600 text-lg">
+                                            {propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+
+                                    {/* Fila 4 - Mantenimiento (Solo Depas) */}
+                                    {propiedadSeleccionada.tipo === 'Departamento' && (
+                                        <div className="sm:col-span-2 mt-1">
+                                            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-blue-100 w-fit">
+                                                <span className="font-bold text-blue-700 text-xs uppercase tracking-wide">Mantenimiento:</span>
+                                                <span className={`font-bold ${propiedadSeleccionada.mantenimiento && Number(propiedadSeleccionada.mantenimiento) > 0 ? 'text-gray-800' : 'text-gray-500'}`}>
+                                                    {propiedadSeleccionada.mantenimiento && Number(propiedadSeleccionada.mantenimiento) > 0 
+                                                        ? `S/ ${Number(propiedadSeleccionada.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` 
+                                                        : 'No'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -454,6 +460,7 @@ export default function ClientesPage() {
                         <p><strong>Tipo:</strong> {selectedCliente.tipo}</p>
                         <p><strong>Email:</strong> {selectedCliente.email || '---'}</p>
                         <p><strong>DNI:</strong> {selectedCliente.dni || '---'}</p>
+                        {selectedCliente.origen && <p><strong>Captación:</strong> {selectedCliente.origen}</p>}
                     </div>
                 </div>
             </div>
