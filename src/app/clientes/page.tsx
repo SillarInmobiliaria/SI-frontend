@@ -8,7 +8,8 @@ import { createCliente, createInteres, eliminarCliente } from '../../services/ap
 import { useAuth } from '../../context/AuthContext'; 
 import { 
   FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
-  FaInfoCircle, FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter
+  FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter,
+  FaInfoCircle
 } from 'react-icons/fa';
 
 // Interface del formulario de Cliente
@@ -36,19 +37,15 @@ export default function ClientesPage() {
 
   const today = new Date().toISOString().split('T')[0];
 
-  // --- FILTROS ---
   const [filterDate, setFilterDate] = useState(today);
-  const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); // 🟢 NUEVO FILTRO
+  const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); 
 
-  // Modales
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
-
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Forms
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormClienteCompleto>();
 
   const selectedPropiedadId = watch('propiedadId');
@@ -60,38 +57,33 @@ export default function ClientesPage() {
     fetchIntereses();
   }, []);
 
-  // --- LÓGICA DE FILTRADO (Buscador + Fecha + Tipo) ---
   const clientesFiltrados = useMemo(() => {
-      // 1. Filtro por Texto
       let filtrados = clientes.filter(c => 
         c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
         (c.dni && c.dni.includes(searchTerm)) ||
         c.telefono1.includes(searchTerm)
       );
 
-      // 2. Filtro por Fecha
       filtrados = filtrados.filter(c => {
-          const fechaRegistro = (c.fechaAlta || (c as any).createdAt || '').split('T')[0];
+          // 🟢 CORRECCIÓN TS: Usamos createdAt si fechaAlta no existe, con validación
+          const fechaRaw = c.fechaAlta || c.createdAt || '';
+          const fechaRegistro = fechaRaw.split('T')[0];
           return fechaRegistro === filterDate;
       });
 
-      // 3. FILTRO POR TIPO (Interesado vs Cliente)
       if (filterType !== 'TODOS') {
           filtrados = filtrados.filter(c => c.tipo === filterType);
       }
 
-      // Ordenar por hora (más reciente primero)
+      // 🟢 CORRECCIÓN TS: Validación de fechas segura para el sort
       filtrados.sort((a, b) => {
-          const dateA = new Date(a.fechaAlta || (a as any).createdAt || new Date().toISOString());
-          const dateB = new Date(b.fechaAlta || (b as any).createdAt || new Date().toISOString());
+          const dateA = new Date(a.fechaAlta || a.createdAt || new Date().toISOString());
+          const dateB = new Date(b.fechaAlta || b.createdAt || new Date().toISOString());
           return dateB.getTime() - dateA.getTime();
       });
 
       return filtrados;
   }, [clientes, searchTerm, filterDate, filterType]);
-
-
-  // --- ACCIONES ---
 
   const handleEliminar = async (id: string) => {
       if(!confirm('⚠️ ¿Estás seguro de eliminar este registro?')) return;
@@ -174,7 +166,6 @@ export default function ClientesPage() {
       <Navbar />
       <main className="container mx-auto p-6 max-w-7xl">
         
-        {/* HEADER & BUSCADOR */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-600">
           <div>
               <h1 className="text-3xl font-bold text-gray-900">Módulo de Atención</h1>
@@ -191,10 +182,7 @@ export default function ClientesPage() {
           </div>
         </div>
 
-        {/* BARRA DE FILTROS (FECHA + TIPO) */}
         <div className="flex flex-col xl:flex-row items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 gap-4">
-            
-            {/* SELECCIÓN DE FECHA */}
             <div className="flex items-center gap-4 w-full xl:w-auto">
                 <div className="bg-indigo-50 p-3 rounded-full text-indigo-600 hidden sm:block">
                     <FaCalendarAlt className="text-xl"/>
@@ -221,13 +209,12 @@ export default function ClientesPage() {
                 </div>
             </div>
 
-            {/* NUEVO: FILTRO POR TIPO (INTERESADOS vs CLIENTES) */}
             <div className="flex bg-gray-100 p-1 rounded-lg w-full xl:w-auto">
                 <button 
                     onClick={() => setFilterType('TODOS')}
                     className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all ${filterType === 'TODOS' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
                 >
-                    Todos ({clientesFiltrados.length + (filterType !== 'TODOS' ? clientes.filter(c => (c.fechaAlta || (c as any).createdAt || '').split('T')[0] === filterDate && c.tipo !== filterType).length : 0)})
+                    Todos
                 </button>
                 <button 
                     onClick={() => setFilterType('PROSPECTO')}
@@ -244,17 +231,15 @@ export default function ClientesPage() {
             </div>
         </div>
 
-        {/* LISTA FILTRADA */}
         {loading ? (
             <div className="text-center py-10">Cargando datos...</div>
         ) : (
             <div className="animate-fade-in-up">
                 
-                {/* TÍTULO DE LA SECCIÓN (Dinámico) */}
                 <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-500 font-medium text-sm">
-                            Mostrando <span className="font-bold text-gray-800">{filterType === 'TODOS' ? 'todos los registros' : filterType === 'PROSPECTO' ? 'solo interesados' : 'solo clientes formales'}</span> del {formatDateLabel(filterDate)}
+                            Mostrando <span className="font-bold text-gray-800">{filterType === 'TODOS' ? 'todos' : filterType === 'PROSPECTO' ? 'interesados' : 'clientes'}</span> del {formatDateLabel(filterDate)}
                         </span>
                     </div>
                     <span className="badge badge-lg bg-indigo-100 text-indigo-800 border-none font-bold">
@@ -262,27 +247,22 @@ export default function ClientesPage() {
                     </span>
                 </div>
 
-                {/* TABLA O MENSAJE VACÍO */}
                 {clientesFiltrados.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
                         <FaFilter className="text-4xl text-gray-200 mx-auto mb-3"/>
-                        <p className="text-gray-400 font-medium">No se encontraron {filterType === 'PROSPECTO' ? 'interesados' : filterType === 'CLIENTE' ? 'clientes' : 'registros'} en esta fecha.</p>
+                        <p className="text-gray-400 font-medium">No se encontraron registros.</p>
                         <div className="flex gap-2 justify-center mt-3">
-                            {filterType !== 'TODOS' && (
-                                <button onClick={() => setFilterType('TODOS')} className="btn btn-sm btn-ghost text-indigo-500">Ver Todos</button>
-                            )}
-                            {filterDate !== today && (
-                                <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-500">Ir a Hoy</button>
-                            )}
+                            {filterDate !== today && <button onClick={() => setFilterDate(today)} className="btn btn-sm btn-ghost text-indigo-500">Ir a Hoy</button>}
                         </div>
                     </div>
                 ) : (
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="table w-full">
+                                {/* 🟢 CORRECCIÓN HYDRATION ERROR: Eliminados espacios vacíos en thead */}
                                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-wider">
                                     <tr>
-                                        <th className="pl-6 w-10">Nivel</th>
+                                        <th className="pl-6 w-32">Nivel</th>
                                         <th>Nombre</th>
                                         <th>Contacto</th>
                                         <th>Interés</th>
@@ -298,22 +278,15 @@ export default function ClientesPage() {
                                             <tr key={c.id} className="hover:bg-indigo-50/30 transition-colors">
                                                 <td className="pl-6">
                                                     {c.tipo === 'CLIENTE' ? (
-                                                        <div className="tooltip" data-tip="Cliente Formal">
-                                                            <FaUserTie className="text-green-600 text-lg"/>
-                                                        </div>
+                                                        <div className="badge bg-green-100 text-green-700 border-none font-bold gap-1 p-3 w-full justify-start"><FaUserTie/> CLIENTE</div>
                                                     ) : (
-                                                        <div className="tooltip" data-tip="Interesado">
-                                                            <FaTrafficLight className="text-orange-400 text-lg"/>
-                                                        </div>
+                                                        <div className="badge bg-yellow-100 text-yellow-700 border-none font-bold gap-1 p-3 w-full justify-start"><FaTrafficLight/> INTERESADO</div>
                                                     )}
                                                 </td>
                                                 <td>
                                                     <div className="font-bold text-gray-800">{c.nombre}</div>
-                                                    <div className="text-xs text-gray-400 font-mono flex gap-2">
-                                                        <span className={`font-bold ${c.tipo === 'CLIENTE' ? 'text-green-600' : 'text-orange-400'}`}>
-                                                            {c.tipo === 'CLIENTE' ? 'CLIENTE' : 'INTERESADO'}
-                                                        </span>
-                                                        {c.dni && <span className="text-gray-500">| DNI: {c.dni}</span>}
+                                                    <div className="text-xs text-gray-400 font-mono">
+                                                        {c.dni ? `DNI: ${c.dni}` : 'Sin DNI'}
                                                     </div>
                                                 </td>
                                                 <td>
@@ -329,24 +302,14 @@ export default function ClientesPage() {
                                                             <div className="text-green-600 font-bold text-[10px]">{propC.moneda} {propC.precio}</div>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-xs text-gray-300 italic">Sin interés marcado</span>
+                                                        <span className="text-xs text-gray-300 italic">Sin interés</span>
                                                     )}
                                                 </td>
                                                 <td>
                                                     <div className="flex justify-center gap-2">
-                                                        <button 
-                                                            onClick={() => handleOpenAgendarVisita(c)}
-                                                            className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium"
-                                                            title="Agendar en Calendario"
-                                                        >
-                                                            <FaCalendarCheck /> Visita
-                                                        </button>
-
+                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium" title="Agendar en Calendario"><FaCalendarCheck /> Visita</button>
                                                         <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500"><FaEye /></button>
-                                                        
-                                                        {isAdmin && (
-                                                            <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>
-                                                        )}
+                                                        {isAdmin && <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -360,7 +323,7 @@ export default function ClientesPage() {
             </div>
         )}
 
-        {/* MODAL NUEVO CONTACTO */}
+        {/* MODAL NUEVO */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
@@ -392,8 +355,6 @@ export default function ClientesPage() {
                                 />
                                 {errors.telefono1 && <span className="text-red-500 text-xs">Debe tener 9 dígitos</span>}
                             </div>
-                            
-                            {/* Selector de Propiedad */}
                             <div className="form-control">
                                 <label className="label font-bold text-gray-700">Propiedad de Interés</label>
                                 <select {...register('propiedadId')} className="select select-bordered w-full">
@@ -403,15 +364,13 @@ export default function ClientesPage() {
                                     ))}
                                 </select>
                             </div>
-
                             <div className="form-control">
                                 <label className="label font-bold text-gray-700">Fecha Registro</label>
                                 <input {...register('fechaAlta')} type="date" defaultValue={filterDate} className="input input-bordered w-full"/>
                             </div>
                         </div>
-
                         {propiedadSeleccionada && (
-                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 animate-fade-in flex gap-4 items-start">
+                            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-4 items-start">
                                 <div className="text-blue-500 text-xl mt-1"><FaInfoCircle/></div>
                                 <div className="text-sm w-full">
                                     <h5 className="font-bold text-blue-900 mb-1">Información de la Propiedad</h5>
@@ -428,7 +387,6 @@ export default function ClientesPage() {
                             </div>
                         )}
                     </div>
-                    
                     <div className="flex justify-end gap-3">
                         <button type="button" onClick={() => setModalOpen(false)} className="btn btn-ghost">Cancelar</button>
                         <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600">{isSubmitting ? 'Guardando...' : 'Registrar Interesado'}</button>
@@ -446,7 +404,7 @@ export default function ClientesPage() {
                     <h2 className="text-2xl font-bold mb-4 text-indigo-900">{selectedCliente.nombre}</h2>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <p><strong>Celular:</strong> {selectedCliente.telefono1}</p>
-                        <p><strong>Tipo:</strong> {selectedCliente.tipo === 'CLIENTE' ? 'CLIENTE FORMAL' : 'INTERESADO'}</p>
+                        <p><strong>Tipo:</strong> {selectedCliente.tipo}</p>
                         <p><strong>Email:</strong> {selectedCliente.email || '---'}</p>
                         <p><strong>DNI:</strong> {selectedCliente.dni || '---'}</p>
                     </div>

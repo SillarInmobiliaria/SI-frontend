@@ -28,6 +28,10 @@ export interface Propiedad {
   ubicacion: string;
   precio: number;
   moneda: string;
+  
+  // 🟢 NUEVO CAMPO
+  mantenimiento?: number;
+
   tipo: string;
   modalidad: string;
   descripcion: string;
@@ -70,14 +74,17 @@ export interface Propiedad {
   // -- AUDITORÍA --
   observaciones?: any;
 
+  createdAt: string;
+  updatedAt?: string;
+  activo?: boolean;
+
   [key: string]: any; 
 }
 
-// Definición de Cliente (ACTUALIZADO PARA PROSPECTOS)
+// Definición de Cliente
 export interface Cliente {
   createdAt: string | undefined;
   id: string;
-  // Nuevo campo para saber su nivel
   tipo: 'PROSPECTO' | 'CLIENTE'; 
   
   nombre: string;
@@ -88,7 +95,7 @@ export interface Cliente {
   direccion?: string;
   email?: string;
   
-  // Contacto (Vital)
+  // Contacto
   telefono1: string; 
   telefono2?: string;
   
@@ -141,7 +148,6 @@ export interface Visita {
   propiedadId: string;
   asesorId?: string;
 
-  // Relaciones completas
   cliente: Cliente;
   propiedad: Propiedad;
   asesor?: {

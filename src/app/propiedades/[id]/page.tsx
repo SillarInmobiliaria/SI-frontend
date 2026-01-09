@@ -8,7 +8,7 @@ import {
   FaCheckCircle, FaTimesCircle, FaExclamationCircle, FaSave, 
   FaMapMarkerAlt, FaBed, FaBath, FaCar, FaRulerCombined, 
   FaImages, FaUserTie, FaWhatsapp, FaFileContract, FaTag, FaBuilding,
-  FaYoutube, FaFilePdf, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers, FaCalendarAlt,
+  FaYoutube, FaFilePdf, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
   FaAlignLeft, FaShareAlt
 } from 'react-icons/fa';
 
@@ -306,9 +306,24 @@ export default function PropiedadDetallePage() {
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Precio de {propiedad.modalidad}</p>
-                    <div className="flex items-baseline gap-1 text-indigo-900 mb-6">
+                    <div className="flex items-baseline gap-1 text-indigo-900 mb-2">
                         <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
+
+                    {/* MANTENIMIENTO */}
+                    {propiedad.mantenimiento && propiedad.mantenimiento > 0 ? (
+                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 mb-6 flex justify-between items-center">
+                            <span className="text-xs font-bold text-blue-600 uppercase">Mantenimiento:</span>
+                            {/* FORMATO SOLES */}
+                            <span className="text-lg font-bold text-blue-900">
+                                S/ {Number(propiedad.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    ) : propiedad.tipo === 'Departamento' && (
+                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mb-6 text-center">
+                            <span className="text-xs font-bold text-gray-400 uppercase">Sin Mantenimiento</span>
+                        </div>
+                    )}
                     
                     <div className="divider my-6"></div>
 
@@ -321,8 +336,6 @@ export default function PropiedadDetallePage() {
                     </div>
                     
                     {/* BOTONES DE ACCIÓN (FINAL) */}
-                    
-                    {/* 1. CONTACTAR DUEÑO (VERDE) - Solo si hay propietarios */}
                     {propiedad.Propietarios && propiedad.Propietarios.length > 0 ? (
                         <a 
                             href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion} (Sillar Inmobiliaria).`}
@@ -337,7 +350,6 @@ export default function PropiedadDetallePage() {
                         </button>
                     )}
 
-                    {/* 2. COMPARTIR FICHA (MORADO) - Para Clientes */}
                     <button onClick={handleShare} className="btn bg-purple-600 hover:bg-purple-700 text-white w-full font-bold gap-2 shadow-lg h-12 border-none">
                         <FaShareAlt/> Compartir Ficha
                     </button>

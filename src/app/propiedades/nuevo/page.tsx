@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
 import { createPropiedad } from '../../../services/api';
-import api from '../../../services/api'; // Necesitamos axios directo para buscar usuarios
+import api from '../../../services/api';
 import { 
   FaHome, FaDollarSign, FaBed, FaBath, FaCar, 
   FaRulerCombined, FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
@@ -33,16 +33,18 @@ export default function NuevaPropiedadPage() {
   const [previewMain, setPreviewMain] = useState<string | null>(null);
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  // Lógica condicional Departamento
+  // 🟢 LÓGICA CONDICIONAL DEPARTAMENTO + MANTENIMIENTO
   const tipoInmueble = watch('tipo');
   const esDepartamento = tipoInmueble === 'Departamento';
+  
+  // Nuevo watch para el select de "¿Tiene mantenimiento?"
+  const tieneMantenimiento = watch('tieneMantenimiento'); 
 
   useEffect(() => {
     fetchPropietarios();
-    // Cargar usuarios para el buscador de asesores
     const fetchUsuarios = async () => {
         try {
-            const { data } = await api.get('/usuarios'); // Asumiendo que tienes esta ruta
+            const { data } = await api.get('/usuarios');
             setAsesoresDB(data);
         } catch (error) {
             console.error("Error cargando asesores", error);
@@ -60,7 +62,7 @@ export default function NuevaPropiedadPage() {
       const propObj = propietarios.find(p => p.id === propietarioSelectId);
       if (propObj) {
           setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-          setPropietarioSelectId(''); // Reset select
+          setPropietarioSelectId('');
       }
   };
 
@@ -77,8 +79,7 @@ export default function NuevaPropiedadPage() {
       setAsesorSeleccionado(asesor);
       setBusquedaAsesor(asesor.nombre);
       setMostrarSugerencias(false);
-      setValue('asesor', asesor.nombre); // Guardamos el nombre para el form
-      // Si necesitas el ID también: setValue('usuarioId', asesor.id);
+      setValue('asesor', asesor.nombre);
   };
 
   // --- LÓGICA FOTOS ---
@@ -104,22 +105,23 @@ export default function NuevaPropiedadPage() {
     try {
         const formData = new FormData();
         
-        // Campos de texto simples
         Object.keys(data).forEach(key => {
-            if (key !== 'fotoPrincipal' && key !== 'galeria' && key !== 'fichaTecnica') {
+            if (key !== 'fotoPrincipal' && key !== 'galeria' && key !== 'fichaTecnica' && key !== 'tieneMantenimiento') {
                 formData.append(key, data[key]);
             }
         });
 
-        // MONEDA FIJA
+        // 🟢 LÓGICA MANTENIMIENTO: Si dijeron NO, enviamos 0 o null
+        if (data.tieneMantenimiento === 'no') {
+            formData.set('mantenimiento', '0'); // O puedes no enviarlo
+        }
+
         formData.append('moneda', 'USD');
 
-        // PROPIETARIOS (Array de IDs)
         propietariosSeleccionados.forEach(p => {
-            formData.append('propietariosIds[]', p.id); // Ajusta según espere tu backend (array o repetido)
+            formData.append('propietariosIds[]', p.id);
         });
 
-        // ARCHIVOS
         if (data.fotoPrincipal?.[0]) formData.append('fotoPrincipal', data.fotoPrincipal[0]);
         if (data.fichaTecnica?.[0]) formData.append('pdf', data.fichaTecnica[0]);
         if (data.galeria && data.galeria.length > 0) {
@@ -128,7 +130,6 @@ export default function NuevaPropiedadPage() {
             }
         }
 
-        // CHECKBOXES
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral'];
         docs.forEach(doc => {
             formData.append(doc, data[doc] ? 'true' : 'false');
@@ -189,7 +190,6 @@ export default function NuevaPropiedadPage() {
                     <button type="button" onClick={agregarPropietario} className="btn btn-primary bg-indigo-600 text-white"><FaPlus/> Agregar</button>
                 </div>
 
-                {/* Lista de Propietarios Agregados */}
                 <div className="space-y-2">
                     {propietariosSeleccionados.length === 0 && <p className="text-sm text-gray-400 italic">No hay propietarios seleccionados.</p>}
                     {propietariosSeleccionados.map((p, index) => (
@@ -258,6 +258,51 @@ export default function NuevaPropiedadPage() {
                             <input type="number" step="0.01" {...register('precio', {required:true})} className="input input-bordered w-full pl-8 bg-white font-bold text-lg"/>
                         </div>
                     </div>
+
+                    {/* LÓGICA MANTENIMIENTO: Solo si es Departamento */}
+                    {esDepartamento && (
+                        <div className="form-control bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <label className="label font-bold text-blue-700 text-sm">¿Tiene Mantenimiento?</label>
+                            
+                            {/* Selector SI/NO */}
+                            <div className="flex gap-4 mb-2">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        value="si" 
+                                        {...register('tieneMantenimiento')} 
+                                        className="radio radio-primary radio-sm" 
+                                    />
+                                    <span className="text-sm">Sí</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        value="no" 
+                                        {...register('tieneMantenimiento')} 
+                                        className="radio radio-primary radio-sm" 
+                                        defaultChecked // Por defecto NO
+                                    />
+                                    <span className="text-sm">No</span>
+                                </label>
+                            </div>
+
+                            {/* Input condicional: Solo si dijeron SÍ */}
+                            {tieneMantenimiento === 'si' && (
+                                <div className="relative animate-fade-in-down">
+                                    <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-xs">S/</span>
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        {...register('mantenimiento')} 
+                                        className="input input-sm input-bordered w-full pl-8 bg-white" 
+                                        placeholder="Precio"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="form-control">
                         <label className="label font-bold text-gray-600">Área Total (m²)</label>
                         <input type="number" {...register('area')} className="input input-bordered w-full bg-white"/>
@@ -344,7 +389,7 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
-                {/* BUSCADOR DE ASESOR (AUTOCOMPLETE) */}
+                {/* BUSCADOR DE ASESOR */}
                 <div className="form-control relative">
                     <label className="label font-bold text-gray-600 text-sm">Asesor Encargado (Buscar)</label>
                     <div className="flex items-center">
@@ -361,7 +406,6 @@ export default function NuevaPropiedadPage() {
                             onFocus={() => setMostrarSugerencias(true)}
                         />
                     </div>
-                    {/* Lista desplegable de sugerencias */}
                     {mostrarSugerencias && busquedaAsesor.length > 0 && (
                         <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-40 overflow-y-auto mt-1">
                             {filtrarAsesores.length > 0 ? (
