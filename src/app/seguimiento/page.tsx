@@ -39,17 +39,28 @@ export default function SeguimientoPage() {
     }
   };
 
-  // 👇 NUEVA FUNCIÓN: Solo muestra alerta por ahora
   const handleCierreVenta = (clienteNombre: string) => {
     alert(`🎉 MÓDULO DE CIERRE (Próximamente)\n\nAquí se procesará la venta final para: ${clienteNombre}.\nSe generarán contratos y comisiones.`);
+  };
+
+  // 👇 FUNCIÓN MÁGICA PARA CORREGIR LA FECHA
+  // Obliga a mostrar la fecha en UTC para que no se reste 1 día por la zona horaria
+  const formatearFecha = (fechaString: string) => {
+    if (!fechaString) return '--';
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // --- LÓGICA DE FILTRADO ---
   const dataFiltrada = seguimientos.filter(s => {
     const fechaRegistro = new Date(s.fecha);
     const pasaEstado = filtroEstado === 'TODOS' ? true : s.estado === filtroEstado;
-    const pasaMes = fechaRegistro.getMonth() === Number(filtroMes);
-    const pasaAnio = fechaRegistro.getFullYear() === Number(filtroAnio);
+    // Ajustamos la zona horaria para el filtro también
+    const mesRegistro = new Date(s.fecha).getUTCMonth(); 
+    const anioRegistro = new Date(s.fecha).getUTCFullYear();
+
+    const pasaMes = mesRegistro === Number(filtroMes);
+    const pasaAnio = anioRegistro === Number(filtroAnio);
     return pasaEstado && pasaMes && pasaAnio;
   });
 
@@ -157,7 +168,8 @@ export default function SeguimientoPage() {
                             {dataFiltrada.map((item) => (
                                 <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
                                     <td className="pl-6 font-mono text-xs text-slate-500 font-medium">
-                                        {new Date(item.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                                        {/* 👇 USAMOS LA FUNCIÓN CORREGIDA AQUÍ */}
+                                        {formatearFecha(item.fecha)}
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-3">
@@ -184,7 +196,8 @@ export default function SeguimientoPage() {
                                         {item.fechaProxima ? (
                                             <div className={`badge ${new Date(item.fechaProxima) < new Date() && item.estado === 'PENDIENTE' ? 'badge-error text-white' : 'badge-ghost text-slate-500 bg-slate-100'} gap-2 text-xs font-medium`}>
                                                 <FaCalendarAlt />
-                                                {new Date(item.fechaProxima).toLocaleDateString()}
+                                                {/* 👇 USAMOS LA FUNCIÓN CORREGIDA AQUÍ TAMBIÉN */}
+                                                {formatearFecha(item.fechaProxima)}
                                             </div>
                                         ) : (
                                             <span className="text-xs text-slate-300 italic">--</span>
@@ -223,7 +236,7 @@ export default function SeguimientoPage() {
                                                 </button>
                                             )}
 
-                                            {/* BOTÓN 2: CIERRE (NUEVO) */}
+                                            {/* BOTÓN 2: CIERRE */}
                                             <button 
                                                 onClick={() => handleCierreVenta(item.Cliente?.nombre)}
                                                 className="btn btn-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none gap-2 font-normal shadow-sm hover:shadow-md transition-all"

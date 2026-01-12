@@ -157,6 +157,7 @@ export interface Visita {
 
 // Definición de Seguimiento
 export interface Seguimiento {
+  comentario: any;
   id: string;
   tipoAccion: string;
   fecha: string;

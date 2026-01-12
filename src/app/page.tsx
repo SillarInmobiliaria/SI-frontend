@@ -1,24 +1,29 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getSeguimientos, getClientes, getVisitas } from '../services/api';
+import toast, { Toaster } from 'react-hot-toast';
+
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, 
-  FaCalendarCheck, FaRoute, FaBirthdayCake, FaClipboardCheck 
+  FaCalendarCheck, FaRoute, FaBirthdayCake, FaClipboardCheck, FaTimes, FaMapMarkerAlt
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
+  
+  const notificacionMostrada = useRef(false);
 
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
   const mostrarAlerta = user?.mustChangePassword;
 
-  // --- CÁLCULO REAL DE DÍAS RESTANTES ---
+  // --- CÁLCULO DÍAS RESTANTES ---
   let diasRestantes = 30;
-  
   if (user?.createdAt) {
     const fechaCreacion = new Date(user.createdAt);
     const fechaActual = new Date();
@@ -28,9 +33,193 @@ export default function DashboardPage() {
   }
   if (diasRestantes < 0) diasRestantes = 0;
 
+  // 👇 FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM)
+  const getHora = (fechaIso: string) => {
+      if (!fechaIso) return '--:--';
+      const date = new Date(fechaIso);
+      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  // 👇 LÓGICA DE NOTIFICACIONES
+  useEffect(() => {
+    if (notificacionMostrada.current) return;
+    notificacionMostrada.current = true;
+
+    const verificarRecordatorios = async () => {
+        try {
+            // 1. Obtener TODOS los datos
+            const seguimientos = await getSeguimientos();
+            const clientes = await getClientes();
+            const visitas = await getVisitas(); 
+            
+            const objHoy = new Date();
+            const objManana = new Date(objHoy);
+            objManana.setDate(objHoy.getDate() + 1);
+
+            const hoyStr = objHoy.toLocaleDateString('en-CA'); // YYYY-MM-DD
+            const mananaStr = objManana.toLocaleDateString('en-CA');
+
+            // --- FILTROS ---
+
+            // A. Seguimientos (Usamos 'fechaProxima')
+            const segHoy = seguimientos.filter((s: any) => s.fechaProxima?.startsWith(hoyStr) && s.estado === 'PENDIENTE');
+            const segManana = seguimientos.filter((s: any) => s.fechaProxima?.startsWith(mananaStr) && s.estado === 'PENDIENTE');
+
+            // B. Visitas (CORREGIDO: Usamos 'fechaProgramada')
+            // Nota: fechaProgramada es un ISO string completo "2026-01-13T15:00:00"
+            const visHoy = visitas.filter((v: any) => v.fechaProgramada?.startsWith(hoyStr) && v.estado !== 'CANCELADA');
+            const visManana = visitas.filter((v: any) => v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA');
+
+            // C. Cumpleaños
+            const cumplesHoy = clientes.filter((c: any) => {
+                if(!c.fechaNacimiento) return false;
+                const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
+                return fechaNac.getDate() === objHoy.getDate() && 
+                       fechaNac.getMonth() === objHoy.getMonth();
+            });
+
+            // --- SONIDO ---
+            if (segHoy.length > 0 || segManana.length > 0 || visHoy.length > 0 || visManana.length > 0 || cumplesHoy.length > 0) {
+                playSound();
+            }
+
+            // --- MOSTRAR ALERTAS ---
+
+            // 1. Visitas HOY (Prioridad Alta)
+            if (visHoy.length > 0) {
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
+                        <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 pt-0.5"><FaMapMarkerAlt className="h-10 w-10 text-teal-600 animate-bounce" /></div>
+                                <div className="ml-3 flex-1">
+                                    <p className="text-sm font-bold text-gray-900">¡Salida de Campo HOY!</p>
+                                    <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-teal-700">{visHoy.length} visitas</b> programadas.</p>
+                                    {/* 👇 CORREGIDO: Usamos getHora y cliente?.nombre */}
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Hora: {getHora(visHoy[0].fechaProgramada)} - {visHoy[0].cliente?.nombre}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex border-l border-gray-200">
+                            <button onClick={() => { toast.dismiss(t.id); router.push('/visitas'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-bold text-teal-700 hover:bg-teal-50">Ver</button>
+                        </div>
+                    </div>
+                ), { duration: 10000 });
+            }
+
+            // 2. Visitas MAÑANA
+            if (visManana.length > 0) {
+                setTimeout(() => {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-cyan-400 relative mb-2`}>
+                            <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5"><FaCalendarCheck className="h-10 w-10 text-cyan-400" /></div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-bold text-gray-900">Visitas para Mañana</p>
+                                        <p className="mt-1 text-sm text-gray-500">Prepárate, tienes <b className="text-cyan-600">{visManana.length} visitas</b>.</p>
+                                        {/* 👇 CORREGIDO: Usamos getHora y cliente?.nombre */}
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Primera: {getHora(visManana[0].fechaProgramada)} - {visManana[0].cliente?.nombre}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex border-l border-gray-200">
+                                <button onClick={() => { toast.dismiss(t.id); router.push('/visitas'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-cyan-600 hover:bg-cyan-50">Ver</button>
+                            </div>
+                        </div>
+                    ), { duration: 8000 });
+                }, 500);
+            }
+
+            // 3. Seguimientos HOY
+            if (segHoy.length > 0) {
+                setTimeout(() => {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-red-500 relative mb-2`}>
+                            <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5"><FaRoute className="h-10 w-10 text-red-500" /></div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-bold text-gray-900">Llamadas para HOY</p>
+                                        <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-red-600">{segHoy.length} seguimientos</b> pendientes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex border-l border-gray-200">
+                                <button onClick={() => { toast.dismiss(t.id); router.push('/seguimiento'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-bold text-red-600 hover:bg-red-50">Ver</button>
+                            </div>
+                        </div>
+                    ), { duration: 9000 });
+                }, 1000);
+            }
+
+            // 4. Seguimientos MAÑANA
+            if (segManana.length > 0) {
+                setTimeout(() => {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-yellow-400 relative mb-2`}>
+                            <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5"><FaRoute className="h-10 w-10 text-yellow-400" /></div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-bold text-gray-900">Llamadas para Mañana</p>
+                                        <p className="mt-1 text-sm text-gray-500">Planifica <b className="text-yellow-600">{segManana.length} seguimientos</b>.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex border-l border-gray-200">
+                                <button onClick={() => { toast.dismiss(t.id); router.push('/seguimiento'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-yellow-600 hover:bg-yellow-50">Ver</button>
+                            </div>
+                        </div>
+                    ), { duration: 8000 });
+                }, 1500);
+            }
+
+            // 5. Cumpleaños
+            if (cumplesHoy.length > 0) {
+                setTimeout(() => {
+                    toast.custom((t) => (
+                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-purple-500 relative`}>
+                            <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5"><FaBirthdayCake className="h-10 w-10 text-purple-500 animate-bounce" /></div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-bold text-gray-900">¡Cumpleaños!</p>
+                                        <p className="mt-1 text-sm text-gray-500">Hoy celebra: <b>{cumplesHoy.map((c:any) => c.nombre).join(', ')}</b>.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ), { duration: 12000 });
+                }, 2000);
+            }
+
+        } catch (error) {
+            console.error("Error notificaciones", error);
+        }
+    };
+
+    const playSound = () => {
+        const audio = new Audio('/alert.mp3'); 
+        audio.play().catch(e => console.log("Audio bloqueado"));
+    };
+
+    verificarRecordatorios();
+  }, []);
+
   return (
     <div className="min-h-screen bg-base-200">
       <Navbar />
+      <Toaster position="top-right" reverseOrder={false} />
       
       <div className="container mx-auto p-8">
         
@@ -49,46 +238,11 @@ export default function DashboardPage() {
                 <div className={`badge ${isAdmin ? 'badge-primary' : 'badge-secondary'} badge-lg p-4 font-bold shadow-md`}>
                     {isAdmin ? 'Administrador' : 'Asesor Comercial'}
                 </div>
-                <button 
-                    onClick={() => router.push('/cambiar-password')}
-                    className="btn btn-sm btn-ghost text-slate-500 gap-2"
-                >
+                <button onClick={() => router.push('/cambiar-password')} className="btn btn-sm btn-ghost text-slate-500 gap-2">
                     <FaKey /> Cambiar Contraseña
                 </button>
             </div>
         </div>
-
-        {/* --- ALERTAS DE SEGURIDAD --- */}
-        {mostrarAlerta ? (
-            <div className="alert alert-warning shadow-lg mb-8 border-l-8 border-yellow-600">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-yellow-900 font-bold text-lg">
-                        <FaExclamationTriangle />
-                        <h3>¡Acción Requerida!</h3>
-                    </div>
-                    <div className="text-yellow-800">
-                        Estás usando una contraseña temporal. Cambiala antes de que expire.
-                    </div>
-                </div>
-                <div className="flex items-center gap-4 bg-yellow-100/50 p-2 rounded-lg">
-                    <FaClock className="text-2xl text-yellow-700"/>
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-yellow-700 uppercase">Tiempo Restante</span>
-                        <span className={`text-2xl font-black leading-none ${diasRestantes < 5 ? 'text-red-600' : 'text-yellow-900'}`}>
-                            {diasRestantes} días
-                        </span>
-                    </div>
-                </div>
-                <button onClick={() => router.push('/cambiar-password')} className="btn btn-active btn-warning text-yellow-900 font-bold">
-                    Cambiar Ahora
-                </button>
-            </div>
-        ) : (
-            <div className="alert alert-success shadow-sm mb-8 bg-green-50 border border-green-200">
-                <FaCheckCircle className="text-green-500"/>
-                <span className="text-green-700 text-sm font-semibold">Tu cuenta está segura y activa.</span>
-            </div>
-        )}
 
         {/* --- GRID DE MÓDULOS --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
