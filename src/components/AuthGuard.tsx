@@ -18,9 +18,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/login');
       }
       
-      // Si YA hay usuario y trata de entrar al login, mandarlo al dashboard
+      // Si YA hay usuario y trata de entrar al login, mandarlo al INICIO (Raíz)
       if (user && publicPages.includes(pathname)) {
-        router.push('/dashboard');
+        router.push('/');
       }
     }
   }, [user, loading, router, pathname]);

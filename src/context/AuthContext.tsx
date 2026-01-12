@@ -44,10 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
 
-    // ⚠️ CAMBIO IMPORTANTE:
-    // Ya no obligamos a ir a /cambiar-password.
-    // Mandamos a todos al Dashboard y ahí mostramos la alerta si hace falta.
-    router.push('/dashboard');
+    router.push('/');
   };
 
   const logout = () => {

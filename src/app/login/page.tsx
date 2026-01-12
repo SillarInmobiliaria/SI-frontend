@@ -15,10 +15,8 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      // 1. Llamar al backend
       const res = await loginService(data);
       
-      // 2. Guardar sesión y redirigir (el AuthContext se encarga)
       login(res.token, res.usuario);
       
     } catch (err: any) {
