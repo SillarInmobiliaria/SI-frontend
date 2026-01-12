@@ -1,8 +1,4 @@
 'use client';
-// 🟢 CORRECCIÓN IMPORTANTE:
-// Estamos en la raíz "src/app/", así que para salir a "src/" usamos "../"
-// Y tu carpeta se llama "context" (singular), no "contexts".
-
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Link from 'next/link';
@@ -10,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, 
-  FaCalendarCheck, FaRoute, FaBirthdayCake 
+  FaCalendarCheck, FaRoute, FaBirthdayCake, FaClipboardCheck 
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -152,10 +148,23 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
+            {/* 6. NUEVO: MÓDULO DE REQUERIMIENTOS */}
+            <Link href="/requerimientos" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-amber-500 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="bg-amber-100 p-3 rounded-full text-amber-600 group-hover:scale-110 transition-transform">
+                            <FaClipboardCheck className="text-2xl"/>
+                        </div>
+                        <h2 className="card-title text-slate-700">Requerimientos</h2>
+                    </div>
+                    <p className="text-slate-400 text-sm">Buzón de pedidos y necesidades urgentes.</p>
+                </div>
+            </Link>
+
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN (OSCURO) --- */}
             {isAdmin && (
                 <>
-                    {/* 6. USUARIOS */}
+                    {/* 7. USUARIOS */}
                     <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-2">
@@ -166,7 +175,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 7. REPORTES */}
+                    {/* 8. REPORTES */}
                     <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-2">
@@ -179,7 +188,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 8. CUMPLEAÑOS */}
+                    {/* 9. CUMPLEAÑOS */}
                     <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-2">

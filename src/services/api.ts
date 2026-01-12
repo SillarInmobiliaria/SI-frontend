@@ -146,10 +146,25 @@ export const createSeguimiento = async (datos: any) => {
   return data;
 };
 
-// Función para actualizar seguimiento (usado para cambiar estado)
 export const updateSeguimiento = async (id: string, datos: any) => {
   const { data } = await api.put<ApiResponse<Seguimiento>>(`/seguimientos/${id}`, datos);
   return data;
+};
+
+// --- REQUERIMIENTOS ---
+export const getRequerimientos = async () => {
+  const { data } = await api.get('/requerimientos');
+  return data;
+};
+
+export const createRequerimiento = async (data: any) => {
+  const response = await api.post('/requerimientos', data);
+  return response.data;
+};
+
+export const updateEstadoRequerimiento = async (id: string, estado: string) => {
+  const response = await api.put(`/requerimientos/${id}`, { estado });
+  return response.data;
 };
 
 //          SEGURIDAD Y USUARIOS

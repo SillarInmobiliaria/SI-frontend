@@ -4,13 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
-import { createCliente, createInteres, eliminarCliente, createSeguimiento } from '../../services/api'; 
+import { createCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { 
   FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
   FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter, FaHistory, FaInfoCircle, FaBullhorn,
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
-  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave
+  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave, FaClipboardList
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'http://localhost:4000/';
@@ -49,9 +49,13 @@ export default function ClientesPage() {
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false); 
 
-  // --- NUEVOS ESTADOS PARA SEGUIMIENTO ---
+  // --- ESTADOS PARA SEGUIMIENTO ---
   const [isSeguimientoOpen, setSeguimientoOpen] = useState(false);
   const [clienteSeguimiento, setClienteSeguimiento] = useState<any>(null);
+
+  // --- ESTADOS PARA REQUERIMIENTO ---
+  const [isReqOpen, setReqOpen] = useState(false);
+  const [clienteReq, setClienteReq] = useState<any>(null);
 
   // Buscador Propiedades
   const [propSearch, setPropSearch] = useState(''); 
@@ -64,11 +68,19 @@ export default function ClientesPage() {
   // Formulario Principal (Clientes)
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>();
 
+  // Formulario Seguimiento
   const { 
     register: registerSeg, 
     handleSubmit: handleSubmitSeg, 
     reset: resetSeg,
     formState: { errors: errorsSeg }
+  } = useForm();
+
+  // Formulario Requerimiento
+  const { 
+    register: registerReq, 
+    handleSubmit: handleSubmitReq, 
+    reset: resetReq
   } = useForm();
 
   const selectedPropiedadId = watch('propiedadId');
@@ -103,43 +115,59 @@ export default function ClientesPage() {
       reset(); 
   };
 
-  // --- LÓGICA DE SEGUIMIENTO ---
+  // --- LÓGICA SEGUIMIENTO ---
   const handleOpenSeguimiento = (cliente: any) => {
       setClienteSeguimiento(cliente);
       setSeguimientoOpen(true);
-      resetSeg(); // Limpiar formulario anterior
+      resetSeg(); 
   };
 
   const onSubmitSeguimiento = async (data: any) => {
       if (!clienteSeguimiento) return;
-      
       try {
-          // El input type="date" devuelve "2026-01-01", pero el backend quiere "2026-01-01T00:00:00.000Z"
           const fechaProximaISO = new Date(data.fechaProxima).toISOString();
-
           const payload = {
               clienteId: clienteSeguimiento.id,
               usuarioId: user?.id, 
-              fecha: new Date().toISOString(), // Fecha actual automática
+              fecha: new Date().toISOString(), 
               comentario: data.comentario,
-              fechaProxima: fechaProximaISO,   // Usamos la fecha convertida
+              fechaProxima: fechaProximaISO,   
               estado: data.estado
           };
-
           await createSeguimiento(payload);
-          
           alert('✅ Seguimiento registrado correctamente');
           setSeguimientoOpen(false);
           resetSeg();
       } catch (error) {
           console.error(error);
-          alert('❌ Error al guardar seguimiento. Revisa que el backend esté corriendo.');
+          alert('❌ Error al guardar seguimiento.');
       }
   };
 
-  // --- LÓGICA DE CIERRE ---
-  const handleCierre = (cliente: any) => {
-      alert(`🚀 Módulo de Cierre (Próximamente)\n\nAquí cerrarás la venta/alquiler para el cliente: ${cliente.nombre}`);
+  // LÓGICA REQUERIMIENTO
+  const handleOpenReq = (cliente: any) => {
+      setClienteReq(cliente);
+      setReqOpen(true);
+      resetReq();
+  };
+
+  const onSubmitReq = async (data: any) => {
+      if (!clienteReq) return;
+      try {
+          await createRequerimiento({
+              clienteId: clienteReq.id,
+              fecha: new Date().toISOString(),
+              pedido: data.pedido,
+              prioridad: data.prioridad, // 'URGENTE' o 'NORMAL'
+              usuarioId: user?.id
+          });
+          alert('✅ Requerimiento creado exitosamente');
+          setReqOpen(false);
+          resetReq();
+      } catch (error) {
+          console.error(error);
+          alert('❌ Error al crear requerimiento');
+      }
   };
 
   const clientesFiltrados = useMemo(() => {
@@ -392,28 +420,30 @@ export default function ClientesPage() {
                                                 {searchTerm && <td className="text-xs font-bold text-gray-500">{fechaReg}</td>}
                                                 <td>
                                                     <div className="flex justify-center gap-2">
+                                                        {/* BOTÓN REQUERIMIENTO */}
+                                                        <button 
+                                                            onClick={() => handleOpenReq(c)}
+                                                            className="btn btn-sm btn-warning text-white tooltip tooltip-top" 
+                                                            data-tip="Requerimiento"
+                                                        >
+                                                            <FaClipboardList />
+                                                        </button>
+
                                                         {/* BOTÓN: SEGUIMIENTO */}
                                                         <button 
                                                             onClick={() => handleOpenSeguimiento(c)}
-                                                            className="btn btn-sm btn-info text-white" 
-                                                            title="Seguimiento"
+                                                            className="btn btn-sm btn-info text-white tooltip tooltip-top" 
+                                                            data-tip="Seguimiento"
                                                         >
-                                                            <FaRoute /> <span className="hidden lg:inline">Seguimiento</span>
+                                                            <FaRoute /> 
                                                         </button>
 
-                                                        {/* BOTÓN: CIERRE */}
-                                                        <button 
-                                                            onClick={() => handleCierre(c)}
-                                                            className="btn btn-sm btn-success text-white" 
-                                                            title="Cerrar Venta"
-                                                        >
-                                                            <FaCheckCircle /> <span className="hidden lg:inline">Cierre</span>
-                                                        </button>
+                                                        {/* ❌ EL BOTÓN DE CIERRE FUE ELIMINADO DE AQUÍ */}
 
                                                         {/* BOTONES ANTERIORES */}
-                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200" title="Agendar"><FaCalendarCheck /></button>
-                                                        <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500"><FaEye /></button>
-                                                        {isAdmin && <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>}
+                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 tooltip" data-tip="Visita"><FaCalendarCheck /></button>
+                                                        <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500 tooltip" data-tip="Ver"><FaEye /></button>
+                                                        {isAdmin && <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500 tooltip" data-tip="Eliminar"><FaTrash /></button>}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -427,7 +457,7 @@ export default function ClientesPage() {
             </div>
         )}
 
-        {/* MODAL NUEVO CLIENTE */}
+        {/* ... MODALES ANTERIORES (Nuevo Cliente, Seguimiento, Detalles) ... */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto relative">
@@ -642,66 +672,88 @@ export default function ClientesPage() {
           </div>
         )}
 
-        {/* MODAL NUEVO: SEGUIMIENTO */}
+        {/* MODAL SEGUIMIENTO */}
         {isSeguimientoOpen && clienteSeguimiento && (
             <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in relative border-t-8 border-info">
                     <button onClick={() => setSeguimientoOpen(false)} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                    <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2 mb-1"><FaRoute className="text-info"/> Nuevo Seguimiento</h3>
+                    <p className="text-sm text-gray-500 mb-6">Registrando actividad para: <span className="font-bold text-gray-800">{clienteSeguimiento.nombre}</span></p>
+                    <form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4">
+                        <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 border border-blue-100"><FaCalendarCheck className="text-blue-400 text-xl"/><div><p className="text-xs font-bold text-blue-500 uppercase">Fecha de Registro</p><p className="font-bold text-gray-800">{fechaHoyVisual}</p></div></div>
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700">Comentario / Resultado *</label>
+                            <textarea {...registerSeg('comentario', { required: true })} className="textarea textarea-bordered h-24 text-base bg-gray-50 focus:bg-white transition-colors" placeholder="Ej. El cliente está interesado pero viaja mañana..."></textarea>
+                            {errorsSeg.comentario && <span className="text-red-500 text-xs">Este campo es obligatorio</span>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Estado *</label>
+                                <select {...registerSeg('estado')} className="select select-bordered w-full"><option value="PENDIENTE">⏳ Pendiente</option><option value="FINALIZADO">✅ Finalizado</option></select>
+                            </div>
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Próximo Contacto</label>
+                                <input type="date" {...registerSeg('fechaProxima', { required: true })} className="input input-bordered w-full" />
+                            </div>
+                        </div>
+                        <div className="modal-action mt-6">
+                            <button type="button" className="btn btn-ghost" onClick={() => setSeguimientoOpen(false)}>Cancelar</button>
+                            <button type="submit" className="btn btn-primary text-white gap-2 shadow-lg hover:shadow-xl"><FaSave /> Guardar Seguimiento</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+
+        {/* MODAL REQUERIMIENTO */}
+        {isReqOpen && clienteReq && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in relative border-t-8 border-warning">
+                    <button onClick={() => setReqOpen(false)} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                     
                     <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2 mb-1">
-                       <FaRoute className="text-info"/> Nuevo Seguimiento
+                       <FaClipboardList className="text-warning"/> Nuevo Requerimiento
                     </h3>
                     <p className="text-sm text-gray-500 mb-6">
-                        Registrando actividad para: <span className="font-bold text-gray-800">{clienteSeguimiento.nombre}</span>
+                        Pedido de: <span className="font-bold text-gray-800">{clienteReq.nombre}</span>
                     </p>
 
-                    <form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4">
-                        
-                        {/* Fecha Actual */}
-                        <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 border border-blue-100">
-                            <FaCalendarCheck className="text-blue-400 text-xl"/>
+                    <form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-4">
+                        <div className="bg-orange-50 p-3 rounded-lg flex items-center gap-3 border border-orange-100">
+                            <FaCalendarCheck className="text-orange-400 text-xl"/>
                             <div>
-                                <p className="text-xs font-bold text-blue-500 uppercase">Fecha de Registro</p>
+                                <p className="text-xs font-bold text-orange-500 uppercase">Fecha de Registro</p>
                                 <p className="font-bold text-gray-800">{fechaHoyVisual}</p>
                             </div>
                         </div>
 
-                        {/* Comentario */}
                         <div className="form-control">
-                            <label className="label font-bold text-gray-700">Comentario / Resultado *</label>
+                            <label className="label font-bold text-gray-700">¿Qué busca el cliente? *</label>
                             <textarea 
-                                {...registerSeg('comentario', { required: true })} 
+                                {...registerReq('pedido', { required: true })} 
                                 className="textarea textarea-bordered h-24 text-base bg-gray-50 focus:bg-white transition-colors" 
-                                placeholder="Ej. El cliente está interesado pero viaja mañana. Quiere ver opciones en Cayma..."
+                                placeholder="Ej. Busca casa en Cayma, 3 habitaciones, con cochera, presupuesto $200k..."
                             ></textarea>
-                            {errorsSeg.comentario && <span className="text-red-500 text-xs">Este campo es obligatorio</span>}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Estado */}
-                            <div className="form-control">
-                                <label className="label font-bold text-gray-700">Estado *</label>
-                                <select {...registerSeg('estado')} className="select select-bordered w-full">
-                                    <option value="PENDIENTE">⏳ Pendiente</option>
-                                    <option value="FINALIZADO">✅ Finalizado</option>
-                                </select>
-                            </div>
-
-                            {/* Fecha Futura */}
-                            <div className="form-control">
-                                <label className="label font-bold text-gray-700">Próximo Contacto</label>
-                                <input 
-                                    type="date" 
-                                    {...registerSeg('fechaProxima', { required: true })} 
-                                    className="input input-bordered w-full" 
-                                />
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700">Prioridad</label>
+                            <div className="flex gap-6 mt-2">
+                                <label className="cursor-pointer flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50 w-full justify-center">
+                                    <input {...registerReq('prioridad')} type="radio" value="NORMAL" className="radio" defaultChecked /> 
+                                    <span>Pendiente (Normal)</span>
+                                </label>
+                                <label className="cursor-pointer flex items-center gap-2 p-2 border border-red-100 rounded-lg hover:bg-red-50 w-full justify-center">
+                                    <input {...registerReq('prioridad')} type="radio" value="URGENTE" className="radio radio-error" /> 
+                                    <span className="font-bold text-red-500">URGENTE</span>
+                                </label>
                             </div>
                         </div>
 
                         <div className="modal-action mt-6">
-                            <button type="button" className="btn btn-ghost" onClick={() => setSeguimientoOpen(false)}>Cancelar</button>
-                            <button type="submit" className="btn btn-primary text-white gap-2 shadow-lg hover:shadow-xl">
-                                <FaSave /> Guardar Seguimiento
+                            <button type="button" className="btn btn-ghost" onClick={() => setReqOpen(false)}>Cancelar</button>
+                            <button type="submit" className="btn btn-warning text-white gap-2 shadow-lg hover:shadow-xl">
+                                <FaSave /> Guardar Requerimiento
                             </button>
                         </div>
                     </form>
