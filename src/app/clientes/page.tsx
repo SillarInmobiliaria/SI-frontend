@@ -1,16 +1,16 @@
 'use client';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation'; 
 import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
-import { createCliente, createInteres, eliminarCliente } from '../../services/api'; 
+import { createCliente, createInteres, eliminarCliente, createSeguimiento } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { 
   FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
   FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaFilter, FaHistory, FaInfoCircle, FaBullhorn,
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
-  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake
+  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'http://localhost:4000/';
@@ -39,6 +39,7 @@ export default function ClientesPage() {
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
   const today = new Date().toISOString().split('T')[0];
+  const fechaHoyVisual = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const [filterDate, setFilterDate] = useState(today);
   const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); 
@@ -48,6 +49,10 @@ export default function ClientesPage() {
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false); 
 
+  // --- NUEVOS ESTADOS PARA SEGUIMIENTO ---
+  const [isSeguimientoOpen, setSeguimientoOpen] = useState(false);
+  const [clienteSeguimiento, setClienteSeguimiento] = useState<any>(null);
+
   // Buscador Propiedades
   const [propSearch, setPropSearch] = useState(''); 
   const [showPropSuggestions, setShowPropSuggestions] = useState(false); 
@@ -56,7 +61,15 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Formulario Principal (Clientes)
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>();
+
+  const { 
+    register: registerSeg, 
+    handleSubmit: handleSubmitSeg, 
+    reset: resetSeg,
+    formState: { errors: errorsSeg }
+  } = useForm();
 
   const selectedPropiedadId = watch('propiedadId');
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
@@ -88,6 +101,45 @@ export default function ClientesPage() {
       setPropSearch(''); 
       setValue('propiedadId', '');
       reset(); 
+  };
+
+  // --- LÓGICA DE SEGUIMIENTO ---
+  const handleOpenSeguimiento = (cliente: any) => {
+      setClienteSeguimiento(cliente);
+      setSeguimientoOpen(true);
+      resetSeg(); // Limpiar formulario anterior
+  };
+
+  const onSubmitSeguimiento = async (data: any) => {
+      if (!clienteSeguimiento) return;
+      
+      try {
+          // El input type="date" devuelve "2026-01-01", pero el backend quiere "2026-01-01T00:00:00.000Z"
+          const fechaProximaISO = new Date(data.fechaProxima).toISOString();
+
+          const payload = {
+              clienteId: clienteSeguimiento.id,
+              usuarioId: user?.id, 
+              fecha: new Date().toISOString(), // Fecha actual automática
+              comentario: data.comentario,
+              fechaProxima: fechaProximaISO,   // Usamos la fecha convertida
+              estado: data.estado
+          };
+
+          await createSeguimiento(payload);
+          
+          alert('✅ Seguimiento registrado correctamente');
+          setSeguimientoOpen(false);
+          resetSeg();
+      } catch (error) {
+          console.error(error);
+          alert('❌ Error al guardar seguimiento. Revisa que el backend esté corriendo.');
+      }
+  };
+
+  // --- LÓGICA DE CIERRE ---
+  const handleCierre = (cliente: any) => {
+      alert(`🚀 Módulo de Cierre (Próximamente)\n\nAquí cerrarás la venta/alquiler para el cliente: ${cliente.nombre}`);
   };
 
   const clientesFiltrados = useMemo(() => {
@@ -257,7 +309,6 @@ export default function ClientesPage() {
             <div className="flex bg-gray-100 p-1 rounded-lg w-full xl:w-auto">
                 <button onClick={() => setFilterType('TODOS')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all ${filterType === 'TODOS' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>Todos</button>
                 <button onClick={() => setFilterType('PROSPECTO')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'PROSPECTO' ? 'bg-white shadow text-orange-500' : 'text-gray-500 hover:text-gray-700'}`}><FaTrafficLight/> Interesados</button>
-                {/* 🟢 CORRECCIÓN: Volvemos a "Clientes" */}
                 <button onClick={() => setFilterType('CLIENTE')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all flex items-center justify-center gap-2 ${filterType === 'CLIENTE' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}><FaHandshake/> Clientes</button>
             </div>
         </div>
@@ -310,7 +361,6 @@ export default function ClientesPage() {
                                         return (
                                             <tr key={c.id} className="hover:bg-indigo-50/30 transition-colors">
                                                 <td className="pl-6">
-                                                    {/* 🟢 CORRECCIÓN: "CLIENTE" sin formal */}
                                                     {c.tipo === 'CLIENTE' ? (
                                                         <div className="badge bg-green-100 text-green-700 border-none font-bold gap-1 p-3 w-full justify-start"><FaUserTie/> CLIENTE</div>
                                                     ) : (
@@ -342,7 +392,26 @@ export default function ClientesPage() {
                                                 {searchTerm && <td className="text-xs font-bold text-gray-500">{fechaReg}</td>}
                                                 <td>
                                                     <div className="flex justify-center gap-2">
-                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 gap-2 font-medium" title="Agendar"><FaCalendarCheck /> Visita</button>
+                                                        {/* BOTÓN: SEGUIMIENTO */}
+                                                        <button 
+                                                            onClick={() => handleOpenSeguimiento(c)}
+                                                            className="btn btn-sm btn-info text-white" 
+                                                            title="Seguimiento"
+                                                        >
+                                                            <FaRoute /> <span className="hidden lg:inline">Seguimiento</span>
+                                                        </button>
+
+                                                        {/* BOTÓN: CIERRE */}
+                                                        <button 
+                                                            onClick={() => handleCierre(c)}
+                                                            className="btn btn-sm btn-success text-white" 
+                                                            title="Cerrar Venta"
+                                                        >
+                                                            <FaCheckCircle /> <span className="hidden lg:inline">Cierre</span>
+                                                        </button>
+
+                                                        {/* BOTONES ANTERIORES */}
+                                                        <button onClick={() => handleOpenAgendarVisita(c)} className="btn btn-sm bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200" title="Agendar"><FaCalendarCheck /></button>
                                                         <button onClick={() => handleViewDetail(c)} className="btn btn-square btn-sm btn-ghost text-gray-400 hover:text-blue-500"><FaEye /></button>
                                                         {isAdmin && <button onClick={() => handleEliminar(c.id)} className="btn btn-square btn-sm btn-ghost text-gray-300 hover:text-red-500"><FaTrash /></button>}
                                                     </div>
@@ -358,7 +427,7 @@ export default function ClientesPage() {
             </div>
         )}
 
-        {/* MODAL NUEVO */}
+        {/* MODAL NUEVO CLIENTE */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
               <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto relative">
@@ -386,7 +455,7 @@ export default function ClientesPage() {
                                 {errors.telefono1 && <span className="text-red-500 text-xs">Debe tener 9 dígitos</span>}
                             </div>
                             
-                            {/* BUSCADOR PREDICTIVO DE PROPIEDADES */}
+                            {/* BUSCADOR PREDICTIVO */}
                             <div className="form-control relative">
                                 <label className="label font-bold text-gray-700">Propiedad de Interés (Buscar)</label>
                                 <div className="relative">
@@ -469,8 +538,6 @@ export default function ClientesPage() {
                                         <span className="font-semibold text-gray-600 flex items-center gap-1"><FaMapMarkerAlt className="text-gray-400"/> Ubicación:</span>
                                         <span className="font-bold text-gray-800">{propiedadSeleccionada.ubicacion}</span>
                                     </div>
-
-                                    {/* Fila 2 - ÁREAS PARA TODOS */}
                                     <div className="flex justify-between sm:justify-start sm:gap-2 items-center">
                                         <span className="font-semibold text-gray-600 flex items-center gap-1"><FaRulerCombined className="text-gray-400"/> Área Terreno:</span>
                                         <span className="font-bold text-gray-800">{propiedadSeleccionada.area} m²</span>
@@ -479,16 +546,12 @@ export default function ClientesPage() {
                                         <span className="font-semibold text-gray-600 flex items-center gap-1"><FaHammer className="text-gray-400"/> Área Construida:</span>
                                         <span className="font-bold text-gray-800">{propiedadSeleccionada.areaConstruida || 0} m²</span>
                                     </div>
-
-                                    {/* Fila 3 - Precio */}
                                     <div className="flex justify-between sm:justify-start sm:gap-2 sm:col-span-2 items-center border-t border-blue-200 pt-2 mt-1">
                                         <span className="font-semibold text-gray-600 flex items-center gap-1"><FaDollarSign className="text-gray-400"/> Precio:</span>
                                         <span className="font-bold text-green-600 text-lg">
                                             {propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
-
-                                    {/* Fila 4 - Mantenimiento (Solo Depas) */}
                                     {propiedadSeleccionada.tipo === 'Departamento' && (
                                         <div className="sm:col-span-2 mt-1">
                                             <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-blue-100 w-fit">
@@ -579,6 +642,73 @@ export default function ClientesPage() {
           </div>
         )}
 
+        {/* MODAL NUEVO: SEGUIMIENTO */}
+        {isSeguimientoOpen && clienteSeguimiento && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 animate-fade-in relative border-t-8 border-info">
+                    <button onClick={() => setSeguimientoOpen(false)} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                    
+                    <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2 mb-1">
+                       <FaRoute className="text-info"/> Nuevo Seguimiento
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Registrando actividad para: <span className="font-bold text-gray-800">{clienteSeguimiento.nombre}</span>
+                    </p>
+
+                    <form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4">
+                        
+                        {/* Fecha Actual */}
+                        <div className="bg-blue-50 p-3 rounded-lg flex items-center gap-3 border border-blue-100">
+                            <FaCalendarCheck className="text-blue-400 text-xl"/>
+                            <div>
+                                <p className="text-xs font-bold text-blue-500 uppercase">Fecha de Registro</p>
+                                <p className="font-bold text-gray-800">{fechaHoyVisual}</p>
+                            </div>
+                        </div>
+
+                        {/* Comentario */}
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700">Comentario / Resultado *</label>
+                            <textarea 
+                                {...registerSeg('comentario', { required: true })} 
+                                className="textarea textarea-bordered h-24 text-base bg-gray-50 focus:bg-white transition-colors" 
+                                placeholder="Ej. El cliente está interesado pero viaja mañana. Quiere ver opciones en Cayma..."
+                            ></textarea>
+                            {errorsSeg.comentario && <span className="text-red-500 text-xs">Este campo es obligatorio</span>}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Estado */}
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Estado *</label>
+                                <select {...registerSeg('estado')} className="select select-bordered w-full">
+                                    <option value="PENDIENTE">⏳ Pendiente</option>
+                                    <option value="FINALIZADO">✅ Finalizado</option>
+                                </select>
+                            </div>
+
+                            {/* Fecha Futura */}
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700">Próximo Contacto</label>
+                                <input 
+                                    type="date" 
+                                    {...registerSeg('fechaProxima', { required: true })} 
+                                    className="input input-bordered w-full" 
+                                />
+                            </div>
+                        </div>
+
+                        <div className="modal-action mt-6">
+                            <button type="button" className="btn btn-ghost" onClick={() => setSeguimientoOpen(false)}>Cancelar</button>
+                            <button type="submit" className="btn btn-primary text-white gap-2 shadow-lg hover:shadow-xl">
+                                <FaSave /> Guardar Seguimiento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+
         {/* MODAL DETALLE DE CLIENTE */}
         {isDetailOpen && selectedCliente && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
@@ -587,7 +717,6 @@ export default function ClientesPage() {
                     <h2 className="text-2xl font-bold mb-4 text-indigo-900">{selectedCliente.nombre}</h2>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <p><strong>Celular:</strong> {selectedCliente.telefono1}</p>
-                        {/* 🟢 CORRECCIÓN: Volvemos a "CLIENTE" */}
                         <p><strong>Tipo:</strong> {selectedCliente.tipo === 'CLIENTE' ? 'CLIENTE' : 'INTERESADO'}</p>
                         <p><strong>Email:</strong> {selectedCliente.email || '---'}</p>
                         <p><strong>DNI:</strong> {selectedCliente.dni || '---'}</p>

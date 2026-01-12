@@ -30,9 +30,7 @@ api.interceptors.request.use((config: any) => {
   return config;
 });
 
-// ==========================================
 //            FUNCIONES DE DATOS
-// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -45,7 +43,6 @@ export const createPropietario = async (datos: Omit<Propietario, 'id'>) => {
   return data;
 };
 
-// 👇 NUEVO: Suspender y Eliminar Propietario
 export const toggleEstadoPropietario = async (id: string, activo: boolean) => {
   const { data } = await api.put(`/propietarios/${id}/estado`, { activo });
   return data;
@@ -74,7 +71,6 @@ export const getPropiedad = async (id: string) => {
     return data;
 };
 
-// 👇 NUEVO: Suspender y Eliminar Propiedad
 export const toggleEstadoPropiedad = async (id: string, activo: boolean) => {
   const { data } = await api.put(`/propiedades/${id}/estado`, { activo });
   return data;
@@ -96,7 +92,6 @@ export const createCliente = async (datos: Omit<Cliente, 'id'>) => {
   return data;
 };
 
-// 👇 NUEVO: Suspender y Eliminar Cliente
 export const toggleEstadoCliente = async (id: string, activo: boolean) => {
   const { data } = await api.put(`/clientes/${id}/estado`, { activo });
   return data;
@@ -151,9 +146,13 @@ export const createSeguimiento = async (datos: any) => {
   return data;
 };
 
-// ==========================================
-//           SEGURIDAD Y USUARIOS
-// ==========================================
+// Función para actualizar seguimiento (usado para cambiar estado)
+export const updateSeguimiento = async (id: string, datos: any) => {
+  const { data } = await api.put<ApiResponse<Seguimiento>>(`/seguimientos/${id}`, datos);
+  return data;
+};
+
+//          SEGURIDAD Y USUARIOS
 
 export const login = async (credenciales: { email: string; password: string }) => {
   const response = await api.post('/auth/login', credenciales);
@@ -196,7 +195,7 @@ export const getCumpleanos = (mes: number) => {
 
 export const downloadExcelCumpleanos = (mes: number) => {
   return api.get(`/admin/cumpleanos/excel?mes=${mes}`, {
-    responseType: 'blob', // Importante para que el navegador sepa que es un archivo
+    responseType: 'blob',
   });
 };
 
