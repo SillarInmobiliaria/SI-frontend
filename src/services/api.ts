@@ -30,7 +30,9 @@ api.interceptors.request.use((config: any) => {
   return config;
 });
 
+// ==========================================
 //            FUNCIONES DE DATOS
+// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -124,7 +126,7 @@ export const createOperacion = async (datos: any) => {
   return data;
 };
 
-// --- VISITAS ---
+// --- VISITAS (ACTUALIZADO) ---
 export const getVisitas = async () => {
   const { data } = await api.get<Visita[]>('/visitas');
   return data;
@@ -134,6 +136,19 @@ export const createVisita = async (datos: any) => {
   const { data } = await api.post<ApiResponse<Visita>>('/visitas', datos);
   return data;
 };
+
+// 👇 NUEVO: Para finalizar visita
+export const updateVisita = async (id: string, datos: any) => {
+  const { data } = await api.put(`/visitas/${id}`, datos);
+  return data;
+};
+
+// 👇 NUEVO: Para cancelar visita
+export const cancelVisita = async (id: string, motivo: string) => {
+  const { data } = await api.put(`/visitas/${id}/cancelar`, { motivo });
+  return data;
+};
+
 
 // --- SEGUIMIENTO ---
 export const getSeguimientos = async () => {
@@ -167,7 +182,9 @@ export const updateEstadoRequerimiento = async (id: string, estado: string) => {
   return response.data;
 };
 
+// ==========================================
 //          SEGURIDAD Y USUARIOS
+// ==========================================
 
 export const login = async (credenciales: { email: string; password: string }) => {
   const response = await api.post('/auth/login', credenciales);
