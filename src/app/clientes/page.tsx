@@ -250,7 +250,13 @@ export default function ClientesPage() {
                         
                         const hasRealReq = reqC && reqC.id;
                         const hasRealSeg = segC && segC.id; 
+                        // El cálculo de nuevo ahora respeta que si tiene alguno de los dos, ya no es nuevo.
                         const isNew = !hasRealReq && !hasRealSeg;
+
+                        // --- LÓGICA DE BOTONES EXCLUYENTE ---
+                        // Si tiene Requerimiento -> SOLO botón naranja
+                        // Si NO tiene Requerimiento pero tiene Seguimiento -> SOLO botón azul
+                        // Si NO tiene ninguno -> Los dos botones
 
                         return (
                             <tr key={c.id} className="group bg-white hover:bg-indigo-50/30 shadow-sm hover:shadow-md transition-all rounded-2xl">
@@ -260,9 +266,21 @@ export default function ClientesPage() {
                                 <td className="border-y border-gray-100">{propC ? <div className="text-xs"><span className="font-bold text-gray-800">{propC.tipo}</span> - {propC.ubicacion}</div> : <span className="text-xs text-gray-400 italic">Sin propiedad</span>}</td>
                                 <td className="rounded-r-2xl border-y border-r border-gray-100 text-center">
                                     <div className="flex justify-center items-center gap-2">
-                                        {hasRealReq && !isNew && (<button onClick={handleGoToRequerimientos} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Ir a Requerimientos"><FaArrowRight/></button>)}
-                                        {hasRealSeg && !isNew && (<button onClick={handleGoToSeguimiento} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Ir a Seguimiento"><FaArrowRight/></button>)}
-                                        {isNew && (<><button onClick={() => handleOpenReq(c)} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Crear Requerimiento"><FaClipboardList/></button><button onClick={() => handleOpenSeguimientoModal(c)} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Iniciar Seguimiento"><FaRoute/></button></>)}
+                                        
+                                        {/* PRIORIDAD 1: REQUERIMIENTO (Gana a todo) */}
+                                        {hasRealReq ? (
+                                            <button onClick={handleGoToRequerimientos} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Ir a Requerimientos"><FaArrowRight/></button>
+                                        ) : hasRealSeg ? (
+                                            /* PRIORIDAD 2: SEGUIMIENTO (Si no hay requerimiento) */
+                                            <button onClick={handleGoToSeguimiento} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Ir a Seguimiento"><FaArrowRight/></button>
+                                        ) : (
+                                            /* PRIORIDAD 3: NUEVO (Ninguno) */
+                                            <>
+                                                <button onClick={() => handleOpenReq(c)} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Crear Requerimiento"><FaClipboardList/></button>
+                                                <button onClick={() => handleOpenSeguimientoModal(c)} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Iniciar Seguimiento"><FaRoute/></button>
+                                            </>
+                                        )}
+                                        
                                         <button onClick={() => handleOpenAgendarVisita(c)} className="bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-all" title="Visita"><FaCalendarCheck/></button>
                                         <button onClick={() => handleViewDetail(c)} className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition-all" title="Ver"><FaEye/></button>
                                         {isAdmin && <button onClick={() => handleEliminar(c.id)} className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-all" title="Eliminar"><FaTrash/></button>}
@@ -307,7 +325,7 @@ export default function ClientesPage() {
                                 <div className="form-control relative"><label className="label font-bold text-slate-700">Propiedad de Interés</label><div className="relative"><FaSearch className="absolute left-3 top-3.5 text-slate-400"/><input type="text" className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" placeholder="Buscar propiedad..." value={propSearch} onChange={(e) => { setPropSearch(e.target.value); setShowPropSuggestions(true); if(!e.target.value) setValue('propiedadId', ''); }}/><input type="hidden" {...register('propiedadId')} />
                                 {showPropSuggestions && propSearch && filteredProps.length > 0 && (<div className="absolute z-50 w-full bg-white border-2 border-indigo-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto">{filteredProps.map(p => (<div key={p.id} onClick={() => handleSelectPropiedad(p)} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col"><span className="font-bold text-slate-800">{p.tipo} - {p.ubicacion}</span><span className="text-xs text-slate-500">{p.direccion}</span></div>))}</div>)}</div></div>
                                 
-                                {/* ----------------------- TARJETA DETALLADA (SOLICITADA) ----------------------- */}
+                                {/* ----------------------- TARJETA DETALLADA (RESTAURADA) ----------------------- */}
                                 {propiedadSeleccionada && (
                                     <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 relative shadow-md">
                                         <div className="flex justify-between items-center mb-4">
