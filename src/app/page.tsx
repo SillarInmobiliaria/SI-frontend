@@ -20,18 +20,6 @@ export default function DashboardPage() {
   const notificacionMostrada = useRef(false);
 
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
-  const mostrarAlerta = user?.mustChangePassword;
-
-  // --- CÁLCULO DÍAS RESTANTES ---
-  let diasRestantes = 30;
-  if (user?.createdAt) {
-    const fechaCreacion = new Date(user.createdAt);
-    const fechaActual = new Date();
-    const diferenciaTiempo = fechaActual.getTime() - fechaCreacion.getTime();
-    const diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
-    diasRestantes = 30 - diasTranscurridos;
-  }
-  if (diasRestantes < 0) diasRestantes = 0;
 
   // 👇 FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM)
   const getHora = (fechaIso: string) => {
@@ -47,30 +35,66 @@ export default function DashboardPage() {
 
     const verificarRecordatorios = async () => {
         try {
-            // 1. Obtener TODOS los datos
-            const seguimientos = await getSeguimientos();
+            // 1. Cargar datos
+            const todosSeguimientos = await getSeguimientos(); // Trae TODO el historial
             const clientes = await getClientes();
             const visitas = await getVisitas(); 
             
+            const ahora = new Date();
             const objHoy = new Date();
             const objManana = new Date(objHoy);
             objManana.setDate(objHoy.getDate() + 1);
 
-            const hoyStr = objHoy.toLocaleDateString('en-CA'); // YYYY-MM-DD
+            const hoyStr = objHoy.toLocaleDateString('en-CA'); 
             const mananaStr = objManana.toLocaleDateString('en-CA');
 
-            // --- FILTROS ---
+            // --- 🧠 LÓGICA MAESTRA DE SEGUIMIENTOS ÚNICOS ---
+            // El Dashboard debe contar IGUAL que la tabla de Seguimiento:
+            // Solo el registro MÁS RECIENTE de cada cliente cuenta.
+            
+            // 1. Ordenar por fecha descendente (lo más nuevo primero)
+            const seguimientosOrdenados = todosSeguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-            // A. Seguimientos (Usamos 'fechaProxima')
-            const segHoy = seguimientos.filter((s: any) => s.fechaProxima?.startsWith(hoyStr) && s.estado === 'PENDIENTE');
-            const segManana = seguimientos.filter((s: any) => s.fechaProxima?.startsWith(mananaStr) && s.estado === 'PENDIENTE');
+            // 2. Agrupar por cliente (Solo nos quedamos con el último estado de cada uno)
+            const ultimosSeguimientosMap = new Map();
+            seguimientosOrdenados.forEach((s: any) => {
+                if (!ultimosSeguimientosMap.has(s.clienteId)) {
+                    ultimosSeguimientosMap.set(s.clienteId, s);
+                }
+            });
+            const ultimosSeguimientos = Array.from(ultimosSeguimientosMap.values());
 
-            // B. Visitas (CORREGIDO: Usamos 'fechaProgramada')
-            // Nota: fechaProgramada es un ISO string completo "2026-01-13T15:00:00"
-            const visHoy = visitas.filter((v: any) => v.fechaProgramada?.startsWith(hoyStr) && v.estado !== 'CANCELADA');
-            const visManana = visitas.filter((v: any) => v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA');
+            // 3. AHORA SÍ FILTRAMOS SOBRE ESTA LISTA LIMPIA
+            
+            // A. Seguimientos HOY (De la lista única, cuáles son para hoy y pendientes)
+            const segHoy = ultimosSeguimientos.filter((s: any) => 
+                s.fechaProxima && 
+                s.fechaProxima.startsWith(hoyStr) && 
+                s.estado === 'PENDIENTE'
+            );
+            
+            // B. Seguimientos MAÑANA
+            const segManana = ultimosSeguimientos.filter((s: any) => 
+                s.fechaProxima && 
+                s.fechaProxima.startsWith(mananaStr) && 
+                s.estado === 'PENDIENTE'
+            );
 
-            // C. Cumpleaños
+            // -------------------------------------------------------
+
+            // C. VISITAS (Hoy futuro y no canceladas)
+            const visHoy = visitas.filter((v: any) => {
+                if (!v.fechaProgramada?.startsWith(hoyStr)) return false;
+                if (v.estado === 'CANCELADA') return false;
+                const fechaVisita = new Date(v.fechaProgramada);
+                return fechaVisita > ahora; 
+            });
+
+            const visManana = visitas.filter((v: any) => 
+                v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA'
+            );
+
+            // D. CUMPLEAÑOS
             const cumplesHoy = clientes.filter((c: any) => {
                 if(!c.fechaNacimiento) return false;
                 const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
@@ -83,9 +107,8 @@ export default function DashboardPage() {
                 playSound();
             }
 
-            // --- MOSTRAR ALERTAS ---
+            // --- MOSTRAR TOASTS ---
 
-            // 1. Visitas HOY (Prioridad Alta)
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -95,11 +118,8 @@ export default function DashboardPage() {
                                 <div className="flex-shrink-0 pt-0.5"><FaMapMarkerAlt className="h-10 w-10 text-teal-600 animate-bounce" /></div>
                                 <div className="ml-3 flex-1">
                                     <p className="text-sm font-bold text-gray-900">¡Salida de Campo HOY!</p>
-                                    <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-teal-700">{visHoy.length} visitas</b> programadas.</p>
-                                    {/* 👇 CORREGIDO: Usamos getHora y cliente?.nombre */}
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        Hora: {getHora(visHoy[0].fechaProgramada)} - {visHoy[0].cliente?.nombre}
-                                    </p>
+                                    <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-teal-700">{visHoy.length} visitas</b> pendientes.</p>
+                                    <p className="text-xs text-gray-400 mt-1">Próxima: {getHora(visHoy[0].fechaProgramada)} - {visHoy[0].cliente?.nombre}</p>
                                 </div>
                             </div>
                         </div>
@@ -110,9 +130,8 @@ export default function DashboardPage() {
                 ), { duration: 10000 });
             }
 
-            // 2. Visitas MAÑANA
             if (visManana.length > 0) {
-                setTimeout(() => {
+                 setTimeout(() => {
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-cyan-400 relative mb-2`}>
                             <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
@@ -122,10 +141,7 @@ export default function DashboardPage() {
                                     <div className="ml-3 flex-1">
                                         <p className="text-sm font-bold text-gray-900">Visitas para Mañana</p>
                                         <p className="mt-1 text-sm text-gray-500">Prepárate, tienes <b className="text-cyan-600">{visManana.length} visitas</b>.</p>
-                                        {/* 👇 CORREGIDO: Usamos getHora y cliente?.nombre */}
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            Primera: {getHora(visManana[0].fechaProgramada)} - {visManana[0].cliente?.nombre}
-                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">Primera: {getHora(visManana[0].fechaProgramada)} - {visManana[0].cliente?.nombre}</p>
                                     </div>
                                 </div>
                             </div>
@@ -137,7 +153,6 @@ export default function DashboardPage() {
                 }, 500);
             }
 
-            // 3. Seguimientos HOY
             if (segHoy.length > 0) {
                 setTimeout(() => {
                     toast.custom((t) => (
@@ -160,9 +175,8 @@ export default function DashboardPage() {
                 }, 1000);
             }
 
-            // 4. Seguimientos MAÑANA
             if (segManana.length > 0) {
-                setTimeout(() => {
+                 setTimeout(() => {
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-yellow-400 relative mb-2`}>
                             <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
@@ -183,9 +197,8 @@ export default function DashboardPage() {
                 }, 1500);
             }
 
-            // 5. Cumpleaños
             if (cumplesHoy.length > 0) {
-                setTimeout(() => {
+                 setTimeout(() => {
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-purple-500 relative`}>
                             <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
