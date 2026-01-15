@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
-import SidebarAtencion from '../../components/SidebarAtencion'; // <--- IMPORTADO
+import SidebarAtencion from '../../components/SidebarAtencion';
 import { getSeguimientos, updateSeguimiento, createSeguimiento, createRequerimiento } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { 
@@ -64,6 +64,14 @@ export default function SeguimientoPage() {
     if (!fechaString) return '--';
     const fecha = new Date(fechaString);
     return fecha.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // 👇 FUNCIÓN CLAVE PARA GUARDAR EN HORA PERÚ
+  const getISOFechaPeru = (fechaStr: string) => {
+      if (!fechaStr) return new Date().toISOString();
+      const [anio, mes, dia] = fechaStr.split('-').map(Number);
+      const fecha = new Date(anio, mes - 1, dia, 12, 0, 0); 
+      return fecha.toISOString();
   };
 
   // --- 🧠 LÓGICA FILTRADO: SOLO 1 FILA POR CLIENTE ---
@@ -130,7 +138,7 @@ export default function SeguimientoPage() {
           }
 
           // 2. CREAR el nuevo como PENDIENTE con la fecha seleccionada
-          const fechaProxISO = nextContactDate ? new Date(nextContactDate).toISOString() : new Date().toISOString();
+          const fechaProxISO = nextContactDate ? getISOFechaPeru(nextContactDate) : new Date().toISOString();
 
           await createSeguimiento({
               clienteId: selectedItem.clienteId,

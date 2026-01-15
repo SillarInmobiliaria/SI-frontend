@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '../../components/Navbar';
-import SidebarAtencion from '../../components/SidebarAtencion'; // <--- IMPORTADO
+import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
     getVisitas, createVisita, updateVisita, cancelVisita, getPropiedades, getClientes 
 } from '../../services/api'; 
@@ -92,9 +92,14 @@ export default function CalendarPage() {
     if (!selectedDay || !preSelectedClienteId) return alert("Error: Falta día o cliente.");
     try {
       const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDay).padStart(2, '0');
-      const fechaISO = `${year}-${month}-${day}T${formData.hora}:00`;
+      const month = currentDate.getMonth(); 
+      const day = selectedDay;
+      
+      const [hora, minuto] = formData.hora.split(':').map(Number);
+
+      // CREAR FECHA USANDO HORA LOCAL (PERÚ)
+      const fechaLocal = new Date(year, month, day, hora, minuto);
+      const fechaISO = fechaLocal.toISOString(); 
 
       await createVisita({
         fechaProgramada: fechaISO,
@@ -171,7 +176,12 @@ export default function CalendarPage() {
       e.preventDefault();
       if (!selectedVisita || !rescheduleData.fecha || !rescheduleData.hora) return;
       try {
-          const nuevaFechaISO = `${rescheduleData.fecha}T${rescheduleData.hora}:00`;
+          const [anio, mes, dia] = rescheduleData.fecha.split('-').map(Number);
+          const [hora, minuto] = rescheduleData.hora.split(':').map(Number);
+          
+          const nuevaFechaLocal = new Date(anio, mes - 1, dia, hora, minuto);
+          const nuevaFechaISO = nuevaFechaLocal.toISOString();
+
           await updateVisita(selectedVisita.id, {
               fechaProgramada: nuevaFechaISO,
               comentariosPrevios: selectedVisita.comentariosPrevios + ` [Reprogramada el ${new Date().toLocaleDateString()}]`

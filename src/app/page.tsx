@@ -21,14 +21,19 @@ export default function DashboardPage() {
 
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
-  // 👇 FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM)
+  // 👇 FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM) EN PERÚ
   const getHora = (fechaIso: string) => {
       if (!fechaIso) return '--:--';
       const date = new Date(fechaIso);
-      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Lima' });
   };
 
-  // 👇 LÓGICA DE NOTIFICACIONES (MANTENIDA EXACTA)
+  // 👇 FUNCIÓN AUXILIAR: Obtener Fecha "YYYY-MM-DD" basada en zona horaria Perú
+  const getFechaPeru = (date: Date = new Date()) => {
+      return date.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+  };
+
+  // 👇 LÓGICA DE NOTIFICACIONES
   useEffect(() => {
     if (notificacionMostrada.current) return;
     notificacionMostrada.current = true;
@@ -39,13 +44,15 @@ export default function DashboardPage() {
             const clientes = await getClientes();
             const visitas = await getVisitas(); 
             
+            // 1. FECHAS REFERENCIA (EN PERÚ)
             const ahora = new Date(); 
-            const objHoy = new Date();
-            const objManana = new Date(objHoy);
-            objManana.setDate(objHoy.getDate() + 1);
+            const hoyStr = getFechaPeru(ahora); 
+            
+            const mananaObj = new Date(ahora);
+            mananaObj.setDate(ahora.getDate() + 1);
+            const mananaStr = getFechaPeru(mananaObj); 
 
-            const hoyStr = objHoy.toLocaleDateString('en-CA'); 
-            const mananaStr = objManana.toLocaleDateString('en-CA');
+            // --- LÓGICA DE FILTRADO ---
 
             const todosSeguimientos = seguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
             const ultimosSeguimientosMap = new Map();
@@ -56,22 +63,38 @@ export default function DashboardPage() {
             });
             const ultimosSeguimientos = Array.from(ultimosSeguimientosMap.values());
 
-            const segHoy = ultimosSeguimientos.filter((s: any) => s.fechaProxima?.startsWith(hoyStr) && s.estado === 'PENDIENTE');
-            const segManana = ultimosSeguimientos.filter((s: any) => s.fechaProxima?.startsWith(mananaStr) && s.estado === 'PENDIENTE');
-
-            const visHoy = visitas.filter((v: any) => {
-                if (!v.fechaProgramada?.startsWith(hoyStr)) return false;
-                if (v.estado === 'CANCELADA') return false;
-                const fechaVisita = new Date(v.fechaProgramada);
-                return fechaVisita > ahora; 
+            // Filtros Seguimientos (Usamos split para evitar conversión UTC en lectura simple)
+            const segHoy = ultimosSeguimientos.filter((s: any) => {
+                if (!s.fechaProxima || s.estado !== 'PENDIENTE') return false;
+                const fechaItemPura = s.fechaProxima.split('T')[0];
+                return fechaItemPura === hoyStr;
             });
 
-            const visManana = visitas.filter((v: any) => v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA');
+            const segManana = ultimosSeguimientos.filter((s: any) => {
+                if (!s.fechaProxima || s.estado !== 'PENDIENTE') return false;
+                const fechaItemPura = s.fechaProxima.split('T')[0];
+                return fechaItemPura === mananaStr;
+            });
+
+            // Filtros Visitas
+            const visHoy = visitas.filter((v: any) => {
+                if (v.estado === 'CANCELADA') return false;
+                const fechaVisitaObj = new Date(v.fechaProgramada);
+                const fechaVisitaPeru = getFechaPeru(fechaVisitaObj);
+                return fechaVisitaPeru === hoyStr && fechaVisitaObj > ahora; 
+            });
+
+            const visManana = visitas.filter((v: any) => {
+                if (v.estado === 'CANCELADA') return false;
+                const fechaVisitaPeru = getFechaPeru(new Date(v.fechaProgramada));
+                return fechaVisitaPeru === mananaStr;
+            });
 
             const cumplesHoy = clientes.filter((c: any) => {
                 if(!c.fechaNacimiento) return false;
                 const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
-                return fechaNac.getDate() === objHoy.getDate() && fechaNac.getMonth() === objHoy.getMonth();
+                const hoyObj = new Date();
+                return fechaNac.getDate() === hoyObj.getDate() && fechaNac.getMonth() === hoyObj.getMonth();
             });
 
             if (segHoy.length > 0 || segManana.length > 0 || visHoy.length > 0 || visManana.length > 0 || cumplesHoy.length > 0) {
@@ -79,6 +102,7 @@ export default function DashboardPage() {
                 audio.play().catch(e => console.log("Audio bloqueado"));
             }
 
+            // --- TOASTS ---
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -222,10 +246,10 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS (DISEÑO UNIFORME) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* --- GRID DE MÓDULOS (DISEÑO UNIFORME - 1 COLUMNA CADA UNO) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN (TAMAÑO ESTÁNDAR) */}
+            {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN */}
             <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-indigo-600 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-3">
@@ -238,7 +262,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     <p className="text-slate-500 text-sm leading-relaxed">
-                        Accede a tus Clientes, Agenda, Seguimiento y Requerimientos desde aquí.
+                        Clientes, Agenda, Seguimiento y Requerimientos.
                     </p>
                 </div>
             </Link>
@@ -269,7 +293,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* --- SECCIÓN EXCLUSIVA DE ADMIN (OSCURO) --- */}
+            {/* --- SECCIÓN EXCLUSIVA DE ADMIN --- */}
             {isAdmin && (
                 <>
                     {/* 4. USUARIOS */}

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
-import SidebarAtencion from '../../components/SidebarAtencion'; // <--- IMPORTADO
+import SidebarAtencion from '../../components/SidebarAtencion';
 import { getRequerimientos, updateEstadoRequerimiento } from '../../services/api';
 import { FaClipboardList, FaCheck, FaTrash, FaExclamationCircle, FaFilter, FaClock, FaSpinner, FaCheckCircle, FaBan, FaUser, FaPhone } from 'react-icons/fa';
 

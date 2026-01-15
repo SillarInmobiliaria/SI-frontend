@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation'; 
 import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
-import SidebarAtencion from '../../components/SidebarAtencion'; // <--- IMPORTADO
+import SidebarAtencion from '../../components/SidebarAtencion';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { 
     createCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento,
@@ -68,8 +68,10 @@ export default function ClientesPage() {
 
   const [requerimientos, setRequerimientos] = useState<any[]>([]);
   const [seguimientos, setSeguimientos] = useState<any[]>([]);
-  const today = new Date().toISOString().split('T')[0];
-  const fechaHoyVisual = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  
+  // 🔥 FIX: FECHA EN ZONA HORARIA PERÚ PARA EL FILTRO INICIAL
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+  const fechaHoyVisual = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Lima' });
 
   const [filterDate, setFilterDate] = useState(today);
   const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); 
@@ -123,6 +125,15 @@ export default function ClientesPage() {
     loadData();
   }, []);
 
+  // 👇 FUNCIÓN CLAVE PARA GUARDAR EN HORA PERÚ
+  const getISOFechaPeru = (fechaStr: string) => {
+      if (!fechaStr) return new Date().toISOString();
+      const [anio, mes, dia] = fechaStr.split('-').map(Number);
+      // Creamos la fecha a las 12:00 del mediodía local para evitar cualquier borde de día
+      const fecha = new Date(anio, mes - 1, dia, 12, 0, 0); 
+      return fecha.toISOString();
+  };
+
   const filteredProps = useMemo(() => {
       if (!propSearch) return [];
       const search = propSearch.toLowerCase();
@@ -150,8 +161,13 @@ export default function ClientesPage() {
     setIsSubmitting(true);
     try {
       const resp = await createCliente({
-          nombre: data.nombre, telefono1: data.telefono1, dni: data.dni || undefined, email: data.email || undefined,
-          fechaAlta: data.fechaAlta, origen: data.origen, tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO' 
+          nombre: data.nombre, 
+          telefono1: data.telefono1, 
+          dni: data.dni || undefined, 
+          email: data.email || undefined,
+          fechaAlta: getISOFechaPeru(data.fechaAlta), // <--- USO DE FUNCIÓN TIMEZONE FIX
+          origen: data.origen, 
+          tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO' 
       } as any);
 
       const nuevoId = (resp as any).data?.id || (resp as any).id; 
@@ -194,7 +210,23 @@ export default function ClientesPage() {
   const handleOpenReq = (cliente: any) => { setClienteReq(cliente); setReqOpen(true); resetReq(); };
   const onSubmitReq = async (data: any) => { if (!clienteReq) return; try { await createRequerimiento({ clienteId: clienteReq.id, fecha: new Date().toISOString(), pedido: data.pedido, prioridad: data.prioridad, usuarioId: user?.id }); alert('✅ Requerimiento guardado'); setReqOpen(false); resetReq(); try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){} } catch (error) { alert('❌ Error'); } };
   const handleOpenSeguimientoModal = (cliente: any) => { setClienteSeguimiento(cliente); setSeguimientoOpen(true); resetSeg(); };
-  const onSubmitSeguimiento = async (data: any) => { if (!clienteSeguimiento) return; try { await createSeguimiento({ clienteId: clienteSeguimiento.id, usuarioId: user?.id, fecha: new Date().toISOString(), comentario: data.comentario, fechaProxima: new Date(data.fechaProxima).toISOString(), estado: data.estado }); alert('✅ Seguimiento registrado'); setSeguimientoOpen(false); resetSeg(); try{ const segs = await getSeguimientos(); setSeguimientos(segs); }catch(e){} } catch (error) { alert('❌ Error'); } };
+  const onSubmitSeguimiento = async (data: any) => { 
+      if (!clienteSeguimiento) return; 
+      try { 
+          await createSeguimiento({ 
+              clienteId: clienteSeguimiento.id, 
+              usuarioId: user?.id, 
+              fecha: new Date().toISOString(), 
+              comentario: data.comentario, 
+              fechaProxima: getISOFechaPeru(data.fechaProxima), // <--- USO DE FUNCIÓN TIMEZONE FIX
+              estado: data.estado 
+          }); 
+          alert('✅ Seguimiento registrado'); 
+          setSeguimientoOpen(false); 
+          resetSeg(); 
+          try{ const segs = await getSeguimientos(); setSeguimientos(segs); }catch(e){} 
+      } catch (error) { alert('❌ Error'); } 
+  };
   
   const handleNumberInput = (e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
   const formatDateLabel = (dateStr: string) => { const d = new Date(dateStr + 'T00:00:00'); return d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); };
@@ -223,6 +255,7 @@ export default function ClientesPage() {
                 <button onClick={handleOpenModal} className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition-all"><FaUserPlus className="text-lg"/> Nuevo</button>
             </div>
             </div>
+            {/* ... Resto de la UI (tablas, modales) se mantienen igual ... */}
             <div className="flex flex-col xl:flex-row items-center justify-between mb-8 bg-white p-6 rounded-2xl shadow-lg border border-gray-100 gap-6 transition-all">
                 <div className="flex items-center gap-5 w-full xl:w-auto">
                     <div className={`p-4 rounded-2xl shadow-sm ${searchTerm ? 'bg-orange-100 text-orange-600' : 'bg-indigo-100 text-indigo-600'}`}>{searchTerm ? <FaHistory className="text-2xl"/> : <FaCalendarAlt className="text-2xl"/>}</div>
