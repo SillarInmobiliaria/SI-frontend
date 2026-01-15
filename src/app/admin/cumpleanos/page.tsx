@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../../components/Navbar';
 import { getCumpleanos, downloadExcelCumpleanos } from '../../../services/api';
-import { FaBirthdayCake, FaFileExcel, FaWhatsapp, FaUserTie, FaUser, FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
+import { FaBirthdayCake, FaFileExcel, FaWhatsapp, FaUserTie, FaUser, FaChevronLeft, FaChevronRight, FaCalendarAlt, FaDownload } from 'react-icons/fa';
 
 export default function CumpleanosPage() {
   const [loading, setLoading] = useState(true);
@@ -146,8 +146,15 @@ export default function CumpleanosPage() {
                     <button onClick={() => setFilterType('PROPIETARIOS')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${filterType === 'PROPIETARIOS' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-500'}`}><FaUserTie className="text-xs"/> Prop.</button>
                 </div>
                 
-                <button onClick={handleDownload} className="btn btn-square btn-success text-white shadow-lg shadow-green-200 hover:scale-105 transition-transform rounded-xl" title="Descargar Excel">
-                    <FaFileExcel className="text-xl"/>
+                <button 
+                    onClick={handleDownload} 
+                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2.5 border-none group relative overflow-hidden"
+                    title="Descargar Excel"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    <FaFileExcel className="text-xl relative z-10"/>
+                    <span className="relative z-10 hidden lg:inline">Descargar</span>
+                    <FaDownload className="text-sm relative z-10 group-hover:translate-y-0.5 transition-transform"/>
                 </button>
             </div>
         </div>
