@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
-  FaTimes, FaUserSecret // <--- Importamos el icono de Agente
+  FaTimes, FaUserSecret, FaHome // <--- Importamos FaHome para Captaciones
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 audio.play().catch(e => console.log("Audio bloqueado"));
             }
 
-            // TOASTS... (Mantenemos la misma lógica de visualización de alertas)
+            // TOASTS...
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -119,7 +119,6 @@ export default function DashboardPage() {
                     </div>
                 ), { duration: 10000 });
             }
-            // ... (Resto de toasts se mantienen igual)
             if (visManana.length > 0) {
                  setTimeout(() => {
                     toast.custom((t) => (
@@ -238,8 +237,8 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS (AHORA XL:4 PARA QUE QUEPAN LOS 4) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* --- GRID DE MÓDULOS (XL:4 PARA QUE QUEPAN TODOS) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             
             {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN */}
             <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-indigo-600 cursor-pointer group hover:-translate-y-1">
@@ -272,7 +271,20 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 3. PROPIETARIOS */}
+            {/* 3. CAPTACIONES (NUEVO - COLOR CYAN) */}
+            <Link href="/captacion" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-cyan-500 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-cyan-100 p-4 rounded-full text-cyan-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaHome className="text-3xl"/>
+                        </div>
+                        <h2 className="card-title text-xl text-slate-800">Captaciones</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm">Registro de propiedades potenciales.</p>
+                </div>
+            </Link>
+
+            {/* 4. PROPIETARIOS */}
             <Link href="/propietarios" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-green-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-3">
@@ -285,7 +297,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 4. AGENTES (NUEVO - COLOR VIOLETA) */}
+            {/* 5. AGENTES (COLOR VIOLETA) */}
             <Link href="/agentes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-purple-600 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-3">
@@ -301,7 +313,7 @@ export default function DashboardPage() {
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN --- */}
             {isAdmin && (
                 <>
-                    {/* 5. USUARIOS */}
+                    {/* 6. USUARIOS */}
                     <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -314,7 +326,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 6. REPORTES */}
+                    {/* 7. REPORTES */}
                     <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -327,7 +339,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 7. CUMPLEAÑOS */}
+                    {/* 8. CUMPLEAÑOS */}
                     <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">

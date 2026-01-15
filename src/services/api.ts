@@ -254,4 +254,22 @@ export const deleteAgente = async (id: string) => {
     return res.data;
 };
 
+// --- CAPTACIONES ---
+export const getCaptaciones = async () => {
+    const res = await api.get('/captaciones');
+    return res.data;
+};
+export const createCaptacion = async (data: any) => {
+    const res = await api.post('/captaciones', data);
+    return res.data;
+};
+export const importarCaptacionesMasivo = async (data: any[]) => {
+    const res = await api.post('/captaciones/masiva', data);
+    return res.data;
+};
+export const deleteCaptacion = async (id: string) => {
+    const res = await api.delete(`/captaciones/${id}`);
+    return res.data;
+};
+
 export default api;
