@@ -21,19 +21,19 @@ export default function DashboardPage() {
 
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
-  // 👇 FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM) EN PERÚ
+  // FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM) EN PERÚ
   const getHora = (fechaIso: string) => {
       if (!fechaIso) return '--:--';
       const date = new Date(fechaIso);
       return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Lima' });
   };
 
-  // 👇 FUNCIÓN AUXILIAR: Obtener Fecha "YYYY-MM-DD" basada en zona horaria Perú
+  // FUNCIÓN AUXILIAR: Obtener Fecha "YYYY-MM-DD" basada en zona horaria Perú
   const getFechaPeru = (date: Date = new Date()) => {
       return date.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
   };
 
-  // 👇 LÓGICA DE NOTIFICACIONES
+  // LÓGICA DE NOTIFICACIONES
   useEffect(() => {
     if (notificacionMostrada.current) return;
     notificacionMostrada.current = true;
