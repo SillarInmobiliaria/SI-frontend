@@ -238,6 +238,12 @@ export const createAgente = async (data: any) => {
     return res.data;
 };
 
+// NUEVA FUNCIÓN PARA IMPORTAR MASIVAMENTE
+export const importarAgentesMasivo = async (listaAgentes: any[]) => {
+    const res = await api.post('/agentes/masiva', listaAgentes);
+    return res.data;
+};
+
 export const toggleEstadoAgente = async (id: string) => {
     const res = await api.put(`/agentes/${id}/estado`);
     return res.data;
