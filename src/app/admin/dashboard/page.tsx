@@ -14,8 +14,10 @@ export default function DashboardPage() {
   
   // --- ESTADOS DE FILTRO ---
   const [year, setYear] = useState(new Date().getFullYear());
-  const [viewMode, setViewMode] = useState<'ANUAL' | 'MENSUAL' | 'SEMANAL'>('ANUAL'); // Nuevo estado
-  const [filtroActivo, setFiltroActivo] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'ANUAL' | 'MENSUAL' | 'SEMANAL'>('ANUAL');
+  
+  // ARRAY para permitir múltiples selecciones
+  const [filtrosActivos, setFiltrosActivos] = useState<string[]>([]); 
   
   const availableYears = [2024, 2025, 2026]; 
 
@@ -26,7 +28,6 @@ export default function DashboardPage() {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
 
-        // Enviamos el modo de vista al backend
         const res = await fetch(`${API_URL}/admin/dashboard/stats?year=${year}&mode=${viewMode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -37,7 +38,7 @@ export default function DashboardPage() {
       } catch (err) { console.error(err); } finally { setLoading(false); }
     };
     fetchData();
-  }, [year, viewMode, router]); // Se recarga si cambia el año o el modo
+  }, [year, viewMode, router]);
 
   const descargarExcel = async () => {
     try {
@@ -54,85 +55,119 @@ export default function DashboardPage() {
       } catch (e) { alert('Error al descargar'); }
   };
 
+  // LÓGICA MULTI-SELECCIÓN
   const toggleFiltro = (metric: string) => {
-    if (filtroActivo === metric) setFiltroActivo(null);
-    else setFiltroActivo(metric);
+    if (filtrosActivos.includes(metric)) {
+        setFiltrosActivos(prev => prev.filter(f => f !== metric));
+    } else {
+        setFiltrosActivos(prev => [...prev, metric]);
+    }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Cargando métricas... 📊</div>;
+  const isVisible = (metric: string) => filtrosActivos.length === 0 || filtrosActivos.includes(metric);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-200 border-t-blue-500"></div>
+      <p className="font-bold text-xl text-slate-700">Cargando métricas... 📊</p>
+    </div>
+  </div>;
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 min-h-screen">
       
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Panel Administrativo</h1>
-          <p className="text-slate-500">Métricas y rendimiento de la inmobiliaria.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Panel Administrativo</h1>
+          <p className="text-slate-600 mt-1 font-medium">Métricas y rendimiento de la inmobiliaria.</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <select 
-            value={year} 
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="select select-bordered select-sm bg-white"
-          >
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button onClick={descargarExcel} className="btn btn-success text-white btn-sm gap-2 shadow">
-            📥 Excel
+        <div className="flex items-center gap-3">
+          {/* SELECTOR DE AÑO MEJORADO */}
+          <div className="relative">
+            <select 
+                value={year} 
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="appearance-none bg-white border border-slate-200 text-slate-700 font-bold py-3 pl-4 pr-10 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer hover:border-slate-300"
+            >
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            {/* Flecha personalizada */}
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+            </div>
+          </div>
+
+          <button onClick={descargarExcel} className="btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-none gap-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-bold h-[46px] px-6 rounded-xl flex items-center">
+            📥 Descargar Excel
           </button>
         </div>
       </div>
 
-      {/* TARJETAS KPI */}
+      {/* TARJETAS KPI (MULTI-SELECT) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <CardResumen 
-          titulo="Propiedades" valor={data?.totales?.propiedades} icono="🏠" color="bg-blue-500"
-          active={!filtroActivo || filtroActivo === 'propiedades'} onClick={() => toggleFiltro('propiedades')}
+          titulo="Propiedades" valor={data?.totales?.propiedades} icono="🏠" color="bg-gradient-to-br from-blue-500 to-blue-600"
+          active={isVisible('propiedades')} onClick={() => toggleFiltro('propiedades')}
         />
         <CardResumen 
-          titulo="Propietarios" valor={data?.totales?.propietarios} icono="👔" color="bg-emerald-500" 
-          active={!filtroActivo || filtroActivo === 'propietarios'} onClick={() => toggleFiltro('propietarios')}
+          titulo="Propietarios" valor={data?.totales?.propietarios} icono="👔" color="bg-gradient-to-br from-emerald-500 to-emerald-600" 
+          active={isVisible('propietarios')} onClick={() => toggleFiltro('propietarios')}
         />
         <CardResumen 
-          titulo="Clientes Nuevos" valor={data?.totales?.clientes} icono="👥" color="bg-purple-500"
-          active={!filtroActivo || filtroActivo === 'clientes'} onClick={() => toggleFiltro('clientes')}
+          titulo="Clientes Nuevos" valor={data?.totales?.clientes} icono="👥" color="bg-gradient-to-br from-purple-500 to-purple-600"
+          active={isVisible('clientes')} onClick={() => toggleFiltro('clientes')}
         />
         <CardResumen 
-          titulo="Visitas Hechas" valor={data?.totales?.visitas} icono="📅" color="bg-orange-500"
-          active={!filtroActivo || filtroActivo === 'visitas'} onClick={() => toggleFiltro('visitas')}
+          titulo="Visitas Hechas" valor={data?.totales?.visitas} icono="📅" color="bg-gradient-to-br from-orange-500 to-orange-600"
+          active={isVisible('visitas')} onClick={() => toggleFiltro('visitas')}
         />
       </div>
 
-      {/* SECCIÓN GRÁFICA CON FILTROS TEMPORALES */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 h-[500px] flex flex-col">
+      {/* SECCIÓN GRÁFICA */}
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 h-[500px] flex flex-col backdrop-blur-sm">
         
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
-                📈 Tendencia {viewMode === 'ANUAL' ? 'Anual' : viewMode === 'MENSUAL' ? 'Mensual' : 'Semanal'}
-                {filtroActivo && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Filtro Activo</span>}
+            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                <span className="text-3xl">📈</span>
+                <div className="flex flex-col">
+                    <span>Tendencia {viewMode === 'ANUAL' ? 'Anual' : viewMode === 'MENSUAL' ? 'Mensual' : 'Semanal'}</span>
+                    {filtrosActivos.length > 0 && <span className="text-xs bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 px-3 py-1 rounded-full font-bold mt-1 w-fit">🔍 Comparando {filtrosActivos.length} métricas</span>}
+                </div>
             </h2>
             
             {/* BOTONES DE FILTRO TEMPORAL */}
-            <div className="join shadow-sm border border-slate-200 rounded-lg">
+            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl shadow-inner">
                 <button 
                     onClick={() => setViewMode('ANUAL')} 
-                    className={`join-item btn btn-sm ${viewMode === 'ANUAL' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
+                        viewMode === 'ANUAL' 
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105' 
+                        : 'bg-transparent text-slate-600 hover:bg-white hover:shadow-md'
+                    }`}
                 >
-                    <FaCalendarAlt className="mr-2"/> Anual
+                    <FaCalendarAlt className="text-base"/> Anual
                 </button>
                 <button 
                     onClick={() => setViewMode('MENSUAL')} 
-                    className={`join-item btn btn-sm ${viewMode === 'MENSUAL' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
+                        viewMode === 'MENSUAL' 
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105' 
+                        : 'bg-transparent text-slate-600 hover:bg-white hover:shadow-md'
+                    }`}
                 >
-                    <FaCalendarDay className="mr-2"/> Mensual
+                    <FaCalendarDay className="text-base"/> Mensual
                 </button>
                 <button 
                     onClick={() => setViewMode('SEMANAL')} 
-                    className={`join-item btn btn-sm ${viewMode === 'SEMANAL' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
+                        viewMode === 'SEMANAL' 
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105' 
+                        : 'bg-transparent text-slate-600 hover:bg-white hover:shadow-md'
+                    }`}
                 >
-                    <FaCalendarWeek className="mr-2"/> Semanal
+                    <FaCalendarWeek className="text-base"/> Semanal
                 </button>
             </div>
         </div>
@@ -153,17 +188,17 @@ export default function DashboardPage() {
                 <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 <Legend verticalAlign="top" height={36}/>
                 
-                {(!filtroActivo || filtroActivo === 'propiedades') && (
-                    <Area type="monotone" dataKey="propiedades" name="Propiedades" stroke="#3b82f6" fill="url(#colorProp)" strokeWidth={3} />
+                {isVisible('propiedades') && (
+                    <Area type="monotone" dataKey="propiedades" name="Propiedades" stroke="#3b82f6" fill="url(#colorProp)" strokeWidth={3} animationDuration={1000} />
                 )}
-                {(!filtroActivo || filtroActivo === 'clientes') && (
-                    <Area type="monotone" dataKey="clientes" name="Clientes" stroke="#a855f7" fill="url(#colorCli)" strokeWidth={3} />
+                {isVisible('clientes') && (
+                    <Area type="monotone" dataKey="clientes" name="Clientes" stroke="#a855f7" fill="url(#colorCli)" strokeWidth={3} animationDuration={1000} />
                 )}
-                {(!filtroActivo || filtroActivo === 'propietarios') && (
-                    <Area type="monotone" dataKey="propietarios" name="Propietarios" stroke="#10b981" fill="url(#colorOwner)" strokeWidth={3} />
+                {isVisible('propietarios') && (
+                    <Area type="monotone" dataKey="propietarios" name="Propietarios" stroke="#10b981" fill="url(#colorOwner)" strokeWidth={3} animationDuration={1000} />
                 )}
-                {(!filtroActivo || filtroActivo === 'visitas') && (
-                    <Area type="monotone" dataKey="visitas" name="Visitas" stroke="#f97316" fill="url(#colorVis)" strokeWidth={3} />
+                {isVisible('visitas') && (
+                    <Area type="monotone" dataKey="visitas" name="Visitas" stroke="#f97316" fill="url(#colorVis)" strokeWidth={3} animationDuration={1000} />
                 )}
                 </AreaChart>
             </ResponsiveContainer>
@@ -177,23 +212,33 @@ const CardResumen = ({ titulo, valor, icono, color, onClick, active }: any) => (
   <div 
     onClick={onClick}
     className={`
-        relative p-6 rounded-xl shadow-sm border-l-4 cursor-pointer transition-all duration-300 select-none
-        ${active ? 'bg-white opacity-100 scale-100 ring-2 ring-offset-1 ring-blue-100' : 'bg-slate-100 opacity-60 scale-95 grayscale'}
-        hover:scale-[1.02]
+        relative p-6 rounded-2xl shadow-md border cursor-pointer transition-all duration-300 select-none overflow-hidden group
+        ${active 
+          ? 'bg-white border-slate-200 opacity-100 scale-100 ring-2 ring-blue-400 ring-offset-2' 
+          : 'bg-slate-50 border-slate-200 opacity-60 scale-95 hover:opacity-80 grayscale'
+        }
+        hover:scale-[1.03] hover:shadow-xl
     `}
   >
-    <div className="flex items-center justify-between">
+    {/* Efecto de brillo sutil */}
+    <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    
+    <div className="relative flex items-center justify-between">
         <div>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{titulo}</p>
-          <p className="text-4xl font-black text-slate-800 mt-2">{valor || 0}</p>
+          <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">{titulo}</p>
+          <p className="text-5xl font-black text-slate-900 mt-1 bg-gradient-to-br from-slate-800 to-slate-600 bg-clip-text">{valor || 0}</p>
         </div>
-        <div className={`p-4 rounded-full text-white text-2xl shadow-lg ${color}`}>
+        <div className={`p-5 rounded-2xl text-white text-3xl shadow-xl ${color} transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
           {icono}
         </div>
     </div>
-    <div className="mt-3 text-right border-t pt-2 border-slate-100">
-        <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-            {active ? 'Visible' : 'Oculto'}
+    <div className="relative mt-4 pt-3 border-t border-slate-200">
+        <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-full transition-colors ${
+          active 
+            ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 shadow-sm' 
+            : 'bg-slate-200 text-slate-500'
+        }`}>
+            {active ? '✓ Visible' : '○ Oculto'}
         </span>
     </div>
   </div>
