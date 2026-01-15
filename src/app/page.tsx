@@ -9,8 +9,8 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
-  FaExclamationTriangle, FaCheckCircle, FaClock, FaChartLine, 
-  FaCalendarCheck, FaRoute, FaBirthdayCake, FaClipboardCheck, FaTimes, FaMapMarkerAlt
+  FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
+  FaTimes 
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -28,19 +28,18 @@ export default function DashboardPage() {
       return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // 👇 LÓGICA DE NOTIFICACIONES
+  // 👇 LÓGICA DE NOTIFICACIONES (MANTENIDA EXACTA)
   useEffect(() => {
     if (notificacionMostrada.current) return;
     notificacionMostrada.current = true;
 
     const verificarRecordatorios = async () => {
         try {
-            // 1. Cargar datos
-            const todosSeguimientos = await getSeguimientos(); // Trae TODO el historial
+            const seguimientos = await getSeguimientos();
             const clientes = await getClientes();
             const visitas = await getVisitas(); 
             
-            const ahora = new Date();
+            const ahora = new Date(); 
             const objHoy = new Date();
             const objManana = new Date(objHoy);
             objManana.setDate(objHoy.getDate() + 1);
@@ -48,41 +47,18 @@ export default function DashboardPage() {
             const hoyStr = objHoy.toLocaleDateString('en-CA'); 
             const mananaStr = objManana.toLocaleDateString('en-CA');
 
-            // --- 🧠 LÓGICA MAESTRA DE SEGUIMIENTOS ÚNICOS ---
-            // El Dashboard debe contar IGUAL que la tabla de Seguimiento:
-            // Solo el registro MÁS RECIENTE de cada cliente cuenta.
-            
-            // 1. Ordenar por fecha descendente (lo más nuevo primero)
-            const seguimientosOrdenados = todosSeguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-
-            // 2. Agrupar por cliente (Solo nos quedamos con el último estado de cada uno)
+            const todosSeguimientos = seguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
             const ultimosSeguimientosMap = new Map();
-            seguimientosOrdenados.forEach((s: any) => {
+            todosSeguimientos.forEach((s: any) => {
                 if (!ultimosSeguimientosMap.has(s.clienteId)) {
                     ultimosSeguimientosMap.set(s.clienteId, s);
                 }
             });
             const ultimosSeguimientos = Array.from(ultimosSeguimientosMap.values());
 
-            // 3. AHORA SÍ FILTRAMOS SOBRE ESTA LISTA LIMPIA
-            
-            // A. Seguimientos HOY (De la lista única, cuáles son para hoy y pendientes)
-            const segHoy = ultimosSeguimientos.filter((s: any) => 
-                s.fechaProxima && 
-                s.fechaProxima.startsWith(hoyStr) && 
-                s.estado === 'PENDIENTE'
-            );
-            
-            // B. Seguimientos MAÑANA
-            const segManana = ultimosSeguimientos.filter((s: any) => 
-                s.fechaProxima && 
-                s.fechaProxima.startsWith(mananaStr) && 
-                s.estado === 'PENDIENTE'
-            );
+            const segHoy = ultimosSeguimientos.filter((s: any) => s.fechaProxima?.startsWith(hoyStr) && s.estado === 'PENDIENTE');
+            const segManana = ultimosSeguimientos.filter((s: any) => s.fechaProxima?.startsWith(mananaStr) && s.estado === 'PENDIENTE');
 
-            // -------------------------------------------------------
-
-            // C. VISITAS (Hoy futuro y no canceladas)
             const visHoy = visitas.filter((v: any) => {
                 if (!v.fechaProgramada?.startsWith(hoyStr)) return false;
                 if (v.estado === 'CANCELADA') return false;
@@ -90,24 +66,18 @@ export default function DashboardPage() {
                 return fechaVisita > ahora; 
             });
 
-            const visManana = visitas.filter((v: any) => 
-                v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA'
-            );
+            const visManana = visitas.filter((v: any) => v.fechaProgramada?.startsWith(mananaStr) && v.estado !== 'CANCELADA');
 
-            // D. CUMPLEAÑOS
             const cumplesHoy = clientes.filter((c: any) => {
                 if(!c.fechaNacimiento) return false;
                 const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
-                return fechaNac.getDate() === objHoy.getDate() && 
-                       fechaNac.getMonth() === objHoy.getMonth();
+                return fechaNac.getDate() === objHoy.getDate() && fechaNac.getMonth() === objHoy.getMonth();
             });
 
-            // --- SONIDO ---
             if (segHoy.length > 0 || segManana.length > 0 || visHoy.length > 0 || visManana.length > 0 || cumplesHoy.length > 0) {
-                playSound();
+                const audio = new Audio('/alert.mp3'); 
+                audio.play().catch(e => console.log("Audio bloqueado"));
             }
-
-            // --- MOSTRAR TOASTS ---
 
             if (visHoy.length > 0) {
                 toast.custom((t) => (
@@ -221,11 +191,6 @@ export default function DashboardPage() {
         }
     };
 
-    const playSound = () => {
-        const audio = new Audio('/alert.mp3'); 
-        audio.play().catch(e => console.log("Audio bloqueado"));
-    };
-
     verificarRecordatorios();
   }, []);
 
@@ -257,112 +222,90 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS --- */}
+        {/* --- GRID DE MÓDULOS (DISEÑO UNIFORME) --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             
-            {/* 1. AGENDA DE VISITAS */}
-            <Link href="/visitas" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-teal-500 cursor-pointer group hover:-translate-y-1">
+            {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN (TAMAÑO ESTÁNDAR) */}
+            <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-indigo-600 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-teal-100 p-3 rounded-full text-teal-600 group-hover:scale-110 transition-transform"><FaCalendarCheck className="text-2xl"/></div>
-                        <h2 className="card-title text-slate-700">Agenda Visitas</h2>
-                    </div>
-                    <p className="text-slate-400 text-sm">Programar salidas, ver pendientes y calendario.</p>
-                </div>
-            </Link>
-
-            {/* 2. SEGUIMIENTO */}
-            <Link href="/seguimiento" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-pink-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-pink-100 p-3 rounded-full text-pink-600 group-hover:scale-110 transition-transform"><FaRoute className="text-2xl"/></div>
-                        <h2 className="card-title text-slate-700">Seguimiento</h2>
-                    </div>
-                    <p className="text-slate-400 text-sm">Historial de resultados y cierre de ventas.</p>
-                </div>
-            </Link>
-
-            {/* 3. PROPIEDADES */}
-            <Link href="/propiedades" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-blue-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-blue-100 p-3 rounded-full text-blue-600 group-hover:scale-110 transition-transform"><FaBuilding className="text-2xl"/></div>
-                        <h2 className="card-title text-slate-700">Propiedades</h2>
-                    </div>
-                    <p className="text-slate-400 text-sm">Gestionar inventario, precios y disponibilidad.</p>
-                </div>
-            </Link>
-
-            {/* 4. PROPIETARIOS */}
-            <Link href="/propietarios" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-green-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-green-100 p-3 rounded-full text-green-600 group-hover:scale-110 transition-transform"><FaUserTie className="text-2xl"/></div>
-                        <h2 className="card-title text-slate-700">Propietarios</h2>
-                    </div>
-                    <p className="text-slate-400 text-sm">Base de datos de dueños y contratos.</p>
-                </div>
-            </Link>
-
-            {/* 5. MÓDULO DE ATENCIÓN */}
-            <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-purple-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-purple-100 p-3 rounded-full text-purple-600 group-hover:scale-110 transition-transform"><FaClipboardList className="text-2xl"/></div>
-                        <h2 className="card-title text-slate-700">Atención</h2>
-                    </div>
-                    <p className="text-slate-400 text-sm">Gestión de interesados y clientes.</p>
-                </div>
-            </Link>
-
-            {/* 6. NUEVO: MÓDULO DE REQUERIMIENTOS */}
-            <Link href="/requerimientos" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-amber-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="bg-amber-100 p-3 rounded-full text-amber-600 group-hover:scale-110 transition-transform">
-                            <FaClipboardCheck className="text-2xl"/>
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaClipboardList className="text-3xl"/>
                         </div>
-                        <h2 className="card-title text-slate-700">Requerimientos</h2>
+                        <div>
+                            <h2 className="card-title text-xl text-slate-800">Centro de Atención</h2>
+                            <span className="badge badge-sm badge-ghost text-xs">Gestión Integral</span>
+                        </div>
                     </div>
-                    <p className="text-slate-400 text-sm">Buzón de pedidos y necesidades urgentes.</p>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                        Accede a tus Clientes, Agenda, Seguimiento y Requerimientos desde aquí.
+                    </p>
+                </div>
+            </Link>
+
+            {/* 2. PROPIEDADES */}
+            <Link href="/propiedades" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-blue-500 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-blue-100 p-4 rounded-full text-blue-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaBuilding className="text-3xl"/>
+                        </div>
+                        <h2 className="card-title text-xl text-slate-800">Propiedades</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm">Gestionar inventario, precios y disponibilidad.</p>
+                </div>
+            </Link>
+
+            {/* 3. PROPIETARIOS */}
+            <Link href="/propietarios" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-green-500 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-green-100 p-4 rounded-full text-green-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaUserTie className="text-3xl"/>
+                        </div>
+                        <h2 className="card-title text-xl text-slate-800">Propietarios</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm">Base de datos de dueños y contratos.</p>
                 </div>
             </Link>
 
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN (OSCURO) --- */}
             {isAdmin && (
                 <>
-                    {/* 7. USUARIOS */}
-                    <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
+                    {/* 4. USUARIOS */}
+                    <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
-                            <div className="flex items-center gap-4 mb-2">
-                                <div className="bg-orange-500/20 p-3 rounded-full text-orange-400 group-hover:scale-110 transition-transform"><FaUsersCog className="text-2xl"/></div>
-                                <h2 className="card-title">Usuarios</h2>
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="bg-orange-500/20 p-4 rounded-full text-orange-400 group-hover:scale-110 transition-transform shadow-sm">
+                                    <FaUsersCog className="text-3xl"/>
+                                </div>
+                                <h2 className="card-title text-xl">Usuarios</h2>
                             </div>
                             <p className="text-slate-400 text-sm">Gestión de accesos, roles y personal.</p>
                         </div>
                     </Link>
 
-                    {/* 8. REPORTES */}
-                    <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
+                    {/* 5. REPORTES */}
+                    <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
-                            <div className="flex items-center gap-4 mb-2">
-                                <div className="bg-yellow-500/20 p-3 rounded-full text-yellow-400 group-hover:scale-110 transition-transform">
-                                    <FaChartLine className="text-2xl"/>
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="bg-yellow-500/20 p-4 rounded-full text-yellow-400 group-hover:scale-110 transition-transform shadow-sm">
+                                    <FaChartLine className="text-3xl"/>
                                 </div>
-                                <h2 className="card-title">Reportes</h2>
+                                <h2 className="card-title text-xl">Reportes</h2>
                             </div>
                             <p className="text-slate-400 text-sm">Estadísticas, métricas y exportación a Excel.</p>
                         </div>
                     </Link>
 
-                    {/* 9. CUMPLEAÑOS */}
-                    <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-b-4 border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
+                    {/* 6. CUMPLEAÑOS */}
+                    <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
-                            <div className="flex items-center gap-4 mb-2">
-                                <div className="bg-pink-500/20 p-3 rounded-full text-pink-400 group-hover:scale-110 transition-transform">
-                                    <FaBirthdayCake className="text-2xl"/>
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="bg-pink-500/20 p-4 rounded-full text-pink-400 group-hover:scale-110 transition-transform shadow-sm">
+                                    <FaBirthdayCake className="text-3xl"/>
                                 </div>
-                                <h2 className="card-title">Cumpleaños</h2>
+                                <h2 className="card-title text-xl">Cumpleaños</h2>
                             </div>
                             <p className="text-slate-400 text-sm">Calendario de clientes y propietarios.</p>
                         </div>
