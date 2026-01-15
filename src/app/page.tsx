@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
-  FaTimes 
+  FaTimes, FaUserSecret // <--- Importamos el icono de Agente
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -44,16 +44,13 @@ export default function DashboardPage() {
             const clientes = await getClientes();
             const visitas = await getVisitas(); 
             
-            // 1. FECHAS REFERENCIA (EN PERÚ)
             const ahora = new Date(); 
             const hoyStr = getFechaPeru(ahora); 
-            
             const mananaObj = new Date(ahora);
             mananaObj.setDate(ahora.getDate() + 1);
             const mananaStr = getFechaPeru(mananaObj); 
 
-            // --- LÓGICA DE FILTRADO ---
-
+            // Filtros Seguimientos
             const todosSeguimientos = seguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
             const ultimosSeguimientosMap = new Map();
             todosSeguimientos.forEach((s: any) => {
@@ -63,7 +60,6 @@ export default function DashboardPage() {
             });
             const ultimosSeguimientos = Array.from(ultimosSeguimientosMap.values());
 
-            // Filtros Seguimientos (Usamos split para evitar conversión UTC en lectura simple)
             const segHoy = ultimosSeguimientos.filter((s: any) => {
                 if (!s.fechaProxima || s.estado !== 'PENDIENTE') return false;
                 const fechaItemPura = s.fechaProxima.split('T')[0];
@@ -102,7 +98,7 @@ export default function DashboardPage() {
                 audio.play().catch(e => console.log("Audio bloqueado"));
             }
 
-            // --- TOASTS ---
+            // TOASTS... (Mantenemos la misma lógica de visualización de alertas)
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -123,7 +119,7 @@ export default function DashboardPage() {
                     </div>
                 ), { duration: 10000 });
             }
-
+            // ... (Resto de toasts se mantienen igual)
             if (visManana.length > 0) {
                  setTimeout(() => {
                     toast.custom((t) => (
@@ -135,7 +131,6 @@ export default function DashboardPage() {
                                     <div className="ml-3 flex-1">
                                         <p className="text-sm font-bold text-gray-900">Visitas para Mañana</p>
                                         <p className="mt-1 text-sm text-gray-500">Prepárate, tienes <b className="text-cyan-600">{visManana.length} visitas</b>.</p>
-                                        <p className="text-xs text-gray-400 mt-1">Primera: {getHora(visManana[0].fechaProgramada)} - {visManana[0].cliente?.nombre}</p>
                                     </div>
                                 </div>
                             </div>
@@ -146,7 +141,6 @@ export default function DashboardPage() {
                     ), { duration: 8000 });
                 }, 500);
             }
-
             if (segHoy.length > 0) {
                 setTimeout(() => {
                     toast.custom((t) => (
@@ -168,7 +162,6 @@ export default function DashboardPage() {
                     ), { duration: 9000 });
                 }, 1000);
             }
-
             if (segManana.length > 0) {
                  setTimeout(() => {
                     toast.custom((t) => (
@@ -190,7 +183,6 @@ export default function DashboardPage() {
                     ), { duration: 8000 });
                 }, 1500);
             }
-
             if (cumplesHoy.length > 0) {
                  setTimeout(() => {
                     toast.custom((t) => (
@@ -246,8 +238,8 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS (DISEÑO UNIFORME - 1 COLUMNA CADA UNO) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* --- GRID DE MÓDULOS (AHORA XL:4 PARA QUE QUEPAN LOS 4) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             
             {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN */}
             <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-indigo-600 cursor-pointer group hover:-translate-y-1">
@@ -293,10 +285,23 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
+            {/* 4. AGENTES (NUEVO - COLOR VIOLETA) */}
+            <Link href="/agentes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-purple-600 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-purple-100 p-4 rounded-full text-purple-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaUserSecret className="text-3xl"/>
+                        </div>
+                        <h2 className="card-title text-xl text-slate-800">Agentes</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm">Directorio de colegas y lista negra.</p>
+                </div>
+            </Link>
+
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN --- */}
             {isAdmin && (
                 <>
-                    {/* 4. USUARIOS */}
+                    {/* 5. USUARIOS */}
                     <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -309,7 +314,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 5. REPORTES */}
+                    {/* 6. REPORTES */}
                     <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -322,7 +327,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 6. CUMPLEAÑOS */}
+                    {/* 7. CUMPLEAÑOS */}
                     <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">

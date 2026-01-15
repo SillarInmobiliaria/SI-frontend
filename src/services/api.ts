@@ -30,9 +30,7 @@ api.interceptors.request.use((config: any) => {
   return config;
 });
 
-// ==========================================
 //            FUNCIONES DE DATOS
-// ==========================================
 
 // --- PROPIETARIOS ---
 export const getPropietarios = async () => {
@@ -137,13 +135,13 @@ export const createVisita = async (datos: any) => {
   return data;
 };
 
-// 👇 NUEVO: Para finalizar visita
+// Para finalizar visita
 export const updateVisita = async (id: string, datos: any) => {
   const { data } = await api.put(`/visitas/${id}`, datos);
   return data;
 };
 
-// 👇 NUEVO: Para cancelar visita
+// Para cancelar visita
 export const cancelVisita = async (id: string, motivo: string) => {
   const { data } = await api.put(`/visitas/${id}/cancelar`, { motivo });
   return data;
@@ -182,9 +180,7 @@ export const updateEstadoRequerimiento = async (id: string, estado: string) => {
   return response.data;
 };
 
-// ==========================================
 //          SEGURIDAD Y USUARIOS
-// ==========================================
 
 export const login = async (credenciales: { email: string; password: string }) => {
   const response = await api.post('/auth/login', credenciales);
@@ -229,6 +225,27 @@ export const downloadExcelCumpleanos = (mes: number) => {
   return api.get(`/admin/cumpleanos/excel?mes=${mes}`, {
     responseType: 'blob',
   });
+};
+
+// --- AGENTES ---
+export const getAgentes = async () => {
+    const res = await api.get('/agentes');
+    return res.data;
+};
+
+export const createAgente = async (data: any) => {
+    const res = await api.post('/agentes', data);
+    return res.data;
+};
+
+export const toggleEstadoAgente = async (id: string) => {
+    const res = await api.put(`/agentes/${id}/estado`);
+    return res.data;
+};
+
+export const deleteAgente = async (id: string) => {
+    const res = await api.delete(`/agentes/${id}`);
+    return res.data;
 };
 
 export default api;
