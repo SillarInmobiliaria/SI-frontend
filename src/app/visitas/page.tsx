@@ -97,9 +97,10 @@ export default function CalendarPage() {
       
       const [hora, minuto] = formData.hora.split(':').map(Number);
 
-      // CREAR FECHA USANDO HORA LOCAL (PERÚ)
-      const fechaLocal = new Date(year, month, day, hora, minuto);
-      const fechaISO = fechaLocal.toISOString(); 
+      // --- CORRECCIÓN DE HORA (FIX) ---
+      // Creamos la fecha usando UTC explícitamente para evitar que la conversión a ISOString reste 5 horas (Perú) y cambie de día
+      const fechaUTC = new Date(Date.UTC(year, month, day, hora, minuto));
+      const fechaISO = fechaUTC.toISOString(); 
 
       await createVisita({
         fechaProgramada: fechaISO,
@@ -164,9 +165,18 @@ export default function CalendarPage() {
 
   const openRescheduleModal = () => {
       if (!selectedVisita) return;
+      // Convertimos a Date local para extraer YMD
+      // Nota: Al leer del backend, la fecha viene en ISO. 
+      // Para editarla correctamente en el input type="date", necesitamos YYYY-MM-DD local
       const fechaObj = new Date(selectedVisita.fechaProgramada);
-      const fechaStr = fechaObj.toISOString().split('T')[0];
-      const horaStr = fechaObj.toTimeString().slice(0, 5); 
+      
+      // Ajuste simple para visualización local en el input
+      const offsetMs = fechaObj.getTimezoneOffset() * 60000;
+      const localDate = new Date(fechaObj.getTime() - offsetMs);
+      
+      const fechaStr = localDate.toISOString().split('T')[0];
+      const horaStr = localDate.toISOString().split('T')[1].substring(0, 5); 
+      
       setRescheduleData({ fecha: fechaStr, hora: horaStr });
       setIsDetailOpen(false);
       setIsRescheduleModalOpen(true);
@@ -179,8 +189,9 @@ export default function CalendarPage() {
           const [anio, mes, dia] = rescheduleData.fecha.split('-').map(Number);
           const [hora, minuto] = rescheduleData.hora.split(':').map(Number);
           
-          const nuevaFechaLocal = new Date(anio, mes - 1, dia, hora, minuto);
-          const nuevaFechaISO = nuevaFechaLocal.toISOString();
+          // Misma corrección de UTC para reprogramar
+          const nuevaFechaUTC = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto));
+          const nuevaFechaISO = nuevaFechaUTC.toISOString();
 
           await updateVisita(selectedVisita.id, {
               fechaProgramada: nuevaFechaISO,
@@ -192,17 +203,15 @@ export default function CalendarPage() {
       } catch (error) { alert('❌ Error al reprogramar'); }
   };
 
-  // Función para manejar input de documentos (CORREGIDA)
+  // Función para manejar input de documentos
   const handleDocumentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value;
       const tipo = completionData.tipoDocumento;
 
-      // Definir límites
       let limite = 12; 
       if (tipo === 'DNI') limite = 8;
       if (tipo === 'PASAPORTE') limite = 9;
 
-      // Cortar si excede
       if (val.length > limite) val = val.slice(0, limite);
 
       if (tipo === 'DNI') {
@@ -219,7 +228,9 @@ export default function CalendarPage() {
 
     return totalSlots.map((day, index) => {
       if (!day) return <div key={`blank-${index}`} className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 min-h-[120px]"></div>;
+      
       const dateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
       const visitsForDay = visitas.filter(v => v.fechaProgramada.startsWith(dateString));
       const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth();
 
@@ -231,15 +242,21 @@ export default function CalendarPage() {
             <button className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-blue-600 hover:text-blue-700 hover:scale-125 transform"><FaCalendarPlus size={14}/></button>
           </div>
           <div className="flex flex-col gap-1.5 mt-1 overflow-y-auto max-h-[100px] scrollbar-hide">
-            {visitsForDay.map(v => (
+            {visitsForDay.map(v => {
+               // Ajuste visual de la hora en la tarjeta (UTC a Local visualmente)
+               // Como guardamos en UTC "fake" (19:00 UTC para que sea 19:00 en la fecha), al leerlo directamete .getUTCHours() daría la hora correcta.
+               const fechaObj = new Date(v.fechaProgramada);
+               const horaVisual = `${String(fechaObj.getUTCHours()).padStart(2, '0')}:${String(fechaObj.getUTCMinutes()).padStart(2, '0')}`;
+
+               return (
                <div key={v.id} onClick={(e) => handleVisitaClick(e, v)}
                  className={`text-[10px] px-2.5 py-2 rounded-lg border-l-[3px] shadow-md truncate flex items-center gap-1.5 cursor-pointer hover:scale-105 hover:shadow-xl transition-all duration-200 font-medium ${v.estado === 'COMPLETADA' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-500 text-green-800 opacity-70' : v.estado === 'CANCELADA' ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-500 text-red-800 opacity-60' : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-600 text-indigo-900'}`}>
-                 <span className="font-bold text-[11px]">{new Date(v.fechaProgramada).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                 <span className="font-bold text-[11px]">{horaVisual}</span>
                  <span className="truncate">{v.cliente.nombre}</span>
                  {v.estado === 'COMPLETADA' && <FaCheckCircle className="ml-auto text-green-600"/>}
                  {v.estado === 'CANCELADA' && <FaTimes className="ml-auto text-red-600"/>}
                </div>
-            ))}
+            )})}
           </div>
         </div>
       );
