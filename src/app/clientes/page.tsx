@@ -55,7 +55,8 @@ interface FormClienteCompleto {
   reqPresupuestoMin?: string;
   reqPresupuestoMax?: string;
   reqComentarios?: string;
-  reqPrioridad?: 'NORMAL' | 'URGENTE';
+  // AGREGADO: Opción DESCARTADO en el tipo
+  reqPrioridad?: 'NORMAL' | 'URGENTE' | 'DESCARTADO';
   reqFormaPago?: 'CONTADO' | 'FINANCIADO' | 'MIXTO';
   reqBanco?: string;
 }
@@ -174,11 +175,25 @@ export default function ClientesPage() {
       if (data.modoInteres === 'REQUERIMIENTO' && nuevoId) {
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : data.reqZonas;
           let detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
+          
           if (data.reqTipo === 'COMPRA') {
               detallePedido += `\n Pago: ${data.reqFormaPago}.`;
               if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
           }
-          await createRequerimiento({ clienteId: nuevoId, fecha: new Date().toISOString(), pedido: detallePedido, prioridad: data.reqPrioridad, usuarioId: user?.id });
+
+          // --- MODIFICADO: SI ELIGE DESCARTADO, GUARDAMOS EL ESTADO DESCARTADO ---
+          const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
+          // Si es descartado, guardamos la prioridad como NORMAL para no romper, pero el estado mandamos DESCARTADO
+          const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
+
+          await createRequerimiento({ 
+              clienteId: nuevoId, 
+              fecha: new Date().toISOString(), 
+              pedido: detallePedido, 
+              prioridad: prioridadFinal, 
+              estado: estadoFinal, // Enviamos el estado
+              usuarioId: user?.id 
+          });
       }
 
       await fetchClientes(); await fetchIntereses();
@@ -279,7 +294,7 @@ export default function ClientesPage() {
                             const hasRealReq = reqC && reqC.id;
                             const hasRealSeg = segC && segC.id; 
 
-                            // --- LÓGICA DE ESTADO (NIVEL) CORREGIDA ---
+                            // --- LÓGICA DE ESTADO (NIVEL) ---
                             let statusLabel = 'INTERESADO';
                             let statusColor = 'bg-orange-100 text-orange-700';
                             let avatarColor = 'bg-gradient-to-br from-orange-400 to-amber-500';
@@ -321,7 +336,6 @@ export default function ClientesPage() {
                                     <td className="border-y border-gray-100 font-bold text-gray-800">{c.nombre}</td>
                                     <td className="border-y border-gray-100 text-sm font-semibold text-gray-600"><FaPhone className="inline mr-1 text-indigo-400"/> {c.telefono1}</td>
                                     
-                                    {/* 🔴 COLUMNA INTERÉS (OPERACIÓN - TIPO - DISTRITO) */}
                                     <td className="border-y border-gray-100">
                                         {propC ? (
                                             <div className="text-xs flex flex-col gap-1">
@@ -382,7 +396,7 @@ export default function ClientesPage() {
                                 {modoInteres === 'PROPIEDAD' && (
                                     <div className="animate-fade-in space-y-4">
                                             <div className="form-control relative"><label className="label font-bold text-slate-700">Propiedad de Interés</label><div className="relative"><FaSearch className="absolute left-3 top-3.5 text-slate-400"/><input type="text" className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" placeholder="Buscar propiedad..." value={propSearch} onChange={(e) => { setPropSearch(e.target.value); setShowPropSuggestions(true); if(!e.target.value) setValue('propiedadId', ''); }}/><input type="hidden" {...register('propiedadId')} />
-                                            {showPropSuggestions && propSearch && filteredProps.length > 0 && (<div className="absolute z-50 w-full bg-white border-2 border-indigo-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto">{filteredProps.map(p => (<div key={p.id} onClick={() => handleSelectPropiedad(p)} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col"><span className="font-bold text-slate-800">{p.tipo} - {p.ubicacion}</span><span className="text-xs text-slate-500">{p.direccion}</span></div>))}</div>)}</div></div>
+                                            {showPropSuggestions && propSearch && filteredProps.length > 0 && (<div className="absolute z-50 w-full bg-white border-2 border-indigo-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto">{filteredProps.map(p => (<div key={p.id} onClick={() => handleSelectPropiedad(p)} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col"><span className="font-bold text-slate-800">{p.tipo} - {p.ubicacion}</span><span className="text-xs text-slate-500">{p.direccion}</span></div>))}</div>)}</div></div>
                                             
                                             {propiedadSeleccionada && (
                                                 <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 relative shadow-md">
@@ -411,7 +425,16 @@ export default function ClientesPage() {
                                     <div className="animate-fade-in space-y-4 border border-amber-200 bg-amber-50/30 p-5 rounded-xl">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="form-control"><label className="label font-bold text-slate-700">Tipo Operación</label><select {...register('reqTipo')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl"><option value="COMPRA">Compra</option><option value="ALQUILER">Alquiler</option></select></div>
-                                                <div className="form-control"><label className="label font-bold text-slate-700">Prioridad</label><select {...register('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl"><option value="NORMAL">Normal</option><option value="URGENTE">Urgente</option></select></div>
+                                                
+                                                {/* 🔴 AGREGADA OPCIÓN DESCARTADO AL SELECT DE PRIORIDAD */}
+                                                <div className="form-control">
+                                                    <label className="label font-bold text-slate-700">Prioridad</label>
+                                                    <select {...register('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl">
+                                                        <option value="NORMAL">Normal</option>
+                                                        <option value="URGENTE">Urgente</option>
+                                                        <option value="DESCARTADO">Descartado (No viable)</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div className="form-control relative">
                                                 <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaCity className="text-slate-400"/> Zonas / Distritos</label>
@@ -432,7 +455,7 @@ export default function ClientesPage() {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div className="form-control"><select {...register('reqFormaPago')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"><option value="FINANCIADO">Financiamiento Bancario</option><option value="CONTADO">Recursos Propios (Contado)</option><option value="MIXTO">Mixto (Banco + Contado)</option></select></div>
                                                         {(reqFormaPago === 'FINANCIADO' || reqFormaPago === 'MIXTO') && (
-                                                            <div className="form-control animate-fade-in-right relative"><FaUniversity className="absolute left-4 top-4 text-green-600 pointer-events-none"/><select {...register('reqBanco')} className="w-full pl-10 pr-4 py-3 border-2 border-green-200 bg-green-50/50 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-green-900"><option value="">Selecciona un Banco...</option>{BANCOS_PERU.map(banco => <option key={banco} value={banco}>{banco}</option>)}</select></div>
+                                                            <div className="form-control animate-fade-in-right relative"><FaUniversity className="absolute left-4 top-4 text-green-600 pointer-events-none"/><select {...register('reqBanco')} className="w-full pl-10 pr-4 py-3 border-2 border-green-200 bg-green-50/50 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-green-900"><option value="">Selecciona un Banco...</option>{BANCOS_PERU.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
                                                         )}
                                                     </div>
                                                 </div>
