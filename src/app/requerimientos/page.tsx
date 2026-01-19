@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { getRequerimientos, updateEstadoRequerimiento } from '../../services/api';
-import { FaClipboardList, FaCheck, FaTrash, FaExclamationCircle, FaFilter, FaClock, FaSpinner, FaCheckCircle, FaBan, FaUser, FaPhone } from 'react-icons/fa';
+import { 
+    FaClipboardList, FaCheck, FaTrash, FaExclamationCircle, FaFilter, 
+    FaClock, FaSpinner, FaCheckCircle, FaBan, FaPhone, 
+    FaMapMarkerAlt, FaRulerCombined, FaDollarSign, FaMoneyBillWave 
+} from 'react-icons/fa';
 
 export default function RequerimientosPage() {
   const [reqs, setReqs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState('ABIERTO');
+  // CORRECCIÓN: El estado inicial ahora es PENDIENTE (antes era ABIERTO)
+  const [filtro, setFiltro] = useState('PENDIENTE');
 
   useEffect(() => {
     cargar();
@@ -18,7 +23,9 @@ export default function RequerimientosPage() {
     setLoading(true);
     try {
       const data = await getRequerimientos();
-      setReqs(data);
+      // Ordenamos para ver los nuevos primero
+      const sorted = data.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      setReqs(sorted);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -32,9 +39,28 @@ export default function RequerimientosPage() {
   };
 
   const filtrados = reqs.filter(r => filtro === 'TODOS' ? true : r.estado === filtro);
-  const totalAbiertos = reqs.filter(r => r.estado === 'ABIERTO').length;
+  
+  // CORRECCIÓN: Contamos PENDIENTE en lugar de ABIERTO
+  const totalPendientes = reqs.filter(r => r.estado === 'PENDIENTE').length;
   const totalAtendidos = reqs.filter(r => r.estado === 'ATENDIDO').length;
   const totalDescartados = reqs.filter(r => r.estado === 'DESCARTADO').length;
+
+  // Función para parsear detalles
+  const renderDetalle = (texto: string) => {
+      if (texto && texto.includes('\n')) {
+          return (
+              <div className="flex flex-col gap-1 mt-2">
+                  {texto.split('\n').map((linea, idx) => (
+                      <div key={idx} className="flex gap-2 text-xs text-slate-600">
+                          <span className="text-indigo-400">•</span>
+                          <span>{linea}</span>
+                      </div>
+                  ))}
+              </div>
+          );
+      }
+      return <p className="text-sm font-medium text-slate-600 italic">"{texto}"</p>;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 font-sans flex flex-col">
@@ -63,7 +89,7 @@ export default function RequerimientosPage() {
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border-2 border-blue-200 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200">
                 <div className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-1">Pendientes</div>
                 <div className="text-3xl font-bold text-blue-600 flex items-center gap-2">
-                    {totalAbiertos}
+                    {totalPendientes}
                     <FaClock className="text-xl"/>
                 </div>
                 </div>
@@ -88,16 +114,16 @@ export default function RequerimientosPage() {
             <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-5 mb-8 hover:shadow-xl transition-shadow duration-300">
             <div className="flex justify-center items-center gap-4">
                 <button 
-                onClick={() => setFiltro('ABIERTO')} 
+                onClick={() => setFiltro('PENDIENTE')} 
                 className={`btn font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 px-6 h-12 ${
-                    filtro === 'ABIERTO' 
+                    filtro === 'PENDIENTE' 
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-none' 
                     : 'bg-white text-blue-600 border-2 border-blue-200 hover:bg-blue-50'
                 }`}
                 >
                 <FaClock className="text-base"/>
                 <span className="ml-2 text-sm">Pendientes</span>
-                <span className="ml-2 badge badge-sm bg-blue-200 text-blue-800 border-none font-bold">{totalAbiertos}</span>
+                <span className="ml-2 badge badge-sm bg-blue-200 text-blue-800 border-none font-bold">{totalPendientes}</span>
                 </button>
                 
                 <button 
@@ -156,7 +182,7 @@ export default function RequerimientosPage() {
                                 {r.Cliente?.nombre}
                             </h3>
                             <p className="text-xs text-slate-400 font-medium flex items-center gap-2 mt-1">
-                                <FaClock className="text-slate-300"/> {r.fecha}
+                                <FaClock className="text-slate-300"/> {new Date(r.fecha).toLocaleDateString()}
                             </p>
                             </div>
                         </div>
@@ -173,13 +199,14 @@ export default function RequerimientosPage() {
                         <span className="font-medium">{r.Cliente?.telefono1}</span>
                         </div>
                         
-                        {/* PEDIDO */}
-                        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl text-slate-700 text-sm my-3 border-2 border-slate-200 shadow-inner">
-                        <p className="font-medium leading-relaxed italic">"{r.pedido}"</p>
+                        {/* PEDIDO / DETALLES COMPLETOS */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-slate-50 p-4 rounded-xl text-slate-700 text-sm my-3 border-2 border-indigo-100 shadow-sm">
+                            <h5 className="text-xs font-bold text-indigo-400 uppercase mb-2">Detalles del Requerimiento:</h5>
+                            {renderDetalle(r.pedido)}
                         </div>
                         
                         {/* ACCIONES */}
-                        {r.estado === 'ABIERTO' ? (
+                        {r.estado === 'PENDIENTE' ? (
                         <div className="flex gap-3 mt-4">
                             <button 
                             onClick={() => cambiarEstado(r.id, 'ATENDIDO')} 
