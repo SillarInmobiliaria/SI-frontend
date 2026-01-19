@@ -1,9 +1,12 @@
 'use client';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import Navbar from '../../components/Navbar';
-// ELIMINADO: import SidebarAtencion from '../../components/SidebarAtencion'; 
-import { getCaptaciones, createCaptacion, importarCaptacionesMasivo, deleteCaptacion } from '../../services/api';
-import { FaHome, FaPlus, FaSearch, FaFileUpload, FaTrash, FaMapMarkerAlt, FaDollarSign, FaPhone, FaUser, FaCalculator, FaCalendarAlt, FaTimes, FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter } from 'react-icons/fa';
+import { getCaptaciones, createCaptacion, importarCaptacionesMasivo, deleteCaptacion, updateCaptacion } from '../../services/api';
+import { 
+    FaHome, FaPlus, FaSearch, FaFileUpload, FaTrash, FaMapMarkerAlt, 
+    FaDollarSign, FaPhone, FaUser, FaCalculator, FaCalendarAlt, FaTimes, 
+    FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter, FaPen
+} from 'react-icons/fa';
 import { read, utils } from 'xlsx';
 
 // LISTA MAESTRA DE DISTRITOS
@@ -22,18 +25,24 @@ export default function CaptacionPage() {
   const [captaciones, setCaptaciones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // --- FILTROS ---
+  // --- FILTROS AVANZADOS ---
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // INICIAMOS CON LA FECHA DE HOY (YYYY-MM-DD)
-  const getToday = () => new Date().toISOString().split('T')[0];
-  const [filterDate, setFilterDate] = useState(getToday());
+  // 1. FECHA VACÍA POR DEFECTO (Para ver todo el historial)
+  const [filterDate, setFilterDate] = useState(''); 
+  const [filterOperacion, setFilterOperacion] = useState('TODOS');
+  const [filterInmueble, setFilterInmueble] = useState('TODOS');
+  const [filterDistrito, setFilterDistrito] = useState('TODOS');
 
+  // --- ESTADOS DEL MODAL ---
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); 
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sugerenciasDistrito, setSugerenciasDistrito] = useState<string[]>([]);
   const [activeStep, setActiveStep] = useState(1);
+
+  const getToday = () => new Date().toISOString().split('T')[0];
 
   const [form, setForm] = useState({
     fechaCaptacion: getToday(),
@@ -84,7 +93,8 @@ export default function CaptacionPage() {
     setLoading(true);
     try {
         const data = await getCaptaciones();
-        setCaptaciones(data);
+        const sorted = data.sort((a: any, b: any) => new Date(b.fechaCaptacion).getTime() - new Date(a.fechaCaptacion).getTime());
+        setCaptaciones(sorted);
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
   };
@@ -173,14 +183,47 @@ export default function CaptacionPage() {
       }
 
       try {
-          await createCaptacion(payload);
-          alert('✅ Propiedad registrada correctamente');
+          if (editingId) {
+              await updateCaptacion(editingId, payload);
+              alert('✏️ Captación actualizada correctamente');
+          } else {
+              await createCaptacion(payload);
+              alert('✅ Propiedad registrada correctamente');
+          }
+          
           setModalOpen(false);
-          setActiveStep(1); 
+          setEditingId(null);
           cargarDatos();
       } catch (e) { 
           alert('Error al guardar.'); 
       } finally { setIsSubmitting(false); }
+  };
+
+  const handleEdit = (item: any) => {
+      setForm({
+          fechaCaptacion: item.fechaCaptacion || getToday(),
+          fuente: item.fuente || 'LETRERO',
+          inmueble: item.inmueble || 'CASA',
+          tipoOperacion: item.tipoOperacion || 'VENTA',
+          relacion: item.relacion || 'PROPIETARIO',
+          nombre: item.nombre || '',
+          celular1: item.celular1 || '',
+          celular2: item.celular2 || '',
+          ubicacion: item.ubicacion || '',
+          distrito: item.distrito || '',
+          moneda: item.moneda || 'USD',
+          precio: item.precio || '',
+          at: item.at || '',
+          ac: item.ac || '',
+          precioM2: item.precioM2 || '',
+          caracteristicas: item.caracteristicas || '',
+          antiguedad: item.antiguedad || '',
+          situacion: item.situacion || '',
+          observaciones: item.observaciones || ''
+      });
+      setEditingId(item.id);
+      setActiveStep(1);
+      setModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -189,7 +232,33 @@ export default function CaptacionPage() {
       cargarDatos();
   };
 
-  // --- LÓGICA DE FILTRADO MEJORADA ---
+  const handleOpenNew = () => {
+      setForm({
+        fechaCaptacion: getToday(),
+        fuente: 'LETRERO',
+        inmueble: 'CASA',
+        tipoOperacion: 'VENTA',
+        relacion: 'PROPIETARIO',
+        nombre: '',
+        celular1: '',
+        celular2: '',
+        ubicacion: '',
+        distrito: '',
+        moneda: 'USD',
+        precio: '',
+        at: '',
+        ac: '',
+        precioM2: '',
+        caracteristicas: '',
+        antiguedad: '',
+        situacion: '',
+        observaciones: ''
+      });
+      setEditingId(null);
+      setActiveStep(1);
+      setModalOpen(true);
+  };
+
   const filtrados = useMemo(() => {
       const t = searchTerm.toLowerCase();
       
@@ -197,76 +266,80 @@ export default function CaptacionPage() {
         const matchesText = 
             c.nombre?.toLowerCase().includes(t) || 
             c.ubicacion?.toLowerCase().includes(t) ||
-            c.distrito?.toLowerCase().includes(t) ||
-            c.inmueble?.toLowerCase().includes(t) ||
-            c.celular1?.includes(t) ||
-            c.celular2?.includes(t);
+            c.celular1?.includes(t);
         
         const matchesDate = filterDate ? c.fechaCaptacion === filterDate : true;
+        const matchesOperacion = filterOperacion === 'TODOS' ? true : c.tipoOperacion === filterOperacion;
+        const matchesInmueble = filterInmueble === 'TODOS' ? true : c.inmueble === filterInmueble;
+        const matchesDistrito = filterDistrito === 'TODOS' ? true : c.distrito === filterDistrito;
 
-        return matchesText && matchesDate;
+        return matchesText && matchesDate && matchesOperacion && matchesInmueble && matchesDistrito;
       });
-  }, [captaciones, searchTerm, filterDate]);
+  }, [captaciones, searchTerm, filterDate, filterOperacion, filterInmueble, filterDistrito]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
       <Navbar />
       
-      {/* QUITAMOS EL SIDEBAR Y DEJAMOS SOLO EL MAIN */}
       <div className="flex flex-1 relative">
           
           <main className="flex-1 p-6 max-w-[100vw] overflow-x-hidden w-full">
             
-            {/* HEADER */}
-            <div className="flex flex-col xl:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
-                        <FaHome className="text-cyan-600"/> Captaciones
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                        {filterDate ? `Mostrando captaciones del: ${filterDate}` : 'Mostrando historial completo'}
-                    </p>
+            {/* HEADER Y FILTROS */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+                            <FaHome className="text-cyan-600"/> Captaciones
+                        </h1>
+                        <p className="text-slate-500 mt-1">Base de datos de propiedades y precios.</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls"/>
+                        <button onClick={() => fileInputRef.current?.click()} className="btn btn-sm bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 gap-2"><FaFileUpload/> Importar Excel</button>
+                        <button onClick={handleOpenNew} className="btn btn-sm bg-cyan-600 text-white hover:bg-cyan-700 gap-2"><FaPlus/> Nueva Captación</button>
+                    </div>
                 </div>
-                
-                <div className="flex flex-col md:flex-row gap-3 items-center w-full xl:w-auto">
-                    
-                    {/* FILTRO FECHA (Por defecto HOY) */}
-                    <div className="relative group">
-                        <input 
-                            type="date" 
-                            className="input input-bordered pl-10 rounded-xl w-full md:w-auto cursor-pointer font-bold text-slate-600 focus:bg-white bg-slate-50" 
-                            value={filterDate} 
-                            onChange={e => setFilterDate(e.target.value)}
-                        />
-                        <FaFilter className="absolute left-3 top-3.5 text-cyan-500 pointer-events-none"/>
-                        
-                        {/* Botón para limpiar fecha */}
-                        {filterDate && (
-                            <button 
-                                onClick={() => setFilterDate('')} 
-                                className="absolute right-10 top-3 text-slate-300 hover:text-red-500 tooltip tooltip-left"
-                                data-tip="Ver todo el historial"
-                            >
-                                <FaTimes/>
-                            </button>
-                        )}
+
+                {/* BARRA DE FILTROS */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    {/* 2. Filtro Operación (IGUAL QUE EN EL FORMULARIO) */}
+                    <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterOperacion} onChange={e => setFilterOperacion(e.target.value)}>
+                        <option value="TODOS">Todas las Operaciones</option>
+                        <option value="VENTA">Venta</option>
+                        <option value="ALQUILER">Alquiler</option>
+                        <option value="ANTICRESIS">Anticresis</option>
+                    </select>
+
+                    {/* 3. Filtro Inmueble (CON TODAS LAS OPCIONES DEL FORMULARIO) */}
+                    <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterInmueble} onChange={e => setFilterInmueble(e.target.value)}>
+                        <option value="TODOS">Todos los Inmuebles</option>
+                        <option value="CASA">Casa</option>
+                        <option value="CASA_TERRENO">Casa / Terreno</option>
+                        <option value="DEPARTAMENTO">Departamento</option>
+                        <option value="PENTHOUSE">Penthouse</option>
+                        <option value="DUPLEX">Duplex</option>
+                        <option value="LOCAL_COMERCIAL">Local Comercial</option>
+                        <option value="TERRENO">Terreno</option>
+                    </select>
+
+                    {/* Filtro Distrito */}
+                    <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterDistrito} onChange={e => setFilterDistrito(e.target.value)}>
+                        <option value="TODOS">Todos los Distritos</option>
+                        {DISTRITOS_AREQUIPA.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+
+                    {/* Filtro Fecha (Opcional) */}
+                    <div className="relative">
+                        <input type="date" className="input input-bordered input-sm w-full font-bold text-slate-600" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+                        {filterDate && <button onClick={() => setFilterDate('')} className="absolute right-2 top-1.5 text-xs text-red-500 font-bold hover:underline">Borrar Fecha</button>}
                     </div>
 
-                    {/* BUSCADOR */}
-                    <div className="relative w-full md:w-72">
-                        <FaSearch className="absolute left-3 top-3.5 text-slate-400"/>
-                        <input 
-                            type="text" 
-                            placeholder="Buscar nombre, celular, distrito..." 
-                            className="input input-bordered w-full pl-10 rounded-xl bg-white shadow-sm focus:shadow-md transition-all" 
-                            value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
+                    {/* Búsqueda General */}
+                    <div className="relative">
+                        <FaSearch className="absolute left-3 top-2.5 text-slate-400"/>
+                        <input type="text" placeholder="Buscar..." className="input input-bordered input-sm w-full pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                     </div>
-                    
-                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls"/>
-                    <button onClick={() => fileInputRef.current?.click()} className="btn bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"><FaFileUpload/> Importar</button>
-                    <button onClick={() => { setForm({...form, fechaCaptacion: getToday(), distrito: '', moneda: 'USD'}); setActiveStep(1); setModalOpen(true); }} className="btn bg-cyan-600 text-white hover:bg-cyan-700 rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"><FaPlus/> Nueva</button>
                 </div>
             </div>
 
@@ -294,7 +367,7 @@ export default function CaptacionPage() {
                                 <th>Antig.</th>
                                 <th className="min-w-[150px] text-left">Situación</th>
                                 <th className="min-w-[150px] text-left">Obs</th>
-                                <th>Acciones</th>
+                                <th className="sticky right-0 bg-slate-100 shadow-l">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -302,13 +375,12 @@ export default function CaptacionPage() {
                                 <tr>
                                     <td colSpan={19} className="text-center py-20 text-slate-400">
                                         <FaSearch className="text-4xl mx-auto mb-4 opacity-20"/>
-                                        <p className="text-lg">No se encontraron resultados.</p>
-                                        {filterDate && <p className="text-sm opacity-70">Intenta cambiando la fecha o borrando el filtro.</p>}
+                                        <p className="text-lg">No se encontraron resultados con estos filtros.</p>
                                     </td>
                                 </tr>
                             )}
                             {filtrados.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-100 text-center">
+                                <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-100 text-center group">
                                     <td className="font-mono text-slate-500">{item.fechaCaptacion}</td>
                                     <td><span className="badge badge-ghost badge-sm">{item.fuente}</span></td>
                                     <td className="font-bold text-cyan-700">{item.inmueble}</td>
@@ -332,8 +404,17 @@ export default function CaptacionPage() {
                                     <td className="text-xs">{item.antiguedad}</td>
                                     <td className="truncate max-w-[150px] text-xs text-left" title={item.situacion}>{item.situacion}</td>
                                     <td className="truncate max-w-[150px] text-xs text-left text-yellow-600 font-medium" title={item.observaciones}>{item.observaciones}</td>
-                                    <td>
-                                        <button onClick={() => handleDelete(item.id)} className="btn btn-ghost btn-xs text-red-400 hover:text-red-600"><FaTrash/></button>
+                                    <td className="sticky right-0 bg-white group-hover:bg-slate-50 shadow-l">
+                                        <div className="flex justify-center gap-1">
+                                            {/* BOTÓN EDITAR */}
+                                            <button onClick={() => handleEdit(item)} className="btn btn-ghost btn-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 tooltip tooltip-left" data-tip="Editar">
+                                                <FaPen/>
+                                            </button>
+                                            {/* BOTÓN ELIMINAR */}
+                                            <button onClick={() => handleDelete(item.id)} className="btn btn-ghost btn-xs text-red-400 hover:text-red-600 hover:bg-red-100 tooltip tooltip-left" data-tip="Eliminar">
+                                                <FaTrash/>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -342,75 +423,60 @@ export default function CaptacionPage() {
                 </div>
             </div>
 
-            {/* MODAL CON EFECTO ACORDEÓN */}
+            {/* MODAL (Reutilizado para Crear y Editar) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl p-0 my-10 animate-scaleIn overflow-hidden flex flex-col max-h-[90vh]">
                         
-                        {/* CABECERA MODAL */}
                         <div className="bg-slate-800 p-6 flex justify-between items-center text-white">
                             <h2 className="text-2xl font-black flex items-center gap-2">
-                                <FaHome className="text-cyan-400"/> Nueva Captación
+                                <FaHome className="text-cyan-400"/> {editingId ? 'Editar Captación' : 'Nueva Captación'}
                             </h2>
                             <button onClick={() => setModalOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white"><FaTimes/></button>
                         </div>
 
-                        {/* CUERPO DEL FORMULARIO CON SCROLL */}
                         <div className="p-8 overflow-y-auto flex-1">
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                
-                                {/* PASO 1: DATOS BÁSICOS */}
+                                {/* PASO 1 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 1 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
-                                    <div 
-                                        className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100"
-                                        onClick={() => setActiveStep(1)}
-                                    >
+                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(1)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">1</span> Datos Básicos</h3>
                                         {activeStep === 1 ? <FaChevronDown/> : <FaChevronRight/>}
                                     </div>
-                                    
                                     {activeStep === 1 && (
                                         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Fecha</label><input type="date" className="input input-bordered input-sm" value={form.fechaCaptacion} onChange={e => setForm({...form, fechaCaptacion: e.target.value})} /></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Fuente</label><select className="select select-bordered select-sm" value={form.fuente} onChange={e => setForm({...form, fuente: e.target.value})}><option value="LETRERO">Letrero</option><option value="GRUPOS">Grupos</option><option value="PERIODICO">Periódico</option><option value="OTROS">Otros</option></select></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Tipo Inmueble</label><select className="select select-bordered select-sm" value={form.inmueble} onChange={e => setForm({...form, inmueble: e.target.value})}><option value="CASA">Casa</option><option value="CASA_TERRENO">Casa / Terreno</option><option value="DEPARTAMENTO">Departamento</option><option value="PENTHOUSE">Penthouse</option><option value="DUPLEX">Duplex</option><option value="LOCAL_COMERCIAL">Local Comercial</option><option value="TERRENO">Terreno</option></select></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Operación</label><select className="select select-bordered select-sm" value={form.tipoOperacion} onChange={e => setForm({...form, tipoOperacion: e.target.value})}><option value="VENTA">Venta</option><option value="ALQUILER">Alquiler</option><option value="ANTICRESIS">Anticresis</option></select></div>
-                                            
-                                            <div className="md:col-span-4 flex justify-end">
-                                                <button type="button" onClick={() => setActiveStep(2)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button>
-                                            </div>
+                                            <div className="md:col-span-4 flex justify-end"><button type="button" onClick={() => setActiveStep(2)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button></div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* PASO 2: CONTACTO */}
+                                {/* PASO 2 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 2 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(2)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">2</span> Contacto</h3>
                                         {activeStep === 2 ? <FaChevronDown/> : <FaChevronRight/>}
                                     </div>
-                                    
                                     {activeStep === 2 && (
                                         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Relación</label><select className="select select-bordered select-sm" value={form.relacion} onChange={e => setForm({...form, relacion: e.target.value})}><option value="PROPIETARIO">Propietario</option><option value="AGENTE">Agente</option><option value="INMOBILIARIA">Inmobiliaria</option><option value="CONSTRUCTORA">Constructora</option></select></div>
                                             <div className="form-control md:col-span-3"><label className="label font-bold text-slate-600 text-xs">Nombre Completo</label><input type="text" className="input input-bordered input-sm" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} /></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Celular 1</label><input type="text" className="input input-bordered input-sm" value={form.celular1} maxLength={9} placeholder="999..." onChange={e => setForm({...form, celular1: e.target.value.replace(/\D/g, '').slice(0, 9)})} /></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Celular 2</label><input type="text" className="input input-bordered input-sm" value={form.celular2} maxLength={9} placeholder="Opcional" onChange={e => setForm({...form, celular2: e.target.value.replace(/\D/g, '').slice(0, 9)})} /></div>
-                                            
-                                            <div className="md:col-span-4 flex justify-end">
-                                                <button type="button" onClick={() => setActiveStep(3)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button>
-                                            </div>
+                                            <div className="md:col-span-4 flex justify-end"><button type="button" onClick={() => setActiveStep(3)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button></div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* PASO 3: DETALLES INMUEBLE */}
+                                {/* PASO 3 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 3 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(3)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">3</span> Detalles</h3>
                                         {activeStep === 3 ? <FaChevronDown/> : <FaChevronRight/>}
                                     </div>
-                                    
                                     {activeStep === 3 && (
                                         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
                                             <div className="form-control md:col-span-2"><label className="label font-bold text-slate-600 text-xs">Ubicación</label><input type="text" className="input input-bordered input-sm" value={form.ubicacion} onChange={e => setForm({...form, ubicacion: e.target.value})} /></div>
@@ -419,55 +485,37 @@ export default function CaptacionPage() {
                                                 <input type="text" className="input input-bordered input-sm w-full" placeholder="Escribe para buscar..." value={form.distrito} onChange={handleDistritoChange} onBlur={() => setTimeout(() => setSugerenciasDistrito([]), 200)} />
                                                 {sugerenciasDistrito.length > 0 && <ul className="absolute z-50 top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-40 overflow-y-auto mt-1">{sugerenciasDistrito.map((dist) => (<li key={dist} onClick={() => seleccionarDistrito(dist)} className="px-4 py-2 hover:bg-cyan-50 cursor-pointer text-xs font-bold text-slate-600">{dist}</li>))}</ul>}
                                             </div>
-                                            
                                             <div className="form-control relative md:col-span-2"><label className="label font-bold text-slate-600 text-xs">Precio</label><div className="flex gap-2"><select className="select select-bordered select-sm w-20 font-bold bg-slate-100" value={form.moneda} onChange={e => setForm({...form, moneda: e.target.value})}><option value="USD">USD $</option><option value="PEN">PEN S/</option></select><input type="number" className="input input-bordered input-sm w-full" placeholder="0.00" value={form.precio} onChange={e => setForm({...form, precio: e.target.value})} /></div></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">A. Terreno (m2)</label><input type="number" className="input input-bordered input-sm" value={form.at} onChange={e => setForm({...form, at: e.target.value})} /></div>
                                             <div className="form-control"><label className="label font-bold text-slate-600 text-xs">A. Const. (m2)</label><input type="number" className="input input-bordered input-sm" value={form.ac} onChange={e => setForm({...form, ac: e.target.value})} /></div>
                                             <div className="form-control relative"><label className="label font-bold text-slate-600 text-xs flex items-center gap-1">Precio x m² <FaCalculator className="text-cyan-400"/></label><input type="number" className="input input-bordered input-sm bg-cyan-50 font-bold text-cyan-800" value={form.precioM2} onChange={e => setForm({...form, precioM2: e.target.value})} placeholder="Auto..." /></div>
-                                            
                                             <div className="form-control">
                                                 <label className="label font-bold text-slate-600 text-xs">Antigüedad</label>
-                                                <div className="flex items-center">
-                                                    <input type="number" className="input input-bordered input-sm w-full rounded-r-none" placeholder="10" value={form.antiguedad.replace(' años', '')} onChange={e => setForm({...form, antiguedad: e.target.value})} />
-                                                    <span className="bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 rounded-r-lg border border-l-0 border-slate-300 h-[32px] flex items-center">años</span>
-                                                </div>
+                                                <div className="flex items-center"><input type="number" className="input input-bordered input-sm w-full rounded-r-none" placeholder="10" value={form.antiguedad.replace(' años', '')} onChange={e => setForm({...form, antiguedad: e.target.value})} /><span className="bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 rounded-r-lg border border-l-0 border-slate-300 h-[32px] flex items-center">años</span></div>
                                             </div>
-
                                             <div className="form-control md:col-span-4"><label className="label font-bold text-slate-600 text-xs">Situación</label><textarea className="textarea textarea-bordered h-12 text-sm leading-tight" placeholder="Saneado, en litigio, sucesión..." value={form.situacion} onChange={e => setForm({...form, situacion: e.target.value})}></textarea></div>
-                                            
-                                            <div className="md:col-span-4 flex justify-end">
-                                                <button type="button" onClick={() => setActiveStep(4)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button>
-                                            </div>
+                                            <div className="md:col-span-4 flex justify-end"><button type="button" onClick={() => setActiveStep(4)} className="btn btn-sm bg-slate-800 text-white hover:bg-slate-900">Siguiente <FaChevronRight/></button></div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* PASO 4: OBSERVACIONES */}
+                                {/* PASO 4 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 4 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(4)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">4</span> Notas Finales</h3>
                                         {activeStep === 4 ? <FaChevronDown/> : <FaChevronRight/>}
                                     </div>
-                                    
                                     {activeStep === 4 && (
                                         <div className="p-6 space-y-4 animate-fade-in">
-                                            <div className="form-control">
-                                                <label className="label font-bold text-slate-600 text-xs">Características del Inmueble</label>
-                                                <textarea className="textarea textarea-bordered h-20 text-sm" value={form.caracteristicas} onChange={e => setForm({...form, caracteristicas: e.target.value})} placeholder="Descripción física..."></textarea>
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label font-bold text-slate-600 text-xs">Observaciones / Notas Internas</label>
-                                                <textarea className="textarea textarea-bordered h-20 text-sm bg-yellow-50 focus:bg-yellow-100 transition-colors" value={form.observaciones} onChange={e => setForm({...form, observaciones: e.target.value})} placeholder="Datos confidenciales, notas privadas..."></textarea>
-                                            </div>
-                                            
+                                            <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Características del Inmueble</label><textarea className="textarea textarea-bordered h-20 text-sm" value={form.caracteristicas} onChange={e => setForm({...form, caracteristicas: e.target.value})} placeholder="Descripción física..."></textarea></div>
+                                            <div className="form-control"><label className="label font-bold text-slate-600 text-xs">Observaciones / Notas Internas</label><textarea className="textarea textarea-bordered h-20 text-sm bg-yellow-50 focus:bg-yellow-100 transition-colors" value={form.observaciones} onChange={e => setForm({...form, observaciones: e.target.value})} placeholder="Datos confidenciales, notas privadas..."></textarea></div>
                                             <div className="flex gap-3 pt-4">
                                                 <button type="button" onClick={() => setModalOpen(false)} className="btn flex-1 btn-ghost">Cancelar</button>
-                                                <button type="submit" disabled={isSubmitting} className="btn flex-1 bg-cyan-600 text-white hover:bg-cyan-700 shadow-lg border-none text-lg"><FaCheckCircle/> Guardar Todo</button>
+                                                <button type="submit" disabled={isSubmitting} className="btn flex-1 bg-cyan-600 text-white hover:bg-cyan-700 shadow-lg border-none text-lg"><FaCheckCircle/> {editingId ? 'Actualizar' : 'Guardar Todo'}</button>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-
                             </form>
                         </div>
                     </div>
