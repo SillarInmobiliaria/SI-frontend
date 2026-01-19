@@ -1,15 +1,31 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { getSeguimientos, updateSeguimiento, createSeguimiento, createRequerimiento } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
+import { useForm } from 'react-hook-form'; 
 import { 
   FaRoute, FaCheckCircle, FaClock, FaCommentDots, FaCalendarAlt, FaCheck, 
   FaUndo, FaFilter, FaHandshake, FaSpinner, FaSearch, FaHistory, FaPaperPlane, 
-  FaClipboardList, FaCalendarPlus, FaPhone, FaTimes 
+  FaClipboardList, FaCalendarPlus, FaPhone, FaTimes, FaBan, FaBuilding, FaCity, 
+  FaRulerCombined, FaDollarSign, FaMoneyBillWave, FaUniversity 
 } from 'react-icons/fa';
+
+const DISTRITOS_SUGERIDOS = [
+    "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
+    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", 
+    "Mariano Melgar", "Miraflores", "Mollebaya", "Paucarpata", "Pocsi", 
+    "Polobaya", "Quequeña", "Sabandía", "Sachaca", "San Juan de Siguas", 
+    "San Juan de Tarucani", "Santa Isabel de Siguas", "Santa Rita de Siguas", 
+    "Socabaya", "Tiabaya", "Uchumayo", "Vitor", "Yanahuara", "Yarabamba", "Yura"
+];
+
+const BANCOS_PERU = [
+    "BCP (Banco de Crédito)", "BBVA", "Interbank", "Scotiabank", "Banco de la Nación", 
+    "BanBif", "Pichincha", "GNB", "Banco de Comercio", "Caja Arequipa", "Caja Cusco", "Otro"
+];
 
 export default function SeguimientoPage() {
   const router = useRouter();
@@ -32,8 +48,19 @@ export default function SeguimientoPage() {
   const [newComment, setNewComment] = useState(''); 
   const [nextContactDate, setNextContactDate] = useState(''); 
 
+  // --- NUEVO: FORMULARIO REQUERIMIENTO COMPLETO ---
   const [isReqOpen, setReqOpen] = useState(false);
-  const [reqData, setReqData] = useState({ pedido: '', prioridad: 'NORMAL' });
+  const { register, handleSubmit, reset, watch, setValue } = useForm();
+  
+  // Multi-select Zonas
+  const [zonasQuery, setZonasQuery] = useState('');
+  const [zonasSelected, setZonasSelected] = useState<string[]>([]);
+  const [showZonasSuggestions, setShowZonasSuggestions] = useState(false);
+  
+  // Watchers para UI Reactiva
+  const reqTipo = watch('reqTipo');
+  const reqFormaPago = watch('reqFormaPago');
+  const reqPrioridad = watch('reqPrioridad'); // <--- AHORA ESCUCHAMOS LA PRIORIDAD
 
   useEffect(() => {
     cargarDatos();
@@ -43,7 +70,6 @@ export default function SeguimientoPage() {
     try {
       setLoading(true);
       const data = await getSeguimientos();
-      // Ordenamos por fecha: Lo más reciente primero IMPORTANTE para el filtro
       const sorted = data.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setSeguimientos(sorted);
     } catch (error) { console.error(error); } 
@@ -66,7 +92,6 @@ export default function SeguimientoPage() {
     return fecha.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // 👇 FUNCIÓN CLAVE PARA GUARDAR EN HORA PERÚ
   const getISOFechaPeru = (fechaStr: string) => {
       if (!fechaStr) return new Date().toISOString();
       const [anio, mes, dia] = fechaStr.split('-').map(Number);
@@ -74,22 +99,27 @@ export default function SeguimientoPage() {
       return fecha.toISOString();
   };
 
-  // --- 🧠 LÓGICA FILTRADO: SOLO 1 FILA POR CLIENTE ---
+  // --- LÓGICA DE ZONAS ---
+  const filteredDistritos = useMemo(() => {
+      if (!zonasQuery) return [];
+      const search = zonasQuery.toLowerCase();
+      return DISTRITOS_SUGERIDOS.filter(d => d.toLowerCase().includes(search) && !zonasSelected.includes(d));
+  }, [zonasQuery, zonasSelected]);
+
+  const handleAddZona = (zona: string) => { const nuevasZonas = [...zonasSelected, zona]; setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); setZonasQuery(''); setShowZonasSuggestions(false); };
+  const handleRemoveZona = (zona: string) => { const nuevasZonas = zonasSelected.filter(z => z !== zona); setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); };
+
+  // --- LÓGICA FILTRADO ---
   const dataFiltrada = useMemo(() => {
-    // 1. Filtrar por búsqueda y fecha
     const filtradosBasicos = seguimientos.filter(s => {
       const texto = searchTerm.toLowerCase();
       const coincideTexto = s.Cliente?.nombre?.toLowerCase().includes(texto) || s.comentario?.toLowerCase().includes(texto);
-      
       if (searchTerm !== '' && !coincideTexto) return false;
-      if (searchTerm !== '') return true;
-
       const mesRegistro = new Date(s.fecha).getUTCMonth(); 
       const anioRegistro = new Date(s.fecha).getUTCFullYear();
       return mesRegistro === Number(filtroMes) && anioRegistro === Number(filtroAnio);
     });
 
-    // 2. AGRUPAR: Usamos un Map para guardar SOLO el primero que encontramos (el más reciente)
     const unicosPorCliente = new Map();
     filtradosBasicos.forEach(item => {
         if (!unicosPorCliente.has(item.clienteId)) {
@@ -97,9 +127,7 @@ export default function SeguimientoPage() {
         }
     });
 
-    // 3. Filtrar por estado FINAL
     const listaUnica = Array.from(unicosPorCliente.values());
-    
     if (filtroEstado === 'TODOS') return listaUnica;
     return listaUnica.filter(s => s.estado === filtroEstado);
 
@@ -108,17 +136,13 @@ export default function SeguimientoPage() {
   const total = dataFiltrada.length;
   const pendientes = dataFiltrada.filter(s => s.estado === 'PENDIENTE').length;
   const finalizados = dataFiltrada.filter(s => s.estado === 'FINALIZADO').length;
-
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-  // --- FUNCIONES DEL CENTRO DE MANDO ---
-  
   const handleOpenHistory = (item: any) => {
       setSelectedItem(item);
       const historial = seguimientos.filter(s => s.clienteId === item.clienteId);
       setClientHistory(historial.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
       
-      // Fecha por defecto: HOY
       const hoy = new Date().toISOString().split('T')[0];
       setNextContactDate(hoy);
       
@@ -131,13 +155,11 @@ export default function SeguimientoPage() {
       if(!newComment.trim() || !selectedItem) return;
 
       try {
-          // 1. FINALIZAR TODOS los seguimientos anteriores PENDIENTES de este cliente
           const itemsPendientes = clientHistory.filter(h => h.estado === 'PENDIENTE');
           for (const item of itemsPendientes) {
               await updateSeguimiento(item.id, { estado: 'FINALIZADO' });
           }
 
-          // 2. CREAR el nuevo como PENDIENTE con la fecha seleccionada
           const fechaProxISO = nextContactDate ? getISOFechaPeru(nextContactDate) : new Date().toISOString();
 
           await createSeguimiento({
@@ -162,28 +184,70 @@ export default function SeguimientoPage() {
       router.push(`/visitas?clienteId=${selectedItem.clienteId}&clienteNombre=${encodeURIComponent(selectedItem.Cliente.nombre)}`);
   };
 
-  const handleCreateRequerimiento = async () => {
+  // --- CREAR REQUERIMIENTO COMPLETO ---
+  const handleOpenReqModal = () => {
       if(!selectedItem) return;
+      setReqOpen(true);
+      // Resetear el formulario y zonas
+      setZonasSelected([]);
+      setZonasQuery('');
+      reset({ 
+          reqTipo: 'COMPRA', 
+          reqPrioridad: 'NORMAL', 
+          reqFormaPago: 'FINANCIADO',
+          reqAreaMin: '', reqAreaMax: '', 
+          reqPresupuestoMin: '', reqPresupuestoMax: '',
+          reqComentarios: ''
+      });
+  };
+
+  const handleCreateRequerimiento = async (data: any) => {
+      if(!selectedItem) return;
+      
+      // Si eligió DESCARTADO, pedimos confirmación extra por si acaso
+      if (data.reqPrioridad === 'DESCARTADO' && !confirm("⚠️ ¿Marcar este cliente como DESCARTADO?\nEsto indicará que el requerimiento no es viable.")) return;
+
       try {
+          const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : data.reqZonas;
+          
+          let detallePedido = "";
+          // Si es descartado, el pedido es simple
+          if (data.reqPrioridad === 'DESCARTADO') {
+              detallePedido = `[DESCARTADO] Motivo/Intento: ${data.reqTipo} en ${zonasFinales || 'zonas'}. ${data.reqComentarios || ''}`;
+          } else {
+              detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
+              if (data.reqTipo === 'COMPRA') {
+                  detallePedido += `\n Pago: ${data.reqFormaPago}.`;
+                  if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
+              }
+          }
+
           // 1. Crear el requerimiento
+          // NOTA: Si es DESCARTADO, pasamos el estado 'DESCARTADO' al backend. Si no, dejamos que el backend ponga 'PENDIENTE'
           await createRequerimiento({
               clienteId: selectedItem.clienteId,
               fecha: new Date().toISOString(),
-              pedido: reqData.pedido,
-              prioridad: reqData.prioridad,
+              pedido: detallePedido,
+              prioridad: data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad, // Guardamos prioridad normal para no romper enum si no existe 'DESCARTADO' en prioridad
+              estado: data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE', // Aquí sí mandamos el estado
               usuarioId: user?.id
           });
 
           // 2. CERRAR el seguimiento actual
-          await updateSeguimiento(selectedItem.id, { estado: 'FINALIZADO' });
+          await updateSeguimiento(selectedItem.id, { 
+              estado: 'FINALIZADO',
+              comentario: data.reqPrioridad === 'DESCARTADO' 
+                  ? `[SISTEMA]: Cliente DESCARTADO por requerimiento no viable.` 
+                  : `[SISTEMA]: Seguimiento convertido a REQUERIMIENTO.`
+          });
 
-          alert("✅ Requerimiento creado y seguimiento cerrado.");
+          alert(data.reqPrioridad === 'DESCARTADO' ? "⛔ Cliente marcado como DESCARTADO." : "✅ Requerimiento creado exitosamente.");
           setReqOpen(false);
           setHistoryOpen(false);
           cargarDatos();
       } catch (error) { 
           console.error(error);
-          alert("Error al crear requerimiento"); 
+          alert("Error al procesar"); 
       }
   };
 
@@ -222,7 +286,7 @@ export default function SeguimientoPage() {
                 </div>
             </div>
 
-            {/* TABLA UNIFICADA (1 FILA POR CLIENTE) */}
+            {/* TABLA UNIFICADA */}
             <div className="bg-white rounded-3xl shadow-2xl border-2 border-slate-200 overflow-hidden">
                 {loading ? <div className="text-center py-20"><FaSpinner className="animate-spin text-4xl text-pink-500 mx-auto"/></div> : 
                 dataFiltrada.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold">Sin registros</div> : 
@@ -266,7 +330,7 @@ export default function SeguimientoPage() {
 
                         <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
                             <div className="flex gap-3 mb-6">
-                                <button onClick={() => setReqOpen(true)} className="btn flex-1 bg-white text-amber-600 border-amber-200 hover:bg-amber-50 shadow-sm"><FaClipboardList/> Nuevo Requerimiento</button>
+                                <button onClick={handleOpenReqModal} className="btn flex-1 bg-white text-amber-600 border-amber-200 hover:bg-amber-50 shadow-sm"><FaClipboardList/> Convertir a Requerimiento</button>
                                 <button onClick={handleGoToVisitas} className="btn flex-1 bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm"><FaCalendarPlus/> Agendar Visita</button>
                             </div>
 
@@ -275,7 +339,6 @@ export default function SeguimientoPage() {
                             <div className="space-y-6 relative pl-4 border-l-2 border-slate-200 ml-2 pb-4">
                                 {clientHistory.map((h, i) => (
                                     <div key={h.id} className="relative">
-                                        {/* PUNTO DE COLOR: Amarillo si pendiente, Verde si finalizado */}
                                         <div className={`absolute -left-[23px] top-1 w-3 h-3 rounded-full border-2 border-white shadow-sm ${h.estado === 'PENDIENTE' ? 'bg-amber-400 ring-2 ring-amber-100' : 'bg-emerald-500'}`}></div>
                                         <div className="text-xs font-bold text-slate-400 mb-1 flex justify-between items-center">
                                             <span>{new Date(h.fecha).toLocaleDateString()}</span>
@@ -287,9 +350,8 @@ export default function SeguimientoPage() {
                             </div>
                         </div>
 
-                        {/* CHAT INPUT CON FECHA */}
+                        {/* CHAT INPUT */}
                         <div className="p-4 bg-white border-t border-slate-200 shrink-0">
-                            {/* Selector de Fecha */}
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xs font-bold text-slate-400 uppercase">📅 Próximo Contacto:</span>
                                 <input 
@@ -299,7 +361,6 @@ export default function SeguimientoPage() {
                                     onChange={(e) => setNextContactDate(e.target.value)}
                                 />
                             </div>
-
                             <form onSubmit={handleAddComment} className="flex gap-2">
                                 <input type="text" className="input input-bordered w-full bg-slate-50" placeholder="Escribe el resultado..." value={newComment} onChange={(e) => setNewComment(e.target.value)}/>
                                 <button type="submit" className="btn btn-primary bg-pink-600 border-none hover:bg-pink-700"><FaPaperPlane/></button>
@@ -309,18 +370,70 @@ export default function SeguimientoPage() {
                 </div>
             )}
 
-            {/* MODAL REQUERIMIENTO */}
+            {/* MODAL REQUERIMIENTO COMPLETO */}
             {isReqOpen && selectedItem && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-zoom-in">
-                        <h3 className="font-bold text-lg mb-4 text-amber-600 flex items-center gap-2"><FaClipboardList/> Nuevo Requerimiento</h3>
-                        <p className="text-sm text-gray-500 mb-4">¿Qué busca ahora <b>{selectedItem.Cliente.nombre}</b>?</p>
-                        <textarea className="textarea textarea-bordered w-full h-24 mb-4" placeholder="Ej: Primer piso, 3 hab..." value={reqData.pedido} onChange={(e) => setReqData({...reqData, pedido: e.target.value})}></textarea>
-                        <div className="flex gap-2 mb-4"><label className="flex items-center gap-2 text-sm"><input type="radio" name="prio" className="radio radio-xs" checked={reqData.prioridad === 'NORMAL'} onChange={()=>setReqData({...reqData, prioridad: 'NORMAL'})}/> Normal</label><label className="flex items-center gap-2 text-sm font-bold text-red-500"><input type="radio" name="prio" className="radio radio-xs radio-error" checked={reqData.prioridad === 'URGENTE'} onChange={()=>setReqData({...reqData, prioridad: 'URGENTE'})}/> URGENTE</label></div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setReqOpen(false)} className="btn btn-ghost btn-sm">Cancelar</button>
-                            <button onClick={handleCreateRequerimiento} className="btn btn-warning btn-sm text-white">Guardar y Cerrar Tarea</button>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                        <div className="bg-amber-500 p-4 text-white font-bold flex justify-between items-center">
+                            <div className="flex items-center gap-2"><FaClipboardList/> Nuevo Requerimiento Completo</div>
+                            <button onClick={()=>setReqOpen(false)} className="hover:bg-white/20 p-2 rounded-full"><FaTimes/></button>
                         </div>
+                        <form onSubmit={handleSubmit(handleCreateRequerimiento)} className="p-6 space-y-4">
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Tipo Operación</label><select {...register('reqTipo')} className="select select-bordered select-sm w-full"><option value="COMPRA">Compra</option><option value="ALQUILER">Alquiler</option></select></div>
+                                
+                                {/* 🔴 PRIORIDAD CON BOTONES (NORMAL, URGENTE, DESCARTADO) */}
+                                <div className="form-control">
+                                    <label className="label font-bold text-slate-700 text-xs">Prioridad / Estado</label>
+                                    <div className="flex gap-2">
+                                        <label className={`cursor-pointer border rounded-lg px-3 py-2 flex-1 text-center text-xs font-bold transition-all ${reqPrioridad === 'NORMAL' ? 'bg-slate-100 text-slate-700 border-slate-300' : 'text-slate-400 border-slate-100 hover:bg-slate-50'}`}>
+                                            <input type="radio" {...register('reqPrioridad')} value="NORMAL" className="hidden"/> Normal
+                                        </label>
+                                        <label className={`cursor-pointer border rounded-lg px-3 py-2 flex-1 text-center text-xs font-bold transition-all ${reqPrioridad === 'URGENTE' ? 'bg-red-100 text-red-700 border-red-200' : 'text-slate-400 border-slate-100 hover:bg-red-50'}`}>
+                                            <input type="radio" {...register('reqPrioridad')} value="URGENTE" className="hidden"/> Urgente
+                                        </label>
+                                        <label className={`cursor-pointer border rounded-lg px-3 py-2 flex-1 text-center text-xs font-bold transition-all ${reqPrioridad === 'DESCARTADO' ? 'bg-gray-800 text-white border-gray-900 shadow-md' : 'text-slate-400 border-slate-100 hover:bg-gray-100 hover:text-gray-600'}`}>
+                                            <input type="radio" {...register('reqPrioridad')} value="DESCARTADO" className="hidden"/> Descartar
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="form-control relative">
+                                <label className="label font-bold text-slate-700 text-xs">Zonas / Distritos</label>
+                                <div className="w-full px-3 py-2 border rounded-lg flex flex-wrap gap-1 min-h-[40px]">
+                                    {zonasSelected.map(z => (<span key={z} className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1">{z} <FaTimes className="cursor-pointer" onClick={() => handleRemoveZona(z)}/></span>))}
+                                    <input className="flex-1 outline-none text-sm bg-transparent min-w-[100px]" placeholder="Escribe..." value={zonasQuery} onChange={(e) => { setZonasQuery(e.target.value); setShowZonasSuggestions(true); }}/>
+                                </div>
+                                {showZonasSuggestions && zonasQuery && filteredDistritos.length > 0 && (<div className="absolute z-50 w-full bg-white border shadow-lg mt-1 max-h-32 overflow-y-auto rounded-lg">{filteredDistritos.map(d => (<div key={d} onClick={() => handleAddZona(d)} className="p-2 hover:bg-amber-50 cursor-pointer text-xs">{d}</div>))}</div>)}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Área (m²)</label><div className="flex gap-1"><input {...register('reqAreaMin')} className="input input-bordered input-sm w-full" placeholder="Min"/><input {...register('reqAreaMax')} className="input input-bordered input-sm w-full" placeholder="Max"/></div></div>
+                                <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Presupuesto</label><div className="flex gap-1"><input {...register('reqPresupuestoMin')} className="input input-bordered input-sm w-full" placeholder="Min"/><input {...register('reqPresupuestoMax')} className="input input-bordered input-sm w-full" placeholder="Max"/></div></div>
+                            </div>
+
+                            {reqTipo === 'COMPRA' && (
+                                <div className="bg-slate-50 p-3 rounded-lg border">
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Forma Pago</label><select {...register('reqFormaPago')} className="select select-bordered select-sm w-full"><option value="FINANCIADO">Financiamiento Bancario</option><option value="CONTADO">Contado</option><option value="MIXTO">Mixto</option></select></div>
+                                        {(reqFormaPago === 'FINANCIADO' || reqFormaPago === 'MIXTO') && (
+                                            <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Banco</label><select {...register('reqBanco')} className="select select-bordered select-sm w-full"><option value="">Selecciona...</option>{BANCOS_PERU.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Comentarios</label><textarea {...register('reqComentarios')} className="textarea textarea-bordered h-20 text-sm" placeholder="Detalles..."></textarea></div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button type="button" onClick={() => setReqOpen(false)} className="btn btn-sm btn-ghost">Cancelar</button>
+                                <button type="submit" className={`btn btn-sm text-white ${reqPrioridad === 'DESCARTADO' ? 'btn-error' : 'btn-warning'}`}>
+                                    {reqPrioridad === 'DESCARTADO' ? 'Descartar y Cerrar' : 'Guardar Requerimiento'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
