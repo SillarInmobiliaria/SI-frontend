@@ -5,7 +5,7 @@ import { getCaptaciones, createCaptacion, importarCaptacionesMasivo, deleteCapta
 import { 
     FaHome, FaPlus, FaSearch, FaFileUpload, FaTrash, FaMapMarkerAlt, 
     FaDollarSign, FaPhone, FaUser, FaCalculator, FaCalendarAlt, FaTimes, 
-    FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter, FaPen
+    FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter, FaPen, FaFileExcel
 } from 'react-icons/fa';
 import { read, utils } from 'xlsx';
 
@@ -27,7 +27,6 @@ export default function CaptacionPage() {
   
   // --- FILTROS AVANZADOS ---
   const [searchTerm, setSearchTerm] = useState('');
-  // 1. FECHA VACÍA POR DEFECTO (Para ver todo el historial)
   const [filterDate, setFilterDate] = useState(''); 
   const [filterOperacion, setFilterOperacion] = useState('TODOS');
   const [filterInmueble, setFilterInmueble] = useState('TODOS');
@@ -93,7 +92,11 @@ export default function CaptacionPage() {
     setLoading(true);
     try {
         const data = await getCaptaciones();
-        const sorted = data.sort((a: any, b: any) => new Date(b.fechaCaptacion).getTime() - new Date(a.fechaCaptacion).getTime());
+        const sorted = data.sort((a: any, b: any) => {
+            const dateA = new Date(a.fechaCaptacion || 0).getTime();
+            const dateB = new Date(b.fechaCaptacion || 0).getTime();
+            return dateB - dateA;
+        });
         setCaptaciones(sorted);
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
@@ -113,60 +116,163 @@ export default function CaptacionPage() {
       setSugerenciasDistrito([]);
   };
 
+  // --- IMPORTACIÓN INTELIGENTE (Corregida para ENUMs) ---
   const handleFileUpload = async (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = async (event: any) => {
-        const wb = read(event.target.result, { type: 'binary' });
-        const sheets = wb.SheetNames;
-        if (sheets.length) {
-            const rows: any[] = utils.sheet_to_json(wb.Sheets[sheets[0]], { header: 1 });
-            const importados = rows.filter((row: any) => {
-                const strRow = JSON.stringify(row).toUpperCase();
-                return strRow.includes('VENTA') || strRow.includes('ALQUILER') || (row[1] && row[1].includes('-'));
-            }).map((row) => {
-                let tipoInmueble = 'OTROS';
-                const rawTipo = String(row[3] || '').toUpperCase();
-                if (rawTipo.includes('CASA')) tipoInmueble = 'CASA';
-                if (rawTipo.includes('TERRENO')) tipoInmueble = 'TERRENO';
-                if (rawTipo.includes('DEPARTAMENTO') || rawTipo.includes('DPTO')) tipoInmueble = 'DEPARTAMENTO';
-                if (rawTipo.includes('PENTHOUSE')) tipoInmueble = 'PENTHOUSE';
-                if (rawTipo.includes('DUPLEX')) tipoInmueble = 'DUPLEX';
-                if (rawTipo.includes('LOCAL')) tipoInmueble = 'LOCAL_COMERCIAL';
+        try {
+            const wb = read(event.target.result, { type: 'binary' });
+            const sheets = wb.SheetNames;
+            
+            if (sheets.length) {
+                const allRows = utils.sheet_to_json(wb.Sheets[sheets[0]], { header: 1 }) as any[][];
+                
+                // 1. BUSCAR CABECERA
+                let headerRowIndex = -1;
+                for (let i = 0; i < Math.min(allRows.length, 25); i++) {
+                    const rowStr = JSON.stringify(allRows[i]).toUpperCase();
+                    if (rowStr.includes("INMUEBLE") && (rowStr.includes("PRECIO") || rowStr.includes("AT"))) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
 
-                return {
-                    fechaCaptacion: row[1] || new Date(), 
-                    fuente: String(row[2] || 'OTROS').toUpperCase().trim(), 
-                    inmueble: tipoInmueble, 
-                    tipoOperacion: String(row[4] || 'VENTA').toUpperCase().trim(),
-                    relacion: String(row[5] || 'PROPIETARIO').toUpperCase().includes('AGENTE') ? 'AGENTE' : 'PROPIETARIO',
-                    nombre: row[6] || 'Sin Nombre',
-                    celular1: row[7] ? String(row[7]).slice(0, 9) : '',
-                    celular2: row[8] ? String(row[8]).slice(0, 9) : '',
-                    ubicacion: row[9] || '',
-                    distrito: row[10] || '',
-                    moneda: 'USD',
-                    precio: row[11] || 0,
-                    at: row[12] || 0,
-                    ac: row[13] || 0,
-                    precioM2: row[14] || 0,
-                    caracteristicas: row[15] || '',
-                    antiguedad: row[16] || '',
-                    situacion: row[17] || '',
-                    observaciones: row[19] || ''
+                if (headerRowIndex === -1) {
+                    alert("⚠️ No se encontró la cabecera de la tabla (INMUEBLE, PRECIO, etc). Verifica el archivo.");
+                    return;
+                }
+
+                // 2. MAPEAR COLUMNAS
+                const headers = allRows[headerRowIndex].map(h => String(h).toUpperCase().trim());
+                const getIdx = (keywords: string[]) => headers.findIndex(h => keywords.some(k => h.includes(k)));
+
+                const idxFecha = getIdx(["FECHA"]);
+                const idxFuente = getIdx(["FUENTE"]);
+                const idxInmueble = getIdx(["INMUEBLE"]);
+                const idxTipo = getIdx(["TIPO"]);
+                const idxRelacion = getIdx(["RELACIÓN", "RELACION"]);
+                const idxNombre = getIdx(["NOMBRE"]);
+                const idxCel1 = getIdx(["CONTACTO 1", "CELULAR 1"]);
+                const idxCel2 = getIdx(["CONTACTO 2", "CELULAR 2"]);
+                const idxUbicacion = getIdx(["UBICACIÓN", "UBICACION"]);
+                const idxDistrito = getIdx(["DISTRITO"]);
+                const idxPrecio = getIdx(["PRECIO", "PRECIO $"]);
+                const idxAT = getIdx(["AT", "A.T."]);
+                const idxAC = getIdx(["AC", "A.C."]);
+                const idxM2 = getIdx(["PRECIO M2", "$/M2"]);
+                const idxCarac = getIdx(["CARACTERISTICAS", "CARACTERÍSTICAS"]);
+                const idxAntig = getIdx(["ANTIG", "ANTIGUEDAD"]);
+                const idxSit = getIdx(["SITUACIÓN", "SITUACION"]);
+                const idxObs = getIdx(["OBS", "OBSERVACIONES"]);
+
+                // Auxiliares
+                const cleanNumber = (val: any) => {
+                    if (!val) return 0;
+                    if (typeof val === 'number') return val;
+                    const cleaned = String(val).replace(/[^0-9.]/g, ''); 
+                    return parseFloat(cleaned) || 0;
                 };
-            });
-            const cleanData = importados.filter(i => !String(i.inmueble).includes('INMUEBLE'));
-            if (confirm(`📦 Se encontraron ${cleanData.length} propiedades.\n¿Importar ahora?`)) {
-                try {
-                    setLoading(true);
-                    await importarCaptacionesMasivo(cleanData);
-                    alert('🚀 ¡Importación exitosa!');
-                    cargarDatos();
-                } catch (e) { alert('Error al importar'); } 
-                finally { setLoading(false); }
+
+                const parseExcelDate = (excelDate: any) => {
+                    if (!excelDate) return new Date().toISOString().split('T')[0];
+                    if (typeof excelDate === 'number') {
+                        const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                        return date.toISOString().split('T')[0];
+                    }
+                    const strDate = String(excelDate).trim();
+                    if (strDate.match(/^\d{4}-\d{2}-\d{2}$/)) return strDate;
+                    return new Date().toISOString().split('T')[0];
+                };
+
+                // 3. PROCESAR FILAS
+                const dataRows = allRows.slice(headerRowIndex + 1);
+                const importados = dataRows.map((row) => {
+                    if (!row[idxInmueble] && !row[idxPrecio]) return null;
+
+                    // --- LIMPIEZA DE ENUMS (AQUÍ ESTÁ LA SOLUCIÓN) ---
+                    
+                    // 1. Relación: Convertir "AGENTE INMOBILIARIO" -> "AGENTE"
+                    let relacionLimpia = 'PROPIETARIO'; // Default
+                    const rawRel = String(row[idxRelacion] || '').toUpperCase();
+                    if (rawRel.includes('AGENTE')) relacionLimpia = 'AGENTE';
+                    else if (rawRel.includes('INMOBILIARIA')) relacionLimpia = 'INMOBILIARIA';
+                    else if (rawRel.includes('CONSTRUCTORA')) relacionLimpia = 'CONSTRUCTORA';
+
+                    // 2. Operación
+                    let operacionLimpia = 'VENTA';
+                    const rawOp = String(row[idxTipo] || '').toUpperCase();
+                    if (rawOp.includes('ALQUILER')) operacionLimpia = 'ALQUILER';
+                    else if (rawOp.includes('ANTICRESIS')) operacionLimpia = 'ANTICRESIS';
+
+                    // 3. Inmueble
+                    let tipoInmueble = 'CASA'; 
+                    const rawTipo = String(row[idxInmueble] || '').toUpperCase();
+                    if (rawTipo.includes('TERRENO')) tipoInmueble = 'TERRENO';
+                    else if (rawTipo.includes('LOCAL') || rawTipo.includes('OFICINA')) tipoInmueble = 'LOCAL_COMERCIAL';
+                    else if (rawTipo.includes('PENTHOUSE')) tipoInmueble = 'PENTHOUSE';
+                    else if (rawTipo.includes('DUPLEX')) tipoInmueble = 'DUPLEX';
+                    else if (rawTipo.includes('DEPARTAMENTO') || rawTipo.includes('DPTO')) tipoInmueble = 'DEPARTAMENTO';
+
+                    // Limpieza de moneda
+                    const rawPrecio = String(row[idxPrecio] || '');
+                    const moneda = rawPrecio.includes('S/') || rawPrecio.includes('PEN') ? 'PEN' : 'USD';
+
+                    // Corrección Chivay (desfase de columnas)
+                    let precioM2 = idxM2 !== -1 ? cleanNumber(row[idxM2]) : 0;
+                    let caracteristicas = idxCarac !== -1 ? String(row[idxCarac] || '') : '';
+                    
+                    const posibleTextoEnM2 = String(row[idxM2] || '');
+                    if (posibleTextoEnM2.length > 15 && isNaN(parseFloat(posibleTextoEnM2))) {
+                        caracteristicas = posibleTextoEnM2 + " " + caracteristicas;
+                        precioM2 = 0;
+                    }
+
+                    return {
+                        fechaCaptacion: parseExcelDate(row[idxFecha]), 
+                        fuente: String(row[idxFuente] || 'OTROS').toUpperCase().trim().slice(0, 50), 
+                        inmueble: tipoInmueble, 
+                        tipoOperacion: operacionLimpia,
+                        relacion: relacionLimpia, // Usamos la versión limpia
+                        nombre: String(row[idxNombre] || 'Sin Nombre').slice(0, 100),
+                        celular1: row[idxCel1] ? String(row[idxCel1]).replace(/\D/g, '').slice(0, 9) : '',
+                        celular2: row[idxCel2] ? String(row[idxCel2]).replace(/\D/g, '').slice(0, 9) : '',
+                        ubicacion: String(row[idxUbicacion] || '').slice(0, 250),
+                        distrito: String(row[idxDistrito] || 'Arequipa').slice(0, 100),
+                        moneda: moneda,
+                        precio: cleanNumber(row[idxPrecio]),
+                        at: cleanNumber(row[idxAT]),
+                        ac: cleanNumber(row[idxAC]),
+                        precioM2: precioM2,
+                        caracteristicas: caracteristicas.slice(0, 250),
+                        antiguedad: String(row[idxAntig] || '').slice(0, 50),
+                        situacion: String(row[idxSit] || '').slice(0, 100),
+                        observaciones: String(row[idxObs] || '').slice(0, 250)
+                    };
+                }).filter(item => item !== null);
+
+                if (importados.length > 0) {
+                    if (confirm(`📦 Se encontraron ${importados.length} propiedades legibles.\n¿Importar a la base de datos?`)) {
+                        try {
+                            setLoading(true);
+                            await importarCaptacionesMasivo(importados);
+                            alert('🚀 ¡Importación exitosa!');
+                            cargarDatos();
+                        } catch (e) { 
+                            console.error(e);
+                            alert('Hubo un error al guardar. Revisa la consola.'); 
+                        } 
+                        finally { setLoading(false); }
+                    }
+                } else {
+                    alert('⚠️ No se encontraron datos válidos.');
+                }
             }
+        } catch (error) {
+            console.error("Error crítico:", error);
+            alert("Error al leer el archivo Excel.");
         }
     };
     reader.readAsBinaryString(file);
@@ -190,7 +296,6 @@ export default function CaptacionPage() {
               await createCaptacion(payload);
               alert('✅ Propiedad registrada correctamente');
           }
-          
           setModalOpen(false);
           setEditingId(null);
           cargarDatos();
@@ -266,7 +371,8 @@ export default function CaptacionPage() {
         const matchesText = 
             c.nombre?.toLowerCase().includes(t) || 
             c.ubicacion?.toLowerCase().includes(t) ||
-            c.celular1?.includes(t);
+            c.celular1?.includes(t) ||
+            c.distrito?.toLowerCase().includes(t);
         
         const matchesDate = filterDate ? c.fechaCaptacion === filterDate : true;
         const matchesOperacion = filterOperacion === 'TODOS' ? true : c.tipoOperacion === filterOperacion;
@@ -295,15 +401,14 @@ export default function CaptacionPage() {
                         <p className="text-slate-500 mt-1">Base de datos de propiedades y precios.</p>
                     </div>
                     <div className="flex gap-2">
-                        <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls"/>
-                        <button onClick={() => fileInputRef.current?.click()} className="btn btn-sm bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 gap-2"><FaFileUpload/> Importar Excel</button>
+                        <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv"/>
+                        <button onClick={() => fileInputRef.current?.click()} className="btn btn-sm bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 gap-2"><FaFileExcel/> Importar Excel</button>
                         <button onClick={handleOpenNew} className="btn btn-sm bg-cyan-600 text-white hover:bg-cyan-700 gap-2"><FaPlus/> Nueva Captación</button>
                     </div>
                 </div>
 
                 {/* BARRA DE FILTROS */}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    {/* 2. Filtro Operación (IGUAL QUE EN EL FORMULARIO) */}
                     <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterOperacion} onChange={e => setFilterOperacion(e.target.value)}>
                         <option value="TODOS">Todas las Operaciones</option>
                         <option value="VENTA">Venta</option>
@@ -311,7 +416,6 @@ export default function CaptacionPage() {
                         <option value="ANTICRESIS">Anticresis</option>
                     </select>
 
-                    {/* 3. Filtro Inmueble (CON TODAS LAS OPCIONES DEL FORMULARIO) */}
                     <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterInmueble} onChange={e => setFilterInmueble(e.target.value)}>
                         <option value="TODOS">Todos los Inmuebles</option>
                         <option value="CASA">Casa</option>
@@ -323,19 +427,16 @@ export default function CaptacionPage() {
                         <option value="TERRENO">Terreno</option>
                     </select>
 
-                    {/* Filtro Distrito */}
                     <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterDistrito} onChange={e => setFilterDistrito(e.target.value)}>
                         <option value="TODOS">Todos los Distritos</option>
                         {DISTRITOS_AREQUIPA.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
 
-                    {/* Filtro Fecha (Opcional) */}
                     <div className="relative">
                         <input type="date" className="input input-bordered input-sm w-full font-bold text-slate-600" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
                         {filterDate && <button onClick={() => setFilterDate('')} className="absolute right-2 top-1.5 text-xs text-red-500 font-bold hover:underline">Borrar Fecha</button>}
                     </div>
 
-                    {/* Búsqueda General */}
                     <div className="relative">
                         <FaSearch className="absolute left-3 top-2.5 text-slate-400"/>
                         <input type="text" placeholder="Buscar..." className="input input-bordered input-sm w-full pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
