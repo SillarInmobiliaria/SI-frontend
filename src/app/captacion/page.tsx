@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import Navbar from '../../components/Navbar';
-import SidebarAtencion from '../../components/SidebarAtencion';
+// ELIMINADO: import SidebarAtencion from '../../components/SidebarAtencion'; 
 import { getCaptaciones, createCaptacion, importarCaptacionesMasivo, deleteCaptacion } from '../../services/api';
 import { FaHome, FaPlus, FaSearch, FaFileUpload, FaTrash, FaMapMarkerAlt, FaDollarSign, FaPhone, FaUser, FaCalculator, FaCalendarAlt, FaTimes, FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter } from 'react-icons/fa';
 import { read, utils } from 'xlsx';
@@ -36,7 +36,7 @@ export default function CaptacionPage() {
   const [activeStep, setActiveStep] = useState(1);
 
   const [form, setForm] = useState({
-    fechaCaptacion: getToday(), // También el formulario inicia con hoy
+    fechaCaptacion: getToday(),
     fuente: 'LETRERO',
     inmueble: 'CASA',
     tipoOperacion: 'VENTA',
@@ -194,7 +194,6 @@ export default function CaptacionPage() {
       const t = searchTerm.toLowerCase();
       
       return captaciones.filter(c => {
-        // BUSCADOR: Busca en Nombre, Ubicación, Distrito, Celulares y Tipo Inmueble
         const matchesText = 
             c.nombre?.toLowerCase().includes(t) || 
             c.ubicacion?.toLowerCase().includes(t) ||
@@ -203,7 +202,6 @@ export default function CaptacionPage() {
             c.celular1?.includes(t) ||
             c.celular2?.includes(t);
         
-        // FECHA: Si filterDate tiene valor, filtra exacto. Si está vacío, muestra todo.
         const matchesDate = filterDate ? c.fechaCaptacion === filterDate : true;
 
         return matchesText && matchesDate;
@@ -213,8 +211,10 @@ export default function CaptacionPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
       <Navbar />
+      
+      {/* QUITAMOS EL SIDEBAR Y DEJAMOS SOLO EL MAIN */}
       <div className="flex flex-1 relative">
-          <SidebarAtencion />
+          
           <main className="flex-1 p-6 max-w-[100vw] overflow-x-hidden w-full">
             
             {/* HEADER */}
@@ -240,7 +240,7 @@ export default function CaptacionPage() {
                         />
                         <FaFilter className="absolute left-3 top-3.5 text-cyan-500 pointer-events-none"/>
                         
-                        {/* Botón para limpiar fecha y ver TODO el historial */}
+                        {/* Botón para limpiar fecha */}
                         {filterDate && (
                             <button 
                                 onClick={() => setFilterDate('')} 
@@ -252,7 +252,7 @@ export default function CaptacionPage() {
                         )}
                     </div>
 
-                    {/* BUSCADOR (La Lupa) */}
+                    {/* BUSCADOR */}
                     <div className="relative w-full md:w-72">
                         <FaSearch className="absolute left-3 top-3.5 text-slate-400"/>
                         <input 
