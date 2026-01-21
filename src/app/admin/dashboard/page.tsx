@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // IMPORTANTE: Para la navegación
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek } from 'react-icons/fa';
+import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek, FaHome } from 'react-icons/fa'; // Agregamos FaHome
 
 const API_URL = 'http://localhost:4000/api'; 
 
@@ -16,7 +17,6 @@ export default function DashboardPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState<'ANUAL' | 'MENSUAL' | 'SEMANAL'>('ANUAL');
   
-  // ARRAY para permitir múltiples selecciones
   const [filtrosActivos, setFiltrosActivos] = useState<string[]>([]); 
   
   const availableYears = [2024, 2025, 2026]; 
@@ -55,7 +55,6 @@ export default function DashboardPage() {
       } catch (e) { alert('Error al descargar'); }
   };
 
-  // LÓGICA MULTI-SELECCIÓN
   const toggleFiltro = (metric: string) => {
     if (filtrosActivos.includes(metric)) {
         setFiltrosActivos(prev => prev.filter(f => f !== metric));
@@ -78,13 +77,22 @@ export default function DashboardPage() {
       
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Panel Administrativo</h1>
-          <p className="text-slate-600 mt-1 font-medium">Métricas y rendimiento de la inmobiliaria.</p>
+        <div className="flex items-center gap-4">
+            {/* BOTÓN IR AL INICIO */}
+            <Link href="/">
+                <button className="btn bg-white border border-slate-200 text-slate-500 hover:bg-white hover:text-blue-600 hover:border-blue-300 shadow-sm rounded-2xl h-14 w-14 flex items-center justify-center transition-all duration-300 group">
+                    <FaHome size={24} className="group-hover:scale-110 transition-transform"/>
+                </button>
+            </Link>
+            
+            <div>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Panel Administrativo</h1>
+                <p className="text-slate-600 mt-1 font-medium">Métricas y rendimiento de la inmobiliaria.</p>
+            </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* SELECTOR DE AÑO MEJORADO */}
+          {/* SELECTOR DE AÑO */}
           <div className="relative">
             <select 
                 value={year} 
@@ -93,7 +101,6 @@ export default function DashboardPage() {
             >
                 {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            {/* Flecha personalizada */}
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
             </div>
@@ -105,7 +112,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* TARJETAS KPI (MULTI-SELECT) */}
+      {/* TARJETAS KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <CardResumen 
           titulo="Propiedades" valor={data?.totales?.propiedades} icono="🏠" color="bg-gradient-to-br from-blue-500 to-blue-600"
@@ -137,7 +144,6 @@ export default function DashboardPage() {
                 </div>
             </h2>
             
-            {/* BOTONES DE FILTRO TEMPORAL */}
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl shadow-inner">
                 <button 
                     onClick={() => setViewMode('ANUAL')} 
