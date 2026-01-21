@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../../components/Navbar';
 import { getCumpleanos, downloadExcelCumpleanos } from '../../../services/api';
-import { FaBirthdayCake, FaFileExcel, FaWhatsapp, FaUserTie, FaUser, FaChevronLeft, FaChevronRight, FaCalendarAlt, FaDownload } from 'react-icons/fa';
+import { FaBirthdayCake, FaFileExcel, FaWhatsapp, FaUserTie, FaUser, FaChevronLeft, FaChevronRight, FaDownload } from 'react-icons/fa';
 
 export default function CumpleanosPage() {
   const [loading, setLoading] = useState(true);
@@ -72,18 +72,28 @@ export default function CumpleanosPage() {
   const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
   const startDay = getFirstDayOfMonth(selectedMonth, selectedYear);
 
+  // --- LÓGICA PARA ZONA HORARIA Y DATOS ---
   const getCumpleanerosDelDia = (dia: number) => {
       const list: any[] = [];
+
+      const obtenerDiaExacto = (fechaString: string) => {
+          if (!fechaString) return -1;
+          const partes = fechaString.toString().split('T')[0].split('-'); 
+          return parseInt(partes[2]); 
+      };
+
       if (filterType !== 'PROPIETARIOS') {
           data.clientes.forEach((c: any) => {
-              const d = new Date(c.fechaNacimiento).getUTCDate(); 
-              if (d === dia) list.push({ ...c, tipo: 'CLIENTE' });
+              if (obtenerDiaExacto(c.fechaNacimiento) === dia) {
+                  list.push({ ...c, tipo: 'CLIENTE' });
+              }
           });
       }
       if (filterType !== 'CLIENTES') {
           data.propietarios.forEach((p: any) => {
-              const d = new Date(p.fechaNacimiento).getUTCDate();
-              if (d === dia) list.push({ ...p, tipo: 'PROPIETARIO' });
+              if (obtenerDiaExacto(p.fechaNacimiento) === dia) {
+                  list.push({ ...p, tipo: 'PROPIETARIO' });
+              }
           });
       }
       return list;
@@ -159,8 +169,8 @@ export default function CumpleanosPage() {
             </div>
         </div>
 
-        {/* --- CALENDARIO MODERNO (GRID CARDS) --- */}
-        <div className="bg-transparent"> {/* Fondo transparente para que las cartas floten */}
+        {/* --- CALENDARIO MODERNO  --- */}
+        <div className="bg-transparent">
             
             {/* Cabecera Días */}
             <div className="grid grid-cols-7 mb-4">
