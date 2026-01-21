@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
-  FaTimes, FaUserSecret, FaHome // <--- Importamos FaHome para Captaciones
+  FaTimes, FaUserSecret, FaHome, FaHandshake // <--- Agregamos FaHandshake
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 3. CAPTACIONES (NUEVO - COLOR CYAN) */}
+            {/* 3. CAPTACIONES */}
             <Link href="/captacion" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-cyan-500 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-3">
@@ -297,7 +297,7 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
-            {/* 5. AGENTES (COLOR VIOLETA) */}
+            {/* 5. AGENTES */}
             <Link href="/agentes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-purple-600 cursor-pointer group hover:-translate-y-1">
                 <div className="card-body">
                     <div className="flex items-center gap-4 mb-3">
@@ -310,10 +310,23 @@ export default function DashboardPage() {
                 </div>
             </Link>
 
+            {/* 6. CIERRE */}
+            <Link href="/cierre" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-emerald-600 cursor-pointer group hover:-translate-y-1">
+                <div className="card-body">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
+                            <FaHandshake className="text-3xl"/>
+                        </div>
+                        <h2 className="card-title text-xl text-slate-800">Cierre / Ventas</h2>
+                    </div>
+                    <p className="text-slate-500 text-sm">Registrar contratos, alquileres y ventas finales.</p>
+                </div>
+            </Link>
+
             {/* --- SECCIÓN EXCLUSIVA DE ADMIN --- */}
             {isAdmin && (
                 <>
-                    {/* 6. USUARIOS */}
+                    {/* 7. USUARIOS */}
                     <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -326,7 +339,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 7. REPORTES */}
+                    {/* 8. REPORTES */}
                     <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">
@@ -339,7 +352,7 @@ export default function DashboardPage() {
                         </div>
                     </Link>
 
-                    {/* 8. CUMPLEAÑOS */}
+                    {/* 9. CUMPLEAÑOS */}
                     <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
                         <div className="card-body">
                             <div className="flex items-center gap-4 mb-3">

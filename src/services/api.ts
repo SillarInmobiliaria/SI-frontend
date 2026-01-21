@@ -238,4 +238,15 @@ export const deleteCaptacion = async (id: string) => {
     return res.data;
 };
 
+// --- CIERRES (VENTAS/ALQUILERES) ---
+export const createCierre = async (data: any) => {
+    const res = await api.post('/cierres', data);
+    return res.data;
+};
+
+export const getCierres = async () => {
+    const res = await api.get('/cierres');
+    return res.data;
+};
+
 export default api;
