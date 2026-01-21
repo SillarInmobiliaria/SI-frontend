@@ -2,13 +2,11 @@ import axios from 'axios';
 import { 
   Propietario, 
   Propiedad, 
-  Cliente, 
   Interes, 
   Operacion, 
   Visita, 
   Seguimiento, 
-  ApiResponse,
-  AuthResponse
+  ApiResponse
 } from '../types';
 
 // 1. Configuración Base
@@ -72,22 +70,35 @@ export const eliminarPropiedad = async (id: string) => {
   return data;
 };
 
-// --- CLIENTES ---
-export const getClientes = async () => {
-  const { data } = await api.get<Cliente[]>('/clientes');
+export const getInteresados = async () => { 
+  const { data } = await api.get('/clientes');
   return data;
 };
-export const createCliente = async (datos: Omit<Cliente, 'id'>) => {
-  const { data } = await api.post<ApiResponse<Cliente>>('/clientes', datos);
+export const createInteresado = async (datos: any) => { 
+  const { data } = await api.post('/clientes', datos);
   return data;
 };
-export const toggleEstadoCliente = async (id: string, activo: boolean) => {
-  const { data } = await api.put(`/clientes/${id}/estado`, { activo });
-  return data;
+export const updateInteresado = async (id: number, datos: any) => {
+    const { data } = await api.put(`/clientes/${id}`, datos);
+    return data;
 };
-export const eliminarCliente = async (id: string) => {
+export const deleteInteresado = async (id: number) => { 
   const { data } = await api.delete(`/clientes/${id}`);
   return data;
+};
+
+// ALIAS DE COMPATIBILIDAD
+export const getClientes = getInteresados;
+export const createCliente = createInteresado;
+export const updateCliente = updateInteresado; 
+export const deleteCliente = deleteInteresado; 
+export const eliminarCliente = deleteInteresado; 
+
+// BUSCADOR INTELIGENTE
+export const buscarInteresadoPorNombre = async (query: string) => {
+    if (!query) return [];
+    const { data } = await api.get(`/cartera/buscar?query=${query}`);
+    return data;
 };
 
 // --- INTERESES ---
@@ -247,6 +258,22 @@ export const createCierre = async (data: any) => {
 export const getCierres = async () => {
     const res = await api.get('/cierres');
     return res.data;
+};
+
+// --- CARTERA DE CLIENTES (Formales) ---
+export const getCartera = async () => {
+    const response = await api.get('/cartera');
+    return response.data;
+};
+
+export const createClienteCartera = async (data: any) => {
+    const response = await api.post('/cartera', data);
+    return response.data;
+};
+
+export const deleteClienteCartera = async (id: number) => {
+    const response = await api.delete(`/cartera/${id}`);
+    return response.data;
 };
 
 export default api;
