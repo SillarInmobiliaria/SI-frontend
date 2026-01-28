@@ -10,30 +10,125 @@ import toast, { Toaster } from 'react-hot-toast';
 import { 
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
-  FaTimes, FaUserSecret, FaHome, FaHandshake // <--- Agregamos FaHandshake
+  FaTimes, FaUserSecret, FaHome, FaHandshake, FaArrowRight, FaShieldAlt
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
-  
   const notificacionMostrada = useRef(false);
-
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
-  // FUNCIÓN AUXILIAR PARA SACAR LA HORA (HH:MM) EN PERÚ
+  // --- CONFIGURACIÓN DE MÓDULOS (Para mantener el código limpio) ---
+  const modulos = [
+    {
+      title: "Centro de Atención",
+      path: "/clientes",
+      icon: FaClipboardList,
+      desc: "Gestión Integral: Clientes, Agenda y Seguimiento",
+      color: "text-indigo-600",
+      bgIcon: "bg-indigo-100",
+      border: "border-indigo-500",
+      gradient: "from-indigo-500 to-blue-600"
+    },
+    {
+      title: "Propiedades",
+      path: "/propiedades",
+      icon: FaBuilding,
+      desc: "Gestionar inventario, precios y disponibilidad",
+      color: "text-blue-600",
+      bgIcon: "bg-blue-100",
+      border: "border-blue-500",
+      gradient: "from-blue-500 to-cyan-500"
+    },
+    {
+      title: "Captaciones",
+      path: "/captacion", // Ojo: en tu código era /captacion, revisa si es singular o plural
+      icon: FaHome,
+      desc: "Registro de nuevas propiedades potenciales",
+      color: "text-cyan-600",
+      bgIcon: "bg-cyan-100",
+      border: "border-cyan-500",
+      gradient: "from-cyan-500 to-teal-500"
+    },
+    {
+      title: "Propietarios",
+      path: "/propietarios",
+      icon: FaUserTie,
+      desc: "Base de datos de dueños y contratos",
+      color: "text-emerald-600",
+      bgIcon: "bg-emerald-100",
+      border: "border-emerald-500",
+      gradient: "from-emerald-500 to-green-600"
+    },
+    {
+      title: "Agentes",
+      path: "/agentes",
+      icon: FaUserSecret,
+      desc: "Directorio de colegas y lista negra",
+      color: "text-purple-600",
+      bgIcon: "bg-purple-100",
+      border: "border-purple-500",
+      gradient: "from-purple-500 to-violet-600"
+    },
+    {
+      title: "Cierre / Ventas",
+      path: "/cierre", // Revisa si es /cierre o /cierres
+      icon: FaHandshake,
+      desc: "Contratos, alquileres y ventas finales",
+      color: "text-green-700",
+      bgIcon: "bg-green-100",
+      border: "border-green-600",
+      gradient: "from-green-600 to-emerald-700"
+    },
+    // --- ADMIN ONLY ---
+    {
+      title: "Usuarios",
+      path: "/usuarios",
+      icon: FaUsersCog,
+      desc: "Gestión de accesos, roles y personal",
+      color: "text-orange-600",
+      bgIcon: "bg-orange-100",
+      border: "border-orange-500",
+      gradient: "from-orange-500 to-red-500",
+      adminOnly: true
+    },
+    {
+      title: "Reportes",
+      path: "/admin/dashboard",
+      icon: FaChartLine,
+      desc: "Estadísticas, métricas y exportación Excel",
+      color: "text-amber-600",
+      bgIcon: "bg-amber-100",
+      border: "border-amber-500",
+      gradient: "from-amber-500 to-yellow-500",
+      adminOnly: true
+    },
+    {
+      title: "Cumpleaños",
+      path: "/admin/cumpleanos",
+      icon: FaBirthdayCake,
+      desc: "Calendario de fidelización de clientes",
+      color: "text-pink-600",
+      bgIcon: "bg-pink-100",
+      border: "border-pink-500",
+      gradient: "from-pink-500 to-rose-500",
+      adminOnly: true
+    }
+  ];
+
+  // --- LÓGICA DE FECHAS ---
   const getHora = (fechaIso: string) => {
       if (!fechaIso) return '--:--';
       const date = new Date(fechaIso);
       return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Lima' });
   };
 
-  // FUNCIÓN AUXILIAR: Obtener Fecha "YYYY-MM-DD" basada en zona horaria Perú
   const getFechaPeru = (date: Date = new Date()) => {
       return date.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
   };
 
-  // LÓGICA DE NOTIFICACIONES
+  // --- LÓGICA DE NOTIFICACIONES (Igual a tu código) ---
   useEffect(() => {
     if (notificacionMostrada.current) return;
     notificacionMostrada.current = true;
@@ -210,164 +305,93 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-800">
       <Navbar />
       <Toaster position="top-right" reverseOrder={false} />
       
-      <div className="container mx-auto p-8">
+      {/* FONDO ANIMADO (Blobs) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob"></div>
+        <div className="absolute top-[20%] -left-[10%] w-[400px] h-[400px] bg-blue-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-indigo-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className="container mx-auto p-6 md:p-10 relative z-10">
         
-        {/* --- ENCABEZADO --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        {/* --- ENCABEZADO DE BIENVENIDA (Glassmorphism) --- */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-white/50 relative overflow-hidden group">
+            {/* Brillo al hover */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
+            
             <div>
-                <h1 className="text-4xl font-bold text-slate-800">
-                    Hola, <span className="text-primary">{user?.nombre}</span> 👋
+                <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
+                    <span className="text-slate-800">Hola, </span>
+                    <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        {user?.nombre?.split(' ')[0]}
+                    </span>
+                    <span className="ml-3 inline-block animate-wave origin-[70%_70%]">👋</span>
                 </h1>
-                <p className="text-slate-500 mt-2 text-lg">
-                    Panel de Control - {isAdmin ? 'Administración General' : 'Gestión Comercial'}
-                </p>
+                <div className="flex items-center gap-2 text-slate-500 font-medium mt-2">
+                    <FaShieldAlt className={`text-lg ${isAdmin ? 'text-purple-500' : 'text-blue-500'}`}/>
+                    {isAdmin ? 'Panel de Administración Global' : 'Panel de Gestión Comercial'}
+                </div>
             </div>
             
-            <div className="flex flex-col items-end gap-2">
-                <div className={`badge ${isAdmin ? 'badge-primary' : 'badge-secondary'} badge-lg p-4 font-bold shadow-md`}>
-                    {isAdmin ? 'Administrador' : 'Asesor Comercial'}
-                </div>
-                <button onClick={() => router.push('/cambiar-password')} className="btn btn-sm btn-ghost text-slate-500 gap-2">
-                    <FaKey /> Cambiar Contraseña
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button 
+                    onClick={() => router.push('/cambiar-password')} 
+                    className="flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md border border-slate-200 font-semibold group/btn"
+                >
+                    <div className="p-1.5 bg-slate-100 rounded-lg group-hover/btn:bg-indigo-100 transition-colors">
+                        <FaKey className="text-sm"/>
+                    </div>
+                    <span>Seguridad</span>
                 </button>
+                <div className={`px-6 py-3 ${isAdmin ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} text-white rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2`}>
+                    {isAdmin ? '👑 Administrador' : '🎯 Asesor'}
+                </div>
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS (XL:4 PARA QUE QUEPAN TODOS) --- */}
+        {/* --- GRID DE MÓDULOS --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            
-            {/* 1. MÓDULO PRINCIPAL DE ATENCIÓN */}
-            <Link href="/clientes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-indigo-600 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaClipboardList className="text-3xl"/>
-                        </div>
-                        <div>
-                            <h2 className="card-title text-xl text-slate-800">Centro de Atención</h2>
-                            <span className="badge badge-sm badge-ghost text-xs">Gestión Integral</span>
-                        </div>
-                    </div>
-                    <p className="text-slate-500 text-sm leading-relaxed">
-                        Clientes, Agenda, Seguimiento y Requerimientos.
-                    </p>
-                </div>
-            </Link>
+            {modulos.map((mod, idx) => {
+                // Si es solo para admin y el usuario no lo es, no renderizar
+                if (mod.adminOnly && !isAdmin) return null;
 
-            {/* 2. PROPIEDADES */}
-            <Link href="/propiedades" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-blue-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-blue-100 p-4 rounded-full text-blue-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaBuilding className="text-3xl"/>
-                        </div>
-                        <h2 className="card-title text-xl text-slate-800">Propiedades</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm">Gestionar inventario, precios y disponibilidad.</p>
-                </div>
-            </Link>
+                return (
+                    <Link href={mod.path} key={idx} className="group relative">
+                        <div className={`h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90`}>
+                            
+                            {/* Borde superior de color */}
+                            <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${mod.gradient}`}></div>
+                            
+                            {/* Fondo decorativo hover */}
+                            <div className={`absolute -right-12 -top-12 w-32 h-32 ${mod.bgIcon} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500`}></div>
 
-            {/* 3. CAPTACIONES */}
-            <Link href="/captacion" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-cyan-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-cyan-100 p-4 rounded-full text-cyan-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaHome className="text-3xl"/>
-                        </div>
-                        <h2 className="card-title text-xl text-slate-800">Captaciones</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm">Registro de propiedades potenciales.</p>
-                </div>
-            </Link>
-
-            {/* 4. PROPIETARIOS */}
-            <Link href="/propietarios" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-green-500 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-green-100 p-4 rounded-full text-green-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaUserTie className="text-3xl"/>
-                        </div>
-                        <h2 className="card-title text-xl text-slate-800">Propietarios</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm">Base de datos de dueños y contratos.</p>
-                </div>
-            </Link>
-
-            {/* 5. AGENTES */}
-            <Link href="/agentes" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-purple-600 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-purple-100 p-4 rounded-full text-purple-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaUserSecret className="text-3xl"/>
-                        </div>
-                        <h2 className="card-title text-xl text-slate-800">Agentes</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm">Directorio de colegas y lista negra.</p>
-                </div>
-            </Link>
-
-            {/* 6. CIERRE */}
-            <Link href="/cierre" className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-emerald-600 cursor-pointer group hover:-translate-y-1">
-                <div className="card-body">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
-                            <FaHandshake className="text-3xl"/>
-                        </div>
-                        <h2 className="card-title text-xl text-slate-800">Cierre / Ventas</h2>
-                    </div>
-                    <p className="text-slate-500 text-sm">Registrar contratos, alquileres y ventas finales.</p>
-                </div>
-            </Link>
-
-            {/* --- SECCIÓN EXCLUSIVA DE ADMIN --- */}
-            {isAdmin && (
-                <>
-                    {/* 7. USUARIOS */}
-                    <Link href="/usuarios" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-orange-500 cursor-pointer group hover:-translate-y-1 text-white">
-                        <div className="card-body">
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="bg-orange-500/20 p-4 rounded-full text-orange-400 group-hover:scale-110 transition-transform shadow-sm">
-                                    <FaUsersCog className="text-3xl"/>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className={`p-3.5 rounded-xl ${mod.bgIcon} ${mod.color} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                        <mod.icon className="text-2xl" />
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-slate-300">
+                                        <FaArrowRight className="transform -rotate-45 group-hover:rotate-0 transition-transform duration-300"/>
+                                    </div>
                                 </div>
-                                <h2 className="card-title text-xl">Usuarios</h2>
+
+                                <h2 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-indigo-900 transition-colors">
+                                    {mod.title}
+                                </h2>
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                    {mod.desc}
+                                </p>
                             </div>
-                            <p className="text-slate-400 text-sm">Gestión de accesos, roles y personal.</p>
                         </div>
                     </Link>
-
-                    {/* 8. REPORTES */}
-                    <Link href="/admin/dashboard" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-yellow-500 cursor-pointer group hover:-translate-y-1 text-white">
-                        <div className="card-body">
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="bg-yellow-500/20 p-4 rounded-full text-yellow-400 group-hover:scale-110 transition-transform shadow-sm">
-                                    <FaChartLine className="text-3xl"/>
-                                </div>
-                                <h2 className="card-title text-xl">Reportes</h2>
-                            </div>
-                            <p className="text-slate-400 text-sm">Estadísticas, métricas y exportación a Excel.</p>
-                        </div>
-                    </Link>
-
-                    {/* 9. CUMPLEAÑOS */}
-                    <Link href="/admin/cumpleanos" className="card bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-[6px] border-pink-500 cursor-pointer group hover:-translate-y-1 text-white">
-                        <div className="card-body">
-                            <div className="flex items-center gap-4 mb-3">
-                                <div className="bg-pink-500/20 p-4 rounded-full text-pink-400 group-hover:scale-110 transition-transform shadow-sm">
-                                    <FaBirthdayCake className="text-3xl"/>
-                                </div>
-                                <h2 className="card-title text-xl">Cumpleaños</h2>
-                            </div>
-                            <p className="text-slate-400 text-sm">Calendario de clientes y propietarios.</p>
-                        </div>
-                    </Link>
-                </>
-            )}
-
+                );
+            })}
         </div>
+
       </div>
     </div>
   );
