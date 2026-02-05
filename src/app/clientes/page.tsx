@@ -208,7 +208,16 @@ export default function ClientesPage() {
     finally { setIsSubmitting(false); }
   };
 
-  const handleEliminar = async (id: string) => { if(!confirm('⚠️ ¿Eliminar?')) return; try { await eliminarCliente(id); fetchClientes(); } catch (e) { alert('❌ Error'); } };
+  const handleEliminar = async (id: string) => { 
+      if(!confirm('⚠️ ¿Eliminar?')) return; 
+      try { 
+          await eliminarCliente(Number(id));
+          fetchClientes(); 
+      } catch (e) { 
+          alert('❌ Error al eliminar'); 
+      } 
+  };
+
   const handleViewDetail = (c: any) => { setSelectedCliente(c); setDetailOpen(true); };
   const handleOpenAgendarVisita = (c: any) => { const interes = intereses.find(i => i.clienteId === c.id); const propiedadId = interes ? interes.propiedadId : ''; router.push(`/visitas?clienteId=${c.id}&clienteNombre=${encodeURIComponent(c.nombre)}&propiedadId=${propiedadId}`); };
   

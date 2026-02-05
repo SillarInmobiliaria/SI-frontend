@@ -8,37 +8,52 @@ import { createPropiedad } from '../../../services/api';
 import api from '../../../services/api';
 import { 
   FaHome, FaDollarSign, FaBed, FaBath, FaCar, 
-  FaRulerCombined, FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
+  FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
-  FaMapMarkerAlt
+  FaMapMarkerAlt, FaMagic, FaListUl, 
+  FaCheckCircle, FaRegCircle, FaCheck 
 } from 'react-icons/fa';
+
+// Componente Checkbox personalizado
+const CustomDocCheckbox = ({ label, name, register, watch }: any) => {
+    const isChecked = watch(name);
+    return (
+      <label className={`label cursor-pointer justify-start gap-4 p-4 rounded-xl transition-all border shadow-sm group h-full
+          ${isChecked ? 'bg-blue-50 border-blue-200 shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50 hover:border-blue-100'}`}>
+        <input type="checkbox" {...register(name)} className="hidden" />
+        
+        {/* Icono del check */}
+        <div className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all
+            ${isChecked ? 'border-blue-500 bg-white' : 'border-gray-300 bg-white group-hover:border-blue-300'}`}>
+           <FaCheck className={`text-blue-600 text-sm transition-all transform ${isChecked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+        </div>
+        {/* Texto con buen tamaño y espaciado */}
+        <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
+      </label>
+    );
+  };
 
 export default function NuevaPropiedadPage() {
   const router = useRouter();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
   const { register, handleSubmit, watch, setValue } = useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // 1. ESTADO PARA MÚLTIPLES PROPIETARIOS
+  const [generandoIA, setGenerandoIA] = useState(false);
+
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
   const [propietarioSelectId, setPropietarioSelectId] = useState('');
 
-  // 2. ESTADO PARA BUSCADOR DE ASESORES
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [asesorSeleccionado, setAsesorSeleccionado] = useState<any>(null);
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
 
-  // Previsualización de imágenes
   const [previewMain, setPreviewMain] = useState<string | null>(null);
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  // 🟢 LÓGICA CONDICIONAL DEPARTAMENTO + MANTENIMIENTO
   const tipoInmueble = watch('tipo');
   const esDepartamento = tipoInmueble === 'Departamento';
-  
-  // Nuevo watch para el select de "¿Tiene mantenimiento?"
-  const tieneMantenimiento = watch('tieneMantenimiento'); 
+  const tieneMantenimientoValue = watch('tieneMantenimiento'); 
 
   useEffect(() => {
     fetchPropietarios();
@@ -53,7 +68,35 @@ export default function NuevaPropiedadPage() {
     fetchUsuarios();
   }, []);
 
-  // --- LÓGICA PROPIETARIOS ---
+  const handleGenerarIA = async () => {
+    const datosContexto = {
+        tipo: watch('tipo'),
+        modalidad: watch('modalidad'),
+        ubicacion: watch('ubicacion'),
+        direccion: watch('direccion'),
+        habitaciones: watch('habitaciones'),
+        banos: watch('banos'),
+        area: watch('area'),
+        precio: watch('precio')
+    };
+
+    if (!datosContexto.tipo || !datosContexto.ubicacion) {
+        alert("⚠️ Por favor selecciona al menos el TIPO y la UBICACIÓN para que la IA sepa qué escribir.");
+        return;
+    }
+
+    setGenerandoIA(true);
+    try {
+        const { data } = await api.post('/ai/generar', datosContexto);
+        setValue('descripcion', data.descripcion);
+    } catch (error) {
+        console.error("Error IA:", error);
+        alert("La IA está ocupada o no configurada. Intenta escribirlo manualmente.");
+    } finally {
+        setGenerandoIA(false);
+    }
+  };
+
   const agregarPropietario = () => {
       if (!propietarioSelectId) return;
       const existe = propietariosSeleccionados.find(p => p.id === propietarioSelectId);
@@ -70,7 +113,6 @@ export default function NuevaPropiedadPage() {
       setPropietariosSeleccionados(propietariosSeleccionados.filter(p => p.id !== id));
   };
 
-  // --- LÓGICA ASESORES ---
   const filtrarAsesores = asesoresDB.filter(a => 
       a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())
   );
@@ -82,7 +124,6 @@ export default function NuevaPropiedadPage() {
       setValue('asesor', asesor.nombre);
   };
 
-  // --- LÓGICA FOTOS ---
   const handleMainPhotoChange = (e: any) => {
       if (e.target.files && e.target.files[0]) {
           setPreviewMain(URL.createObjectURL(e.target.files[0]));
@@ -106,14 +147,13 @@ export default function NuevaPropiedadPage() {
         const formData = new FormData();
         
         Object.keys(data).forEach(key => {
-            if (key !== 'fotoPrincipal' && key !== 'galeria' && key !== 'fichaTecnica' && key !== 'tieneMantenimiento') {
+            if (key !== 'fotoPrincipal' && key !== 'galeria' && key !== 'fichaTecnica' && key !== 'tieneMantenimiento' && key !== 'testimonio' && key !== 'hr' && key !== 'pu' && key !== 'impuestoPredial' && key !== 'arbitrios' && key !== 'copiaLiteral') {
                 formData.append(key, data[key]);
             }
         });
 
-        // 🟢 LÓGICA MANTENIMIENTO: Si dijeron NO, enviamos 0 o null
         if (data.tieneMantenimiento === 'no') {
-            formData.set('mantenimiento', '0'); // O puedes no enviarlo
+            formData.set('mantenimiento', '0');
         }
 
         formData.append('moneda', 'USD');
@@ -151,7 +191,6 @@ export default function NuevaPropiedadPage() {
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-800">
       <Navbar />
       
-      {/* HEADER */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-4">
@@ -167,7 +206,6 @@ export default function NuevaPropiedadPage() {
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* 1. MÚLTIPLES PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2">
                     <FaUserTie className="text-indigo-600 text-lg"/> 1. Propietarios (Captación)
@@ -204,7 +242,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 2. DATOS DEL INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
                     <FaHome className="text-indigo-500 text-lg"/> 2. Datos del Inmueble
@@ -259,45 +296,38 @@ export default function NuevaPropiedadPage() {
                         </div>
                     </div>
 
-                    {/* LÓGICA MANTENIMIENTO: Solo si es Departamento */}
                     {esDepartamento && (
-                        <div className="form-control bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <label className="label font-bold text-blue-700 text-sm">¿Tiene Mantenimiento?</label>
+                        <div className="form-control bg-blue-50 p-4 rounded-xl border border-blue-100 transition-all hover:shadow-md">
+                            <label className="label font-bold text-blue-800 text-sm mb-4 flex items-center gap-2 border-b border-blue-200 pb-2">
+                                <FaCheckCircle/> ¿Tiene Mantenimiento?
+                            </label>
                             
-                            {/* Selector SI/NO */}
-                            <div className="flex gap-4 mb-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                        type="radio" 
-                                        value="si" 
-                                        {...register('tieneMantenimiento')} 
-                                        className="radio radio-primary radio-sm" 
-                                    />
-                                    <span className="text-sm">Sí</span>
+                            <div className="flex gap-4 mb-4 pl-2 justify-around">
+                                <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center
+                                    ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400 shadow-inner' : 'bg-white border-gray-200 hover:bg-blue-50 hover:border-blue-300'}`}>
+                                    <input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />
+                                    {tieneMantenimientoValue === 'si' 
+                                        ? <FaCheckCircle className="text-blue-600 text-3xl" /> 
+                                        : <FaRegCircle className="text-gray-300 text-3xl" />
+                                    }
+                                    <span className={`text-lg font-bold ${tieneMantenimientoValue === 'si' ? 'text-blue-900' : 'text-gray-600'}`}>Sí</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                        type="radio" 
-                                        value="no" 
-                                        {...register('tieneMantenimiento')} 
-                                        className="radio radio-primary radio-sm" 
-                                        defaultChecked // Por defecto NO
-                                    />
-                                    <span className="text-sm">No</span>
+
+                                <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center
+                                    ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400 shadow-inner' : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`}>
+                                    <input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" defaultChecked />
+                                     {tieneMantenimientoValue === 'no' 
+                                        ? <FaCheckCircle className="text-gray-600 text-3xl" /> 
+                                        : <FaRegCircle className="text-gray-300 text-3xl" />
+                                    }
+                                    <span className={`text-lg font-bold ${tieneMantenimientoValue === 'no' ? 'text-gray-800' : 'text-gray-600'}`}>No</span>
                                 </label>
                             </div>
 
-                            {/* Input condicional: Solo si dijeron SÍ */}
-                            {tieneMantenimiento === 'si' && (
-                                <div className="relative animate-fade-in-down">
-                                    <span className="absolute left-3 top-2.5 text-gray-400 font-bold text-xs">S/</span>
-                                    <input 
-                                        type="number" 
-                                        step="0.01" 
-                                        {...register('mantenimiento')} 
-                                        className="input input-sm input-bordered w-full pl-8 bg-white" 
-                                        placeholder="Precio"
-                                    />
+                            {tieneMantenimientoValue === 'si' && (
+                                <div className="relative animate-fade-in-down pl-2">
+                                    <span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span>
+                                    <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900 text-lg border-blue-300 focus:border-blue-600 h-12" placeholder="Monto mensual"/>
                                 </div>
                             )}
                         </div>
@@ -314,25 +344,79 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 3. DETALLES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
                     <FaBed className="text-orange-500 text-lg"/> 3. Detalles y Distribución
                 </h3>
                 
-                <div className="grid grid-cols-3 gap-6 mb-6 text-center">
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white"/></div>
+                <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100">
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white shadow-sm"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white shadow-sm"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white shadow-sm"/></div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600">Descripción (Marketing)</label><textarea {...register('descripcion')} className="textarea textarea-bordered h-32 bg-white"></textarea></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600">Distribución Interna</label><textarea {...register('detalles')} className="textarea textarea-bordered h-32 bg-white"></textarea></div>
+                <div className="grid grid-cols-1 gap-8">
+                    <div className="form-control">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="label font-bold text-gray-700 text-lg flex gap-2 items-center">
+                                <FaMagic className="text-purple-500"/> Descripción Comercial (Marketing)
+                            </label>
+                            
+                            <button 
+                                type="button" 
+                                onClick={handleGenerarIA}
+                                disabled={generandoIA}
+                                className={`
+                                    btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all duration-300 transform hover:-translate-y-0.5
+                                    ${generandoIA 
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                                        : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-indigo-200'
+                                    }
+                                `}
+                            >
+                                <FaMagic className={generandoIA ? "animate-spin text-purple-600" : "text-yellow-300 text-lg"} />
+                                {generandoIA ? "Creando magia..." : "Redactar con IA"}
+                            </button>
+                        </div>
+                        
+                        <div className="relative">
+                            <textarea 
+                                {...register('descripcion')} 
+                                className="textarea textarea-bordered h-56 w-full text-base leading-relaxed bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all rounded-xl p-4 shadow-inner"
+                                placeholder="✨ Aquí aparecerá la descripción generada por la IA para captar clientes..."
+                            ></textarea>
+                            <div className="absolute bottom-3 right-3 text-xs text-gray-400 pointer-events-none bg-white/80 px-2 rounded">
+                                Sugerido por IA
+                            </div>
+                        </div>
+                        <label className="label">
+                            <span className="label-text-alt text-gray-400">Este texto es el "gancho" comercial que verán los clientes en la web.</span>
+                        </label>
+                    </div>
+                    
+                    <div className="form-control">
+                        <div className="flex items-center gap-2 mb-2">
+                             <label className="label font-bold text-gray-700 text-lg flex gap-2 items-center">
+                                <FaListUl className="text-blue-500"/> Distribución y Detalles Técnicos
+                            </label>
+                        </div>
+
+                        <div className="relative">
+                            <textarea 
+                                {...register('detalles')} 
+                                className="textarea textarea-bordered h-56 w-full text-base leading-relaxed bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all rounded-xl p-4 shadow-inner"
+                                placeholder="Ejemplo:
+1er Piso: Sala amplia con piso de parquet, cocina americana con reposteros altos y bajos...
+2do Piso: Habitación principal con baño privado y walking closet..."
+                            ></textarea>
+                        </div>
+                        <label className="label">
+                            <span className="label-text-alt text-gray-400">Describe detalladamente los ambientes, acabados y distribución por pisos (Visible en Ficha Técnica).</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            {/* 4. DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
                     <FaGavel className="text-blue-500 text-lg"/> 4. Datos Legales
@@ -366,18 +450,19 @@ export default function NuevaPropiedadPage() {
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
-                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2">Documentación en Regla</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('testimonio')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Testimonio</span></label>
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('hr')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">HR</span></label>
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('pu')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">PU</span></label>
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('impuestoPredial')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Predial</span></label>
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('arbitrios')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Arbitrios</span></label>
-                        <label className="label cursor-pointer justify-start gap-2"><input type="checkbox" {...register('copiaLiteral')} className="checkbox checkbox-primary checkbox-sm"/><span className="text-sm">Copia Lit.</span></label>
+                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2">
+                        <FaFilePdf className="text-gray-500"/> Documentación en Regla (Checklist)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} />
+                        <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} />
+                        <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} />
+                        <CustomDocCheckbox label="Predial Pagado" name="impuestoPredial" register={register} watch={watch} />
+                        <CustomDocCheckbox label="Arbitrios Pagados" name="arbitrios" register={register} watch={watch} />
+                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} />
                     </div>
                 </div>
 
-                {/* 5 LINKS EXTERNOS */}
                 <div className="space-y-4 mb-6">
                     <h4 className="font-bold text-gray-600 flex gap-2 items-center"><FaLink className="text-blue-400"/> 5 Links Externos</h4>
                     <div className="grid grid-cols-1 gap-2">
@@ -389,7 +474,6 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
-                {/* BUSCADOR DE ASESOR */}
                 <div className="form-control relative">
                     <label className="label font-bold text-gray-600 text-sm">Asesor Encargado (Buscar)</label>
                     <div className="flex items-center">
@@ -427,7 +511,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 5. MULTIMEDIA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
                     <FaImages className="text-yellow-500 text-lg"/> 5. Multimedia
@@ -453,7 +536,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* BOTÓN FINAL */}
             <div className="flex justify-end pt-4">
                 <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-12 py-3 h-auto text-lg shadow-xl hover:shadow-indigo-300 hover:-translate-y-1 transition-all">
                     {isSubmitting ? 'Publicando...' : <><FaSave className="mr-2"/> Publicar Propiedad</>}

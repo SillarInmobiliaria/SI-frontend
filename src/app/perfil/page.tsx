@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
-import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
+import { useAuth } from '../../context/AuthContext'; 
 
 export default function PerfilPage() {
-  const { currentUser } = useInmobiliariaStore();
+  const { user: currentUser } = useAuth();
   
   const [user, setUser] = useState({
     nombre: '',
@@ -14,7 +14,6 @@ export default function PerfilPage() {
     nacimiento: '',
     bio: '',
     foto: 'https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp',
-    // 👇 Nuevo campo para el color de fondo (morado por defecto)
     fondoColor: '#7c3aed' 
   });
 
@@ -50,13 +49,10 @@ export default function PerfilPage() {
         
         <div className="card bg-base-100 shadow-2xl overflow-hidden border border-base-300">
           
-          {/* PORTADA PERSONALIZABLE */}
-          {/* Usamos style en línea para aplicar el color dinámico */}
           <div 
             className="h-52 relative transition-colors duration-500"
             style={{ backgroundColor: user.fondoColor }}
           >
-            {/* Si está editando, mostramos el selector de color */}
             {isEditing && (
               <div className="absolute top-4 right-4 bg-white/80 p-2 rounded-lg shadow-md backdrop-blur-sm flex items-center gap-2">
                 <span className="text-xs font-bold text-black uppercase">Color de Portada</span>
@@ -130,7 +126,7 @@ export default function PerfilPage() {
                   />
                 </div>
 
-                {/* 👇 TELÉFONO VALIDADO (9 dígitos, solo números) */}
+                {/* TELÉFONO VALIDADO (9 dígitos, solo números) */}
                 <div className="form-control">
                   <label className="label font-bold text-primary">Teléfono / Celular</label>
                   <input 

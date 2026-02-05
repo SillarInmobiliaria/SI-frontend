@@ -157,7 +157,7 @@ export default function PropiedadesPage() {
                         {isAdmin && (
                             <div className="absolute top-3 right-3 z-20 flex gap-2">
                                 <button 
-                                    onClick={(e) => handleSuspender(e, prop.id, prop.activo)}
+                                    onClick={(e) => handleSuspender(e, prop.id, prop.activo || false)}
                                     className={`btn btn-circle btn-sm border-none shadow-lg ${prop.activo ? 'bg-white text-amber-500 hover:bg-amber-50' : 'bg-green-500 text-white hover:bg-green-600'}`}
                                     title={prop.activo ? "Suspender" : "Activar"}
                                 >

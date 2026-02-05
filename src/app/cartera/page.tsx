@@ -75,7 +75,6 @@ export default function CarteraPage() {
                 const resultados = await buscarInteresadoPorNombre(val);
                 
                 // FILTRO MÁGICO: Excluir los que YA están en cartera
-                // Comparamos los resultados de la búsqueda con la lista 'clientes' actual
                 const resultadosFiltrados = resultados.filter((r: any) => {
                     const yaExiste = clientes.some(c => 
                         c.nombreCompleto.toLowerCase().trim() === r.nombre.toLowerCase().trim()
@@ -444,7 +443,7 @@ export default function CarteraPage() {
                             {/* SECCIÓN TELÉFONOS DESTACADA */}
                             <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2">
                                         <FaWhatsapp className="text-emerald-600"/> Teléfono Principal *
                                     </label>
                                     <input 
@@ -458,7 +457,7 @@ export default function CarteraPage() {
                                     />
                                 </div>
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-bold text-slate-600 mb-2 flex items-center gap-2">
                                         <FaPhone className="text-slate-400"/> Teléfono 2 (Opcional)
                                     </label>
                                     <input 
@@ -474,7 +473,7 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                                         <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento
                                     </label>
                                     <input 
@@ -486,7 +485,7 @@ export default function CarteraPage() {
                                     />
                                 </div>
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                                         <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
                                     </label>
                                     <input 
