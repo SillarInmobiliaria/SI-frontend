@@ -2,23 +2,20 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import AriAI from './AriAI'; 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Lista de páginas públicas (donde no necesitas estar logueado)
   const publicPages = ['/login', '/registro'];
 
   useEffect(() => {
     if (!loading) {
-      // Si NO hay usuario Y NO estamos en una página pública, mandar al login
       if (!user && !publicPages.includes(pathname)) {
         router.push('/login');
       }
-      
-      // Si YA hay usuario y trata de entrar al login, mandarlo al INICIO (Raíz)
       if (user && publicPages.includes(pathname)) {
         router.push('/');
       }
@@ -34,7 +31,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (user || publicPages.includes(pathname)) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        
+        {/* Solo mostramos a Ari si hay un usuario logueado */}
+        {user && <AriAI />} 
+      </>
+    );
   }
 
   return null;

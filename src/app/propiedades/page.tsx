@@ -146,14 +146,13 @@ export default function PropiedadesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {propiedadesFiltradas.map((prop) => (
                     
-                    // 👉 LINK QUE ENVUELVE TODO PARA NAVEGAR AL DETALLE
                     <Link 
                         key={prop.id} 
                         href={`/propiedades/${prop.id}`} 
                         className="group relative block bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 overflow-hidden hover:-translate-y-1"
                     >
                         
-                        {/* BOTONES ADMIN FLOTANTES (CON PREVENT DEFAULT) */}
+                        {/* BOTONES ADMIN FLOTANTES */}
                         {isAdmin && (
                             <div className="absolute top-3 right-3 z-20 flex gap-2">
                                 <button 
