@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // IMPORTANTE: Para la navegación
+import Link from 'next/link'; 
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek, FaHome } from 'react-icons/fa'; // Agregamos FaHome
+import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek, FaHome, FaFileExcel } from 'react-icons/fa'; // Agregué FaFileExcel para el botón
 
 const API_URL = 'http://localhost:4000/api'; 
 
@@ -28,6 +28,7 @@ export default function DashboardPage() {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
 
+        // Enviamos el modo y el año al backend
         const res = await fetch(`${API_URL}/admin/dashboard/stats?year=${year}&mode=${viewMode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -40,19 +41,29 @@ export default function DashboardPage() {
     fetchData();
   }, [year, viewMode, router]);
 
+  // --- LÓGICA DE DESCARGA MEJORADA ---
   const descargarExcel = async () => {
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/admin/dashboard/exportar`, {
+        // AQUÍ ESTÁ LA CLAVE: Le mandamos el 'year' y el 'mode' actual al backend
+        const res = await fetch(`${API_URL}/admin/dashboard/exportar?year=${year}&mode=${viewMode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+
+        if (!res.ok) throw new Error("Error al descargar el archivo");
+
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Reporte_General_${year}.xlsx`;
+        // El nombre del archivo ahora dice qué estás descargando (ej: Reporte_General_SEMANAL_2025.xlsx)
+        a.download = `Reporte_General_${viewMode}_${year}.xlsx`;
+        document.body.appendChild(a);
         a.click();
-      } catch (e) { alert('Error al descargar'); }
+        a.remove();
+      } catch (e) { 
+        alert('No se pudo descargar el reporte. Intenta nuevamente.'); 
+      }
   };
 
   const toggleFiltro = (metric: string) => {
@@ -87,7 +98,7 @@ export default function DashboardPage() {
             
             <div>
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight">Panel Administrativo</h1>
-                <p className="text-slate-600 mt-1 font-medium">Métricas y rendimiento de la inmobiliaria.</p>
+                <p className="text-slate-600 mt-1 font-medium">Reportes y métricas de rendimiento.</p>
             </div>
         </div>
 
@@ -106,8 +117,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* BOTÓN DESCARGAR EXCEL (Mejorado) */}
           <button onClick={descargarExcel} className="btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-none gap-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-bold h-[46px] px-6 rounded-xl flex items-center">
-            📥 Descargar Excel
+            <FaFileExcel size={18} /> Descargar Reporte
           </button>
         </div>
       </div>
