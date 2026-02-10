@@ -20,6 +20,7 @@ import {
   FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight
 } from 'react-icons/fa';
 
+// 1. URL CORREGIDA
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
@@ -104,7 +105,13 @@ export default function ClientesPage() {
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
-  const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq } = useForm();
+  
+  // Formulario independiente para el Modal de Requerimiento
+  const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
+  
+  // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
+  const reqTipoModal = watchReq('reqTipo');
+  const reqFormaPagoModal = watchReq('reqFormaPago');
 
   // CARGA DE DATOS
   useEffect(() => {
@@ -142,8 +149,20 @@ export default function ClientesPage() {
   }, [zonasQuery, zonasSelected]);
 
   const handleSelectPropiedad = (prop: any) => { setValue('propiedadId', prop.id); setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); setShowPropSuggestions(false); };
-  const handleAddZona = (zona: string) => { const nuevasZonas = [...zonasSelected, zona]; setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); setZonasQuery(''); setShowZonasSuggestions(false); };
-  const handleRemoveZona = (zona: string) => { const nuevasZonas = zonasSelected.filter(z => z !== zona); setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); };
+  
+  const handleAddZona = (zona: string) => { 
+      const nuevasZonas = [...zonasSelected, zona]; 
+      setZonasSelected(nuevasZonas); 
+      setValue('reqZonas', nuevasZonas.join(', ')); // Para el form principal
+      setZonasQuery(''); 
+      setShowZonasSuggestions(false); 
+  };
+  
+  const handleRemoveZona = (zona: string) => { 
+      const nuevasZonas = zonasSelected.filter(z => z !== zona); 
+      setZonasSelected(nuevasZonas); 
+      setValue('reqZonas', nuevasZonas.join(', ')); 
+  };
   
   const handleOpenModal = () => {
       setModalOpen(true);
@@ -180,9 +199,8 @@ export default function ClientesPage() {
               if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
           }
 
-          // --- MODIFICADO: SI ELIGE DESCARTADO, GUARDAMOS EL ESTADO DESCARTADO ---
+          // SI ELIGE DESCARTADO, GUARDAMOS EL ESTADO DESCARTADO
           const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
-          
           const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
 
           await createRequerimiento({ 
@@ -207,6 +225,7 @@ export default function ClientesPage() {
     finally { setIsSubmitting(false); }
   };
 
+  // 2. ELIMINACIÓN ARREGLADA (Sin Number cast)
   const handleEliminar = async (id: string) => { 
       if(!confirm('⚠️ ¿Eliminar?')) return; 
       try { 
@@ -223,8 +242,54 @@ export default function ClientesPage() {
   const handleGoToSeguimiento = () => { router.push('/seguimiento'); };
   const handleGoToRequerimientos = () => { router.push('/requerimientos'); }; 
 
-  const handleOpenReq = (cliente: any) => { setClienteReq(cliente); setReqOpen(true); resetReq(); };
-  const onSubmitReq = async (data: any) => { if (!clienteReq) return; try { await createRequerimiento({ clienteId: clienteReq.id, fecha: new Date().toISOString(), pedido: data.pedido, prioridad: data.prioridad, usuarioId: user?.id }); alert('✅ Requerimiento guardado'); setReqOpen(false); resetReq(); try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){} } catch (error) { alert('❌ Error'); } };
+  // 3. HANDLERS PARA EL NUEVO MODAL DE REQUERIMIENTO COMPLETO
+  const handleOpenReq = (cliente: any) => { 
+      setClienteReq(cliente); 
+      setReqOpen(true); 
+      setZonasSelected([]); // Limpiamos zonas
+      setZonasQuery('');
+      resetReq({ // Valores por defecto
+          reqTipo: 'COMPRA',
+          reqPrioridad: 'NORMAL',
+          reqFormaPago: 'FINANCIADO'
+      });
+  };
+
+  const onSubmitReq = async (data: any) => { 
+      if (!clienteReq) return; 
+      try { 
+          // Construcción del pedido detallado
+          const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : '';
+          let detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
+          
+          if (data.reqTipo === 'COMPRA') {
+              detallePedido += `\n Pago: ${data.reqFormaPago}.`;
+              if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
+          }
+
+          const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
+          const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
+
+          await createRequerimiento({ 
+              clienteId: clienteReq.id, 
+              fecha: new Date().toISOString(), 
+              pedido: detallePedido, 
+              prioridad: prioridadFinal, 
+              estado: estadoFinal, // Estado correcto
+              usuarioId: user?.id 
+          }); 
+
+          alert('✅ Requerimiento guardado'); 
+          setReqOpen(false); 
+          resetReq(); 
+          
+          // Refrescar
+          try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){} 
+      } catch (error) { 
+          alert('❌ Error al guardar requerimiento'); 
+      } 
+  };
+
   const handleOpenSeguimientoModal = (cliente: any) => { setClienteSeguimiento(cliente); setSeguimientoOpen(true); resetSeg(); };
   const onSubmitSeguimiento = async (data: any) => { 
       if (!clienteSeguimiento) return; 
@@ -302,7 +367,7 @@ export default function ClientesPage() {
                             const hasRealReq = reqC && reqC.id;
                             const hasRealSeg = segC && segC.id; 
 
-                            // --- LÓGICA DE ESTADO  ---
+                            // --- LÓGICA DE ESTADO ---
                             let statusLabel = 'INTERESADO';
                             let statusColor = 'bg-orange-100 text-orange-700';
                             let avatarColor = 'bg-gradient-to-br from-orange-400 to-amber-500';
@@ -535,7 +600,127 @@ export default function ClientesPage() {
             
             {/* OTROS MODALES */}
             {isDetailOpen && selectedCliente && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in"><div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl"><button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 absolute right-6 top-6"><FaTimes/></button><h2 className="text-2xl font-bold text-indigo-900 mb-4">{selectedCliente.nombre}</h2><div className="grid grid-cols-2 gap-4 text-sm"><p><strong>Celular:</strong> {selectedCliente.telefono1}</p><p><strong>Canal:</strong> {selectedCliente.origen || '---'}</p><p><strong>Email:</strong> {selectedCliente.email || '---'}</p></div></div></div>)}
-            {isReqOpen && clienteReq && (<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"><div className="bg-white w-full max-w-lg rounded-2xl p-6 relative"><button onClick={()=>setReqOpen(false)} className="absolute top-2 right-2 btn btn-sm btn-circle btn-ghost">✕</button><h3 className="font-bold text-lg mb-4">Requerimiento</h3><form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-4"><textarea {...registerReq('pedido', {required:true})} className="textarea textarea-bordered w-full h-24" placeholder="¿Qué busca?"></textarea><div className="flex justify-end"><button className="btn btn-warning text-white">Guardar</button></div></form></div></div>)}
+            
+            {/* 3. MODAL DE REQUERIMIENTO COMPLETO (REEMPLAZADO) */}
+            {isReqOpen && clienteReq && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="bg-amber-500 p-6 text-white flex justify-between items-center">
+                            <div>
+                                <h3 className="font-black text-xl flex items-center gap-2"><FaClipboardList/> Nuevo Requerimiento</h3>
+                                <p className="text-amber-100 text-sm">Para el cliente: <strong>{clienteReq.nombre}</strong></p>
+                            </div>
+                            <button onClick={()=>setReqOpen(false)} className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-all"><FaTimes/></button>
+                        </div>
+                        
+                        {/* Body Scrollable */}
+                        <div className="p-8 overflow-y-auto bg-slate-50">
+                            <form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-6">
+                                
+                                {/* Tipo y Prioridad */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="form-control">
+                                        <label className="label font-bold text-slate-700">Tipo Operación</label>
+                                        <select {...registerReq('reqTipo')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
+                                            <option value="COMPRA">Compra</option>
+                                            <option value="ALQUILER">Alquiler</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-slate-700">Prioridad</label>
+                                        <select {...registerReq('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
+                                            <option value="NORMAL">Normal</option>
+                                            <option value="URGENTE">Urgente</option>
+                                            <option value="DESCARTADO">Descartado</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Zonas (Reutilizando lógica) */}
+                                <div className="form-control relative">
+                                    <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaCity className="text-slate-400"/> Zonas / Distritos</label>
+                                    <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white flex flex-wrap gap-2 items-center min-h-[50px]">
+                                        {zonasSelected.map(z => (
+                                            <span key={z} className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
+                                                {z} <FaTimes className="cursor-pointer hover:text-red-500" onClick={() => handleRemoveZona(z)}/>
+                                            </span>
+                                        ))}
+                                        <input 
+                                            className="flex-1 outline-none min-w-[150px] bg-transparent text-sm" 
+                                            placeholder={zonasSelected.length > 0 ? "Añadir otro..." : "Escribe zona (ej. Yanahuara)..."} 
+                                            value={zonasQuery} 
+                                            onChange={(e) => { setZonasQuery(e.target.value); setShowZonasSuggestions(true); }}
+                                        />
+                                    </div>
+                                    {/* Sugerencias de zonas */}
+                                    {showZonasSuggestions && zonasQuery && filteredDistritos.length > 0 && (
+                                        <div className="absolute z-50 w-full bg-white border-2 border-amber-200 rounded-xl shadow-xl mt-1 max-h-40 overflow-y-auto">
+                                            {filteredDistritos.map(d => (
+                                                <div key={d} onClick={() => handleAddZona(d)} className="p-2 hover:bg-amber-50 cursor-pointer text-sm font-medium text-slate-700 flex items-center gap-2">
+                                                    <FaPlus className="text-amber-500 text-xs"/> {d}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Area y Presupuesto */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="form-control">
+                                        <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaRulerCombined className="text-slate-400"/> Área (m²)</label>
+                                        <div className="flex gap-2 items-center">
+                                            <input {...registerReq('reqAreaMin')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Min"/>
+                                            <span className="text-slate-400">-</span>
+                                            <input {...registerReq('reqAreaMax')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Max"/>
+                                        </div>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaDollarSign className="text-slate-400"/> Presupuesto</label>
+                                        <div className="flex gap-2 items-center">
+                                            <input {...registerReq('reqPresupuestoMin')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Min"/>
+                                            <span className="text-slate-400">-</span>
+                                            <input {...registerReq('reqPresupuestoMax')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Max"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {reqTipoModal === 'COMPRA' && (
+                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                         <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2"><FaMoneyBillWave className="text-green-500"/> Forma de Pago</h5>
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="form-control">
+                                                <select {...registerReq('reqFormaPago')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
+                                                    <option value="FINANCIADO">Financiamiento Bancario</option>
+                                                    <option value="CONTADO">Recursos Propios (Contado)</option>
+                                                    <option value="MIXTO">Mixto (Banco + Contado)</option>
+                                                </select>
+                                            </div>
+                                            {(reqFormaPagoModal === 'FINANCIADO' || reqFormaPagoModal === 'MIXTO') && (
+                                                 <div className="form-control animate-fade-in-right relative"><FaUniversity className="absolute left-4 top-4 text-green-600 pointer-events-none"/><select {...registerReq('reqBanco')} className="w-full pl-10 pr-4 py-3 border-2 border-green-200 bg-green-50/50 rounded-xl font-medium text-green-900"><option value="">Selecciona un Banco...</option>{BANCOS_PERU.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+                                            )}
+                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Comentarios */}
+                                <div className="form-control">
+                                    <label className="label font-bold text-slate-700">Comentarios Adicionales</label>
+                                    <textarea {...registerReq('reqComentarios')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl h-24 resize-none bg-white" placeholder="Ej: Que tenga jardín, cochera doble..."></textarea>
+                                </div>
+
+                                {/* Botón Guardar */}
+                                <div className="pt-4 flex justify-end">
+                                    <button type="submit" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
+                                        <FaSave/> Guardar Requerimiento
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isSeguimientoOpen && clienteSeguimiento && (<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"><div className="bg-white w-full max-w-lg rounded-2xl p-6 relative"><button onClick={()=>setSeguimientoOpen(false)} className="absolute top-2 right-2 btn btn-sm btn-circle btn-ghost">✕</button><h3 className="font-bold text-lg mb-4">Nuevo Seguimiento</h3><form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4"><textarea {...registerSeg('comentario', {required:true})} className="textarea textarea-bordered w-full" placeholder="Resultado..."></textarea><div className="grid grid-cols-2 gap-2"><select {...registerSeg('estado')} className="select select-bordered"><option value="PENDIENTE">Pendiente</option><option value="FINALIZADO">Finalizado</option></select><input type="date" {...registerSeg('fechaProxima')} className="input input-bordered"/></div><div className="flex justify-end"><button className="btn btn-primary">Guardar</button></div></form></div></div>)}
 
           </main>
