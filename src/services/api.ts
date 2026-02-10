@@ -82,7 +82,7 @@ export const updateInteresado = async (id: number, datos: any) => {
     const { data } = await api.put(`/clientes/${id}`, datos);
     return data;
 };
-export const deleteInteresado = async (id: number) => { 
+export const deleteInteresado = async (id: string | number) => { 
   const { data } = await api.delete(`/clientes/${id}`);
   return data;
 };

@@ -55,7 +55,6 @@ interface FormClienteCompleto {
   reqPresupuestoMin?: string;
   reqPresupuestoMax?: string;
   reqComentarios?: string;
-  // AGREGADO: Opción DESCARTADO en el tipo
   reqPrioridad?: 'NORMAL' | 'URGENTE' | 'DESCARTADO';
   reqFormaPago?: 'CONTADO' | 'FINANCIADO' | 'MIXTO';
   reqBanco?: string;
@@ -183,7 +182,7 @@ export default function ClientesPage() {
 
           // --- MODIFICADO: SI ELIGE DESCARTADO, GUARDAMOS EL ESTADO DESCARTADO ---
           const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
-          // Si es descartado, guardamos la prioridad como NORMAL para no romper, pero el estado mandamos DESCARTADO
+          
           const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
 
           await createRequerimiento({ 
@@ -191,7 +190,7 @@ export default function ClientesPage() {
               fecha: new Date().toISOString(), 
               pedido: detallePedido, 
               prioridad: prioridadFinal, 
-              estado: estadoFinal, // Enviamos el estado
+              estado: estadoFinal,
               usuarioId: user?.id 
           });
       }
@@ -211,7 +210,7 @@ export default function ClientesPage() {
   const handleEliminar = async (id: string) => { 
       if(!confirm('⚠️ ¿Eliminar?')) return; 
       try { 
-          await eliminarCliente(Number(id));
+          await eliminarCliente(id);
           fetchClientes(); 
       } catch (e) { 
           alert('❌ Error al eliminar'); 
@@ -303,7 +302,7 @@ export default function ClientesPage() {
                             const hasRealReq = reqC && reqC.id;
                             const hasRealSeg = segC && segC.id; 
 
-                            // --- LÓGICA DE ESTADO (NIVEL) ---
+                            // --- LÓGICA DE ESTADO  ---
                             let statusLabel = 'INTERESADO';
                             let statusColor = 'bg-orange-100 text-orange-700';
                             let avatarColor = 'bg-gradient-to-br from-orange-400 to-amber-500';
@@ -313,7 +312,7 @@ export default function ClientesPage() {
                                 statusColor = 'bg-green-100 text-green-700';
                                 avatarColor = 'bg-gradient-to-br from-green-500 to-emerald-600';
                             } else if (hasRealReq) {
-                                // 🔴 FIX: Si el requerimiento está RECHAZADO o DESCARTADO
+                                // Si el requerimiento está RECHAZADO o DESCARTADO
                                 if (reqC?.estado === 'RECHAZADO' || reqC?.estado === 'DESCARTADO') {
                                     statusLabel = 'DESCARTADO';
                                     statusColor = 'bg-red-100 text-red-700';
@@ -435,7 +434,6 @@ export default function ClientesPage() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="form-control"><label className="label font-bold text-slate-700">Tipo Operación</label><select {...register('reqTipo')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl"><option value="COMPRA">Compra</option><option value="ALQUILER">Alquiler</option></select></div>
                                                 
-                                                {/* 🔴 AGREGADA OPCIÓN DESCARTADO AL SELECT DE PRIORIDAD */}
                                                 <div className="form-control">
                                                     <label className="label font-bold text-slate-700">Prioridad</label>
                                                     <select {...register('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl">
