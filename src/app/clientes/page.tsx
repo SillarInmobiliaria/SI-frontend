@@ -20,7 +20,7 @@ import {
   FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight
 } from 'react-icons/fa';
 
-const BACKEND_URL = 'http://localhost:4000/';
+const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
     "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
