@@ -6,6 +6,9 @@ import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
 import { createPropiedad } from '../../../services/api';
 import api from '../../../services/api';
+
+const API_BASE_URL = 'https://sillar-backend.onrender.com/api';
+
 import { 
   FaHome, FaDollarSign, FaBed, FaBath, FaCar, 
   FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
@@ -59,7 +62,11 @@ export default function NuevaPropiedadPage() {
     fetchPropietarios();
     const fetchUsuarios = async () => {
         try {
-            const { data } = await api.get('/usuarios');
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_BASE_URL}/usuarios`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
             setAsesoresDB(data);
         } catch (error) {
             console.error("Error cargando asesores", error);
@@ -68,7 +75,7 @@ export default function NuevaPropiedadPage() {
     fetchUsuarios();
   }, []);
 
-  const handleGenerarIA = async () => {
+const handleGenerarIA = async () => {
     const datosContexto = {
         tipo: watch('tipo'),
         modalidad: watch('modalidad'),
@@ -87,11 +94,21 @@ export default function NuevaPropiedadPage() {
 
     setGenerandoIA(true);
     try {
-        const { data } = await api.post('/ai/generar', datosContexto);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/ai/generar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(datosContexto)
+        });
+
+        const data = await res.json();
         setValue('descripcion', data.descripcion);
     } catch (error) {
         console.error("Error IA:", error);
-        alert("La IA está ocupada o no configurada. Intenta escribirlo manualmente.");
+        alert("La IA está despertando en Render. Intenta de nuevo en unos segundos.");
     } finally {
         setGenerandoIA(false);
     }
