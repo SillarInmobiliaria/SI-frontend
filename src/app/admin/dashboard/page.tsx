@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link'; 
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek, FaHome, FaFileExcel } from 'react-icons/fa'; // Agregué FaFileExcel para el botón
+import { FaCalendarAlt, FaCalendarDay, FaCalendarWeek, FaHome, FaFileExcel } from 'react-icons/fa';
 
-const API_URL = 'http://localhost:4000/api'; 
+const API_URL = 'https://sillar-backend.onrender.com/api'; 
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function DashboardPage() {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
 
-        // Enviamos el modo y el año al backend
+        // Petición al Backend real
         const res = await fetch(`${API_URL}/admin/dashboard/stats?year=${year}&mode=${viewMode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -41,11 +41,10 @@ export default function DashboardPage() {
     fetchData();
   }, [year, viewMode, router]);
 
-  // --- LÓGICA DE DESCARGA MEJORADA ---
+  // --- LÓGICA DE DESCARGA ---
   const descargarExcel = async () => {
     try {
         const token = localStorage.getItem('token');
-        // AQUÍ ESTÁ LA CLAVE: Le mandamos el 'year' y el 'mode' actual al backend
         const res = await fetch(`${API_URL}/admin/dashboard/exportar?year=${year}&mode=${viewMode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -56,7 +55,6 @@ export default function DashboardPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        // El nombre del archivo ahora dice qué estás descargando (ej: Reporte_General_SEMANAL_2025.xlsx)
         a.download = `Reporte_General_${viewMode}_${year}.xlsx`;
         document.body.appendChild(a);
         a.click();
@@ -89,7 +87,6 @@ export default function DashboardPage() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
         <div className="flex items-center gap-4">
-            {/* BOTÓN IR AL INICIO */}
             <Link href="/">
                 <button className="btn bg-white border border-slate-200 text-slate-500 hover:bg-white hover:text-blue-600 hover:border-blue-300 shadow-sm rounded-2xl h-14 w-14 flex items-center justify-center transition-all duration-300 group">
                     <FaHome size={24} className="group-hover:scale-110 transition-transform"/>
@@ -103,7 +100,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* SELECTOR DE AÑO */}
           <div className="relative">
             <select 
                 value={year} 
@@ -117,7 +113,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* BOTÓN DESCARGAR EXCEL (Mejorado) */}
           <button onClick={descargarExcel} className="btn bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-none gap-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-bold h-[46px] px-6 rounded-xl flex items-center">
             <FaFileExcel size={18} /> Descargar Reporte
           </button>
@@ -238,7 +233,6 @@ const CardResumen = ({ titulo, valor, icono, color, onClick, active }: any) => (
         hover:scale-[1.03] hover:shadow-xl
     `}
   >
-    {/* Efecto de brillo sutil */}
     <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     
     <div className="relative flex items-center justify-between">
