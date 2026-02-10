@@ -9,15 +9,15 @@ import {
   ApiResponse
 } from '../types';
 
-// 1. Configuración Base
+// Configuración Base
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://sillar-backend.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 2. Interceptor (Token)
+// Interceptor (Token)
 api.interceptors.request.use((config: any) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('token');
