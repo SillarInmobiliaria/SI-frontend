@@ -41,7 +41,7 @@ export default function CambiarPasswordPage() {
       }
 
       // 2. Petición al Backend
-      const res = await fetch('http://localhost:4000/api/auth/cambiar-password', {
+      const res = await fetch('https://sillar-backend.onrender.com/api/auth/cambiar-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
