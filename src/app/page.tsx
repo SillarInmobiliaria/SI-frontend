@@ -20,28 +20,29 @@ export default function DashboardPage() {
   const notificacionMostrada = useRef(false);
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
-  // --- LÓGICA DE CONTADOR DE SEGURIDAD (PASSWORD TEMPORAL) ---
+  // --- LÓGICA DE CONTADOR DE SEGURIDAD ---
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
+  const [mostrarAlerta, setMostrarAlerta] = useState(false);
 
   useEffect(() => {
-    // Calculamos si tiene clave temporal
-    if (user?.createdAt && user?.passwordChanged === false) {
+    // DIAGNÓSTICO: Esto imprimirá en la consola del navegador qué está llegando
+    if (user) console.log("Datos de usuario para alerta:", { creado: user.createdAt, cambiado: user.passwordChanged });
+
+    // La alerta se muestra si existe fecha de creación Y (passwordChanged es falso O es null/undefined)
+    if (user?.createdAt && user?.passwordChanged !== true) {
       const calcularDias = () => {
         const fechaCreacion = new Date(user.createdAt);
         const hoy = new Date();
         
-        // Diferencia absoluta en milisegundos
         const diffInMs = hoy.getTime() - fechaCreacion.getTime();
-        // Convertir a días (redondeando hacia abajo)
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         const restantes = 30 - diffInDays;
         
         setDiasRestantes(restantes > 0 ? restantes : 0);
+        setMostrarAlerta(true);
       };
 
       calcularDias();
-      const interval = setInterval(calcularDias, 3600000); // Actualiza cada hora
-      return () => clearInterval(interval);
     }
   }, [user]);
 
@@ -161,9 +162,9 @@ export default function DashboardPage() {
     const verificarRecordatorios = async () => {
         try {
             const [seguimientos, clientes, visitas] = await Promise.all([
-              getSeguimientos(),
-              getClientes(),
-              getVisitas()
+              getSeguimientos().catch(() => []), // Evita que un error rompa todo
+              getClientes().catch(() => []),
+              getVisitas().catch(() => [])
             ]);
             
             const ahora = new Date(); 
@@ -172,20 +173,11 @@ export default function DashboardPage() {
             mananaObj.setDate(ahora.getDate() + 1);
             const mananaStr = getFechaPeru(mananaObj); 
 
-            // Filtros simplificados
+            // Filtros rápidos
             const segHoy = seguimientos.filter((s: any) => s.fechaProxima?.split('T')[0] === hoyStr && s.estado === 'PENDIENTE');
-            const visHoy = visitas.filter((v: any) => getFechaPeru(new Date(v.fechaProgramada)) === hoyStr && v.estado !== 'CANCELADA');
-            const cumplesHoy = clientes.filter((c: any) => {
-                if(!c.fechaNacimiento) return false;
-                const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
-                return fechaNac.getDate() === ahora.getDate() && fechaNac.getMonth() === ahora.getMonth();
-            });
-
-            if (segHoy.length > 0 || visHoy.length > 0 || cumplesHoy.length > 0) {
-                const audio = new Audio('/alert.mp3'); 
-                audio.play().catch(() => {});
-            }
-
+            const visHoy = visitas.filter((v: any) => v.fechaProgramada && getFechaPeru(new Date(v.fechaProgramada)) === hoyStr && v.estado !== 'CANCELADA');
+            
+            // Toasts (Solo ejemplo visita hoy)
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -227,35 +219,35 @@ export default function DashboardPage() {
 
       <div className="container mx-auto p-6 md:p-10 relative z-10">
         
-        {/* --- BANNER DE SEGURIDAD (NUEVO) --- */}
-        {user && user.passwordChanged === false && diasRestantes !== null && (
+        {/* --- BANNER DE SEGURIDAD (Se muestra si mostrarAlerta es true) --- */}
+        {mostrarAlerta && diasRestantes !== null && (
           <div className={`mb-8 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between border-2 transition-all shadow-xl ${
-            diasRestantes <= 5 
+            (diasRestantes || 0) <= 5 
               ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' 
               : 'bg-amber-50 border-amber-200 text-amber-800'
           }`}>
             <div className="flex items-center gap-5 mb-4 md:mb-0">
-              <div className={`p-4 rounded-2xl ${diasRestantes <= 5 ? 'bg-red-100' : 'bg-amber-100'}`}>
+              <div className={`p-4 rounded-2xl ${(diasRestantes || 0) <= 5 ? 'bg-red-100' : 'bg-amber-100'}`}>
                 <FaExclamationTriangle className="text-2xl" />
               </div>
               <div>
-                <p className="font-black text-xl uppercase tracking-tight">Acceso Temporal - Sillar CRM</p>
+                <p className="font-black text-xl uppercase tracking-tight">Acceso Temporal</p>
                 <p className="font-medium opacity-90">
-                  Debes cambiar tu contraseña. Te quedan 
+                  Hola <b>{user?.nombre}</b>, debes cambiar tu contraseña. Te quedan 
                   <span className="bg-white px-3 py-1 rounded-lg mx-2 font-bold shadow-sm text-indigo-600">
                     {diasRestantes} días
                   </span> 
-                  para la suspensión de cuenta.
+                  para la suspensión de la cuenta.
                 </p>
               </div>
             </div>
             <button 
               onClick={() => router.push('/cambiar-password')}
               className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-md active:scale-95 ${
-                diasRestantes <= 5 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'
+                (diasRestantes || 0) <= 5 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'
               }`}
             >
-              Cambiar ahora
+              Cambiar Ahora
             </button>
           </div>
         )}
@@ -297,8 +289,8 @@ export default function DashboardPage() {
             {modulos.map((mod, idx) => {
                 if (mod.adminOnly && !isAdmin) return null;
                 return (
-                    <Link href={mod.path} key={idx} className="group">
-                        <div className="h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90 relative">
+                    <Link href={mod.path} key={idx} className="group relative">
+                        <div className={`h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90`}>
                             <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${mod.gradient}`}></div>
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-4">
