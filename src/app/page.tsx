@@ -136,12 +136,11 @@ export default function DashboardPage() {
       gradient: "from-pink-500 to-rose-500",
       adminOnly: true
     },
-    // --- NUEVO MÓDULO PARA EL PROGRAMADOR ---
     {
       title: "Buzón Developer",
-      path: "#feedback",
+      path: "/admin/tickets",
       icon: FaTerminal,
-      desc: "Reportar bugs o sugerencias técnicas al programador",
+      desc: "Revisar logs, errores y sugerencias técnicas del sistema",
       color: "text-green-400",
       bgIcon: "bg-slate-800",
       border: "border-slate-900",
@@ -255,8 +254,8 @@ export default function DashboardPage() {
                 return (
                     <div 
                       key={idx} 
-                      className="group relative cursor-pointer"
-                      onClick={() => isDev ? document.getElementById('btn-open-feedback')?.click() : router.push(mod.path)}
+                      className="group relative cursor-pointer h-full"
+                      onClick={() => isDev ? router.push(mod.path) : router.push(mod.path)}
                     >
                         <div className={`h-full rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden 
                           ${isDev ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white/70 backdrop-blur-md border-white/60 hover:bg-white/90 text-slate-800'}`}>
@@ -270,7 +269,7 @@ export default function DashboardPage() {
                                     </div>
                                     <FaArrowRight className={`transition-all ${isDev ? 'text-green-400' : 'text-slate-300'}`}/>
                                 </div>
-                                <h2 className="text-xl font-bold mb-1">{mod.title}</h2>
+                                <h2 className="text-xl font-bold mb-1 uppercase tracking-tighter">{mod.title}</h2>
                                 <p className="text-sm opacity-70 leading-relaxed">{mod.desc}</p>
                             </div>
                         </div>
