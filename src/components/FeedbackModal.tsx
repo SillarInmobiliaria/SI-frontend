@@ -10,11 +10,10 @@ const FeedbackModal = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Intentamos sacar el token. Si usas 'auth-storage' o algo similar en Sillar, cámbialo aquí.
       const token = localStorage.getItem('token'); 
       
-      // Intentamos con la ruta completa para evitar confusiones de Next.js
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://si-backend-56ps.onrender.com';
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://si-backend-56ps.onrender.com';
+      if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
 
       const res = await fetch(`${apiUrl}/api/feedback`, { 
         method: 'POST',
@@ -32,11 +31,11 @@ const FeedbackModal = () => {
         setFormData({ tipo: 'SUGERENCIA', asunto: '', descripcion: '' });
         setIsOpen(false);
       } else {
-        alert(`❌ Error: ${data.message || 'No se pudo enviar'}`);
+        alert(`❌ Error del servidor: ${data.message || 'No se pudo enviar'}`);
       }
     } catch (error) {
       console.error('Error enviando feedback:', error);
-      alert('❌ Error de conexión. Verifica que el servidor esté activo.');
+      alert('❌ Error de conexión. Verifica tu internet o el estado del servidor.');
     } finally {
       setLoading(false);
     }
@@ -44,7 +43,7 @@ const FeedbackModal = () => {
 
   return (
     <>
-      {/* Botón Flotante - MOVIDO A BOTTOM-24 PARA NO TAPAR LA AI */}
+      {/* Botón Flotante - Posicionado arriba de la IA */}
       <button 
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-50 flex items-center justify-center border-2 border-white"
@@ -61,7 +60,7 @@ const FeedbackModal = () => {
             <div className="bg-blue-600 p-4 text-white flex justify-between items-center font-bold">
               <div className="flex items-center gap-2">
                 <span>📩</span> 
-                <span className="tracking-tight">BUZÓN DE MEJORAS SILLAR</span>
+                <span className="tracking-tight uppercase text-sm">Buzón de Mejoras Sillar</span>
               </div>
               <button 
                 onClick={() => setIsOpen(false)} 
@@ -102,7 +101,7 @@ const FeedbackModal = () => {
                 <textarea 
                   required
                   rows={4}
-                  placeholder="Explícame tu idea o el error que encontraste..."
+                  placeholder="Explícame tu idea o el error encontrado..."
                   className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 focus:border-blue-500 outline-none transition-all text-gray-700 resize-none"
                   value={formData.descripcion}
                   onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
