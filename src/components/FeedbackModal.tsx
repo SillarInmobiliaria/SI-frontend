@@ -15,7 +15,7 @@ const FeedbackModal = () => {
       let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://si-backend-56ps.onrender.com';
       if (apiUrl.endsWith('/')) apiUrl = apiUrl.slice(0, -1);
 
-      const res = await fetch(`${apiUrl}/api/feedback`, { 
+      const res = await fetch(`${apiUrl}/feedback`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
