@@ -11,7 +11,7 @@ import {
   FaUsersCog, FaBuilding, FaUserTie, FaClipboardList, FaKey, 
   FaChartLine, FaCalendarCheck, FaRoute, FaBirthdayCake, FaMapMarkerAlt,
   FaTimes, FaUserSecret, FaHome, FaHandshake, FaArrowRight, FaShieldAlt,
-  FaExclamationTriangle
+  FaExclamationTriangle, FaTerminal
 } from 'react-icons/fa';
 
 export default function DashboardPage() {
@@ -25,23 +25,18 @@ export default function DashboardPage() {
   const [mostrarAlerta, setMostrarAlerta] = useState(false);
 
   useEffect(() => {
-    // DIAGNÓSTICO: Esto imprimirá en la consola del navegador qué está llegando
     if (user) console.log("Datos de usuario para alerta:", { creado: user.createdAt, cambiado: user.passwordChanged });
 
-    // La alerta se muestra si existe fecha de creación Y (passwordChanged es falso O es null/undefined)
     if (user?.createdAt && user?.passwordChanged !== true) {
       const calcularDias = () => {
         const fechaCreacion = new Date(user.createdAt);
         const hoy = new Date();
-        
         const diffInMs = hoy.getTime() - fechaCreacion.getTime();
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         const restantes = 30 - diffInDays;
-        
         setDiasRestantes(restantes > 0 ? restantes : 0);
         setMostrarAlerta(true);
       };
-
       calcularDias();
     }
   }, [user]);
@@ -140,21 +135,25 @@ export default function DashboardPage() {
       border: "border-pink-500",
       gradient: "from-pink-500 to-rose-500",
       adminOnly: true
+    },
+    // --- NUEVO MÓDULO PARA EL PROGRAMADOR ---
+    {
+      title: "Buzón Developer",
+      path: "#feedback",
+      icon: FaTerminal,
+      desc: "Reportar bugs o sugerencias técnicas al programador",
+      color: "text-green-400",
+      bgIcon: "bg-slate-800",
+      border: "border-slate-900",
+      gradient: "from-slate-800 to-black",
+      isDeveloper: true 
     }
   ];
-
-  // --- LÓGICA DE FECHAS ---
-  const getHora = (fechaIso: string) => {
-      if (!fechaIso) return '--:--';
-      const date = new Date(fechaIso);
-      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Lima' });
-  };
 
   const getFechaPeru = (date: Date = new Date()) => {
       return date.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
   };
 
-  // --- LÓGICA DE NOTIFICACIONES ---
   useEffect(() => {
     if (notificacionMostrada.current) return;
     notificacionMostrada.current = true;
@@ -162,22 +161,14 @@ export default function DashboardPage() {
     const verificarRecordatorios = async () => {
         try {
             const [seguimientos, clientes, visitas] = await Promise.all([
-              getSeguimientos().catch(() => []), // Evita que un error rompa todo
+              getSeguimientos().catch(() => []), 
               getClientes().catch(() => []),
               getVisitas().catch(() => [])
             ]);
             
-            const ahora = new Date(); 
-            const hoyStr = getFechaPeru(ahora); 
-            const mananaObj = new Date(ahora);
-            mananaObj.setDate(ahora.getDate() + 1);
-            const mananaStr = getFechaPeru(mananaObj); 
-
-            // Filtros rápidos
-            const segHoy = seguimientos.filter((s: any) => s.fechaProxima?.split('T')[0] === hoyStr && s.estado === 'PENDIENTE');
+            const hoyStr = getFechaPeru(); 
             const visHoy = visitas.filter((v: any) => v.fechaProgramada && getFechaPeru(new Date(v.fechaProgramada)) === hoyStr && v.estado !== 'CANCELADA');
             
-            // Toasts (Solo ejemplo visita hoy)
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -197,9 +188,7 @@ export default function DashboardPage() {
                     </div>
                 ), { duration: 10000 });
             }
-        } catch (error) {
-            console.error("Error notificaciones", error);
-        }
+        } catch (error) { console.error("Error notificaciones", error); }
     };
 
     verificarRecordatorios();
@@ -210,7 +199,6 @@ export default function DashboardPage() {
       <Navbar />
       <Toaster position="top-right" reverseOrder={false} />
       
-      {/* FONDO ANIMADO */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl animate-blob"></div>
         <div className="absolute top-[20%] -left-[10%] w-[400px] h-[400px] bg-blue-300/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
@@ -219,95 +207,77 @@ export default function DashboardPage() {
 
       <div className="container mx-auto p-6 md:p-10 relative z-10">
         
-        {/* --- BANNER DE SEGURIDAD (Se muestra si mostrarAlerta es true) --- */}
         {mostrarAlerta && diasRestantes !== null && (
-          <div className={`mb-8 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between border-2 transition-all shadow-xl ${
-            (diasRestantes || 0) <= 5 
-              ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' 
-              : 'bg-amber-50 border-amber-200 text-amber-800'
-          }`}>
+          <div className={`mb-8 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between border-2 transition-all shadow-xl ${ (diasRestantes || 0) <= 5 ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' : 'bg-amber-50 border-amber-200 text-amber-800' }`}>
             <div className="flex items-center gap-5 mb-4 md:mb-0">
               <div className={`p-4 rounded-2xl ${(diasRestantes || 0) <= 5 ? 'bg-red-100' : 'bg-amber-100'}`}>
                 <FaExclamationTriangle className="text-2xl" />
               </div>
               <div>
                 <p className="font-black text-xl uppercase tracking-tight">Acceso Temporal</p>
-                <p className="font-medium opacity-90">
-                  Hola <b>{user?.nombre}</b>, debes cambiar tu contraseña. Te quedan 
-                  <span className="bg-white px-3 py-1 rounded-lg mx-2 font-bold shadow-sm text-indigo-600">
-                    {diasRestantes} días
-                  </span> 
-                  para la suspensión de la cuenta.
-                </p>
+                <p className="font-medium opacity-90">Hola <b>{user?.nombre}</b>, debes cambiar tu contraseña. Te quedan <span className="bg-white px-3 py-1 rounded-lg mx-2 font-bold shadow-sm text-indigo-600">{diasRestantes} días</span> para la suspensión.</p>
               </div>
             </div>
-            <button 
-              onClick={() => router.push('/cambiar-password')}
-              className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-md active:scale-95 ${
-                (diasRestantes || 0) <= 5 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'
-              }`}
-            >
+            <button onClick={() => router.push('/cambiar-password')} className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-md active:scale-95 ${ (diasRestantes || 0) <= 5 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600' }`}>
               Cambiar Ahora
             </button>
           </div>
         )}
         
-        {/* --- ENCABEZADO DE BIENVENIDA --- */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 bg-white/60 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-white/50 relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
-            
             <div>
                 <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
                     <span className="text-slate-800">Hola, </span>
-                    <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        {user?.nombre?.split(' ')[0]}
-                    </span>
+                    <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">{user?.nombre?.split(' ')[0]}</span>
                     <span className="ml-3 inline-block animate-wave">👋</span>
                 </h1>
                 <div className="flex items-center gap-2 text-slate-500 font-medium mt-2">
-                    <FaShieldAlt className={`text-lg ${isAdmin ? 'text-purple-500' : 'text-blue-500'}`}/>
-                    {isAdmin ? 'Panel de Administración Global' : 'Panel de Gestión Comercial'}
+                  <FaShieldAlt className={`text-lg ${isAdmin ? 'text-purple-500' : 'text-blue-500'}`}/>
+                  {isAdmin ? 'Panel de Administración Global' : 'Panel de Gestión Comercial'}
                 </div>
             </div>
-            
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <button 
-                    onClick={() => router.push('/cambiar-password')} 
-                    className="flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl transition-all duration-300 shadow-sm border border-slate-200 font-semibold"
-                >
-                    <FaKey className="text-sm text-slate-400"/>
-                    <span>Seguridad</span>
+                <button onClick={() => router.push('/cambiar-password')} className="flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl transition-all duration-300 shadow-sm border border-slate-200 font-semibold">
+                    <FaKey className="text-sm text-slate-400"/><span className="text-sm">Seguridad</span>
                 </button>
-                <div className={`px-6 py-3 ${isAdmin ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2`}>
+                <div className={`px-6 py-3 ${isAdmin ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 text-sm`}>
                     {isAdmin ? '👑 Administrador' : '🎯 Asesor'}
                 </div>
             </div>
         </div>
 
-        {/* --- GRID DE MÓDULOS --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {modulos.map((mod, idx) => {
+            {modulos.map((mod: any, idx) => {
                 if (mod.adminOnly && !isAdmin) return null;
+                const isDev = mod.isDeveloper;
+
                 return (
-                    <Link href={mod.path} key={idx} className="group relative">
-                        <div className={`h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90`}>
+                    <div 
+                      key={idx} 
+                      className="group relative cursor-pointer"
+                      onClick={() => isDev ? document.getElementById('btn-open-feedback')?.click() : router.push(mod.path)}
+                    >
+                        <div className={`h-full rounded-2xl shadow-lg border p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden 
+                          ${isDev ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white/70 backdrop-blur-md border-white/60 hover:bg-white/90 text-slate-800'}`}>
+                            
                             <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${mod.gradient}`}></div>
+                            
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className={`p-3.5 rounded-xl ${mod.bgIcon} ${mod.color} shadow-sm group-hover:scale-110 transition-transform`}>
                                         <mod.icon className="text-2xl" />
                                     </div>
-                                    <FaArrowRight className="text-slate-300 opacity-0 group-hover:opacity-100 transition-all transform -rotate-45 group-hover:rotate-0"/>
+                                    <FaArrowRight className={`transition-all ${isDev ? 'text-green-400' : 'text-slate-300'}`}/>
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-800 mb-1">{mod.title}</h2>
-                                <p className="text-sm text-slate-500 leading-relaxed">{mod.desc}</p>
+                                <h2 className="text-xl font-bold mb-1">{mod.title}</h2>
+                                <p className="text-sm opacity-70 leading-relaxed">{mod.desc}</p>
                             </div>
                         </div>
-                    </Link>
+                    </div>
                 );
             })}
         </div>
-
       </div>
     </div>
   );
