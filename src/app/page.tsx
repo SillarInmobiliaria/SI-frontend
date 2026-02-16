@@ -24,14 +24,15 @@ export default function DashboardPage() {
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
 
   useEffect(() => {
-    // Solo calculamos si el usuario no ha cambiado su contraseña (passwordChanged es false)
+    // Calculamos si tiene clave temporal
     if (user?.createdAt && user?.passwordChanged === false) {
       const calcularDias = () => {
         const fechaCreacion = new Date(user.createdAt);
         const hoy = new Date();
         
-        // Calculamos diferencia en milisegundos y convertimos a días
+        // Diferencia absoluta en milisegundos
         const diffInMs = hoy.getTime() - fechaCreacion.getTime();
+        // Convertir a días (redondeando hacia abajo)
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         const restantes = 30 - diffInDays;
         
@@ -39,8 +40,7 @@ export default function DashboardPage() {
       };
 
       calcularDias();
-      // Opcional: Actualizar cada hora si la pestaña se queda abierta
-      const interval = setInterval(calcularDias, 3600000);
+      const interval = setInterval(calcularDias, 3600000); // Actualiza cada hora
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -160,9 +160,11 @@ export default function DashboardPage() {
 
     const verificarRecordatorios = async () => {
         try {
-            const seguimientos = await getSeguimientos();
-            const clientes = await getClientes();
-            const visitas = await getVisitas(); 
+            const [seguimientos, clientes, visitas] = await Promise.all([
+              getSeguimientos(),
+              getClientes(),
+              getVisitas()
+            ]);
             
             const ahora = new Date(); 
             const hoyStr = getFechaPeru(ahora); 
@@ -170,55 +172,20 @@ export default function DashboardPage() {
             mananaObj.setDate(ahora.getDate() + 1);
             const mananaStr = getFechaPeru(mananaObj); 
 
-            // Filtros Seguimientos
-            const todosSeguimientos = seguimientos.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-            const ultimosSeguimientosMap = new Map();
-            todosSeguimientos.forEach((s: any) => {
-                if (!ultimosSeguimientosMap.has(s.clienteId)) {
-                    ultimosSeguimientosMap.set(s.clienteId, s);
-                }
-            });
-            const ultimosSeguimientos = Array.from(ultimosSeguimientosMap.values());
-
-            const segHoy = ultimosSeguimientos.filter((s: any) => {
-                if (!s.fechaProxima || s.estado !== 'PENDIENTE') return false;
-                const fechaItemPura = s.fechaProxima.split('T')[0];
-                return fechaItemPura === hoyStr;
-            });
-
-            const segManana = ultimosSeguimientos.filter((s: any) => {
-                if (!s.fechaProxima || s.estado !== 'PENDIENTE') return false;
-                const fechaItemPura = s.fechaProxima.split('T')[0];
-                return fechaItemPura === mananaStr;
-            });
-
-            // Filtros Visitas
-            const visHoy = visitas.filter((v: any) => {
-                if (v.estado === 'CANCELADA') return false;
-                const fechaVisitaObj = new Date(v.fechaProgramada);
-                const fechaVisitaPeru = getFechaPeru(fechaVisitaObj);
-                return fechaVisitaPeru === hoyStr && fechaVisitaObj > ahora; 
-            });
-
-            const visManana = visitas.filter((v: any) => {
-                if (v.estado === 'CANCELADA') return false;
-                const fechaVisitaPeru = getFechaPeru(new Date(v.fechaProgramada));
-                return fechaVisitaPeru === mananaStr;
-            });
-
+            // Filtros simplificados
+            const segHoy = seguimientos.filter((s: any) => s.fechaProxima?.split('T')[0] === hoyStr && s.estado === 'PENDIENTE');
+            const visHoy = visitas.filter((v: any) => getFechaPeru(new Date(v.fechaProgramada)) === hoyStr && v.estado !== 'CANCELADA');
             const cumplesHoy = clientes.filter((c: any) => {
                 if(!c.fechaNacimiento) return false;
                 const fechaNac = new Date(c.fechaNacimiento + 'T12:00:00'); 
-                const hoyObj = new Date();
-                return fechaNac.getDate() === hoyObj.getDate() && fechaNac.getMonth() === hoyObj.getMonth();
+                return fechaNac.getDate() === ahora.getDate() && fechaNac.getMonth() === ahora.getMonth();
             });
 
-            if (segHoy.length > 0 || segManana.length > 0 || visHoy.length > 0 || visManana.length > 0 || cumplesHoy.length > 0) {
+            if (segHoy.length > 0 || visHoy.length > 0 || cumplesHoy.length > 0) {
                 const audio = new Audio('/alert.mp3'); 
                 audio.play().catch(() => {});
             }
 
-            // Toasts
             if (visHoy.length > 0) {
                 toast.custom((t) => (
                     <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
@@ -238,7 +205,6 @@ export default function DashboardPage() {
                     </div>
                 ), { duration: 10000 });
             }
-            // (Los demás toasts de tu código irían aquí...)
         } catch (error) {
             console.error("Error notificaciones", error);
         }
@@ -252,20 +218,20 @@ export default function DashboardPage() {
       <Navbar />
       <Toaster position="top-right" reverseOrder={false} />
       
-      {/* FONDO ANIMADO (Blobs) */}
+      {/* FONDO ANIMADO */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob"></div>
-        <div className="absolute top-[20%] -left-[10%] w-[400px] h-[400px] bg-blue-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-indigo-300/30 rounded-full blur-3xl mix-blend-multiply filter animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-[10%] -right-[10%] w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl animate-blob"></div>
+        <div className="absolute top-[20%] -left-[10%] w-[400px] h-[400px] bg-blue-300/30 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-indigo-300/30 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
       </div>
 
       <div className="container mx-auto p-6 md:p-10 relative z-10">
         
-        {/* --- BANNER DE SEGURIDAD (CONTADOR) --- */}
+        {/* --- BANNER DE SEGURIDAD (NUEVO) --- */}
         {user && user.passwordChanged === false && diasRestantes !== null && (
-          <div className={`mb-8 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between border-2 transition-all shadow-lg animate-pulse ${
+          <div className={`mb-8 p-5 rounded-3xl flex flex-col md:flex-row items-center justify-between border-2 transition-all shadow-xl ${
             diasRestantes <= 5 
-              ? 'bg-red-50 border-red-200 text-red-700' 
+              ? 'bg-red-50 border-red-200 text-red-700 animate-pulse' 
               : 'bg-amber-50 border-amber-200 text-amber-800'
           }`}>
             <div className="flex items-center gap-5 mb-4 md:mb-0">
@@ -273,13 +239,13 @@ export default function DashboardPage() {
                 <FaExclamationTriangle className="text-2xl" />
               </div>
               <div>
-                <p className="font-black text-xl uppercase tracking-tight">Seguridad Obligatoria</p>
+                <p className="font-black text-xl uppercase tracking-tight">Acceso Temporal - Sillar CRM</p>
                 <p className="font-medium opacity-90">
-                  Tu cuenta usa una clave temporal. Te quedan 
-                  <span className="bg-white px-2 py-0.5 rounded-lg mx-1 font-bold shadow-sm">
+                  Debes cambiar tu contraseña. Te quedan 
+                  <span className="bg-white px-3 py-1 rounded-lg mx-2 font-bold shadow-sm text-indigo-600">
                     {diasRestantes} días
                   </span> 
-                  para cambiarla antes de la suspensión automática.
+                  para la suspensión de cuenta.
                 </p>
               </div>
             </div>
@@ -289,7 +255,7 @@ export default function DashboardPage() {
                 diasRestantes <= 5 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-amber-500 text-white hover:bg-amber-600'
               }`}
             >
-              Cambiar Clave Ahora
+              Cambiar ahora
             </button>
           </div>
         )}
@@ -304,7 +270,7 @@ export default function DashboardPage() {
                     <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         {user?.nombre?.split(' ')[0]}
                     </span>
-                    <span className="ml-3 inline-block animate-wave origin-[70%_70%]">👋</span>
+                    <span className="ml-3 inline-block animate-wave">👋</span>
                 </h1>
                 <div className="flex items-center gap-2 text-slate-500 font-medium mt-2">
                     <FaShieldAlt className={`text-lg ${isAdmin ? 'text-purple-500' : 'text-blue-500'}`}/>
@@ -315,14 +281,12 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                 <button 
                     onClick={() => router.push('/cambiar-password')} 
-                    className="flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md border border-slate-200 font-semibold group/btn"
+                    className="flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-xl transition-all duration-300 shadow-sm border border-slate-200 font-semibold"
                 >
-                    <div className="p-1.5 bg-slate-100 rounded-lg group-hover/btn:bg-indigo-100 transition-colors">
-                        <FaKey className="text-sm"/>
-                    </div>
+                    <FaKey className="text-sm text-slate-400"/>
                     <span>Seguridad</span>
                 </button>
-                <div className={`px-6 py-3 ${isAdmin ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} text-white rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2`}>
+                <div className={`px-6 py-3 ${isAdmin ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2`}>
                     {isAdmin ? '👑 Administrador' : '🎯 Asesor'}
                 </div>
             </div>
@@ -333,21 +297,18 @@ export default function DashboardPage() {
             {modulos.map((mod, idx) => {
                 if (mod.adminOnly && !isAdmin) return null;
                 return (
-                    <Link href={mod.path} key={idx} className="group relative">
-                        <div className={`h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90`}>
+                    <Link href={mod.path} key={idx} className="group">
+                        <div className="h-full bg-white/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/60 p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl overflow-hidden hover:bg-white/90 relative">
                             <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${mod.gradient}`}></div>
-                            <div className={`absolute -right-12 -top-12 w-32 h-32 ${mod.bgIcon} rounded-full opacity-20 group-hover:scale-150 transition-transform duration-500`}></div>
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className={`p-3.5 rounded-xl ${mod.bgIcon} ${mod.color} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                    <div className={`p-3.5 rounded-xl ${mod.bgIcon} ${mod.color} shadow-sm group-hover:scale-110 transition-transform`}>
                                         <mod.icon className="text-2xl" />
                                     </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-slate-300">
-                                        <FaArrowRight className="transform -rotate-45 group-hover:rotate-0 transition-transform duration-300"/>
-                                    </div>
+                                    <FaArrowRight className="text-slate-300 opacity-0 group-hover:opacity-100 transition-all transform -rotate-45 group-hover:rotate-0"/>
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-800 mb-1 group-hover:text-indigo-900 transition-colors">{mod.title}</h2>
-                                <p className="text-sm text-slate-500 font-medium leading-relaxed">{mod.desc}</p>
+                                <h2 className="text-xl font-bold text-slate-800 mb-1">{mod.title}</h2>
+                                <p className="text-sm text-slate-500 leading-relaxed">{mod.desc}</p>
                             </div>
                         </div>
                     </Link>
