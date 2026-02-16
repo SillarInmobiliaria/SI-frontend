@@ -10,8 +10,13 @@ const FeedbackModal = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const token = localStorage.getItem('token'); // Ajusta según donde guardes tu token
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback`, {
+      // Intentamos sacar el token. Si usas 'auth-storage' o algo similar en Sillar, cámbialo aquí.
+      const token = localStorage.getItem('token'); 
+      
+      // Intentamos con la ruta completa para evitar confusiones de Next.js
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://si-backend-56ps.onrender.com';
+
+      const res = await fetch(`${apiUrl}/api/feedback`, { 
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -20,13 +25,18 @@ const FeedbackModal = () => {
         body: JSON.stringify(formData),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        alert('¡Gracias! Tu mensaje fue enviado con éxito.');
+        alert('✅ ¡Gracias! Tu mensaje ha sido enviado con éxito.');
         setFormData({ tipo: 'SUGERENCIA', asunto: '', descripcion: '' });
         setIsOpen(false);
+      } else {
+        alert(`❌ Error: ${data.message || 'No se pudo enviar'}`);
       }
     } catch (error) {
-      alert('Error al enviar el mensaje.');
+      console.error('Error enviando feedback:', error);
+      alert('❌ Error de conexión. Verifica que el servidor esté activo.');
     } finally {
       setLoading(false);
     }
@@ -34,31 +44,38 @@ const FeedbackModal = () => {
 
   return (
     <>
-      {/* Botón Flotante del Buzón */}
-    <button 
+      {/* Botón Flotante - MOVIDO A BOTTOM-24 PARA NO TAPAR LA AI */}
+      <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-50 flex items-center justify-center"
+        className="fixed bottom-24 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-50 flex items-center justify-center border-2 border-white"
         title="Buzón de Ideas y Errores"
-    >
+      >
         <span className="text-2xl">💡</span>
-    </button>
+      </button>
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-              <h3 className="font-bold flex items-center gap-2">
-                <span>📩</span> Buzón de Sillar
-              </h3>
-              <button onClick={() => setIsOpen(false)} className="hover:text-gray-200">✕</button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="bg-blue-600 p-4 text-white flex justify-between items-center font-bold">
+              <div className="flex items-center gap-2">
+                <span>📩</span> 
+                <span className="tracking-tight">BUZÓN DE MEJORAS SILLAR</span>
+              </div>
+              <button 
+                onClick={() => setIsOpen(false)} 
+                className="hover:bg-blue-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Tipo de reporte</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Categoría</label>
                 <select 
-                  className="w-full border-b-2 border-gray-100 p-2 focus:border-blue-500 outline-none transition-all"
+                  className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 focus:border-blue-500 outline-none transition-all text-gray-700 font-medium"
                   value={formData.tipo}
                   onChange={(e) => setFormData({...formData, tipo: e.target.value})}
                 >
@@ -69,24 +86,24 @@ const FeedbackModal = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Asunto</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Asunto</label>
                 <input 
                   type="text"
                   required
-                  placeholder="¿De qué se trata?"
-                  className="w-full border-b-2 border-gray-100 p-2 focus:border-blue-500 outline-none transition-all"
+                  placeholder="¿Sobre qué quieres escribir?"
+                  className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 focus:border-blue-500 outline-none transition-all text-gray-700"
                   value={formData.asunto}
                   onChange={(e) => setFormData({...formData, asunto: e.target.value})}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Descripción</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Mensaje Detallado</label>
                 <textarea 
                   required
                   rows={4}
-                  placeholder="Cuéntame más detalles..."
-                  className="w-full border-2 border-gray-100 rounded-lg p-2 mt-1 focus:border-blue-500 outline-none transition-all"
+                  placeholder="Explícame tu idea o el error que encontraste..."
+                  className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 focus:border-blue-500 outline-none transition-all text-gray-700 resize-none"
                   value={formData.descripcion}
                   onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                 />
@@ -95,10 +112,18 @@ const FeedbackModal = () => {
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                className="w-full bg-blue-600 text-white font-black py-4 rounded-xl hover:bg-blue-700 transition-all transform active:scale-95 disabled:bg-gray-300 shadow-lg shadow-blue-200"
               >
-                {loading ? 'Enviando...' : 'Enviar Mensaje'}
+                {loading ? (
+                   <span className="flex items-center justify-center gap-2">
+                     <span className="animate-spin text-xl">⏳</span> ENVIANDO...
+                   </span>
+                ) : 'ENVIAR AL EQUIPO TÉCNICO'}
               </button>
+
+              <p className="text-[9px] text-center text-gray-400 font-bold uppercase tracking-tighter">
+                🔒 Tu reporte será revisado por administración
+              </p>
             </form>
           </div>
         </div>
