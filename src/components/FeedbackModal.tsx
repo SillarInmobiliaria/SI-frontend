@@ -34,14 +34,14 @@ const FeedbackModal = () => {
 
   return (
     <>
-      {/* Botón Flotante */}
-      <button 
+      {/* Botón Flotante del Buzón */}
+    <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-50 flex items-center justify-center"
+        className="fixed bottom-24 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 z-50 flex items-center justify-center"
         title="Buzón de Ideas y Errores"
-      >
+    >
         <span className="text-2xl">💡</span>
-      </button>
+    </button>
 
       {/* Modal */}
       {isOpen && (
