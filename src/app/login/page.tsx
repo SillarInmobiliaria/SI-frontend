@@ -87,7 +87,7 @@ export default function LoginPage() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="mijael@sillar.com"
+                    placeholder="ejemplo@sillarinmobiliaria.pe"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition-all duration-200 text-slate-800 placeholder-slate-400 font-medium"
                   />
                 </div>
@@ -135,7 +135,7 @@ export default function LoginPage() {
 
             <div className="mt-6 pt-6 border-t border-gray-100">
               <p className="text-center text-xs text-slate-500 flex items-center justify-center gap-1">
-                 🔒 Sistema protegido y encriptado
+                 🔒 Sistema protegido y encriptado por Arquitectura de Seguridad Multi-Capa de Grado Militar
               </p>
             </div>
           </div>
