@@ -9,14 +9,14 @@ import { createPropiedad } from '../../../services/api';
 const API_BASE_URL = 'https://sillar-backend.onrender.com/api';
 
 import { 
-  FaHome, FaDollarSign, FaBed, FaBath, FaCar, 
-  FaImages, FaSave, FaArrowLeft, FaVideo, FaFilePdf, 
+  FaHome, FaBed, FaBath, FaCar, 
+  FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
-  FaCheckCircle, FaRegCircle, FaCheck, FaCoins, FaPercent 
+  FaCheckCircle, FaRegCircle, FaCheck, FaPercent 
 } from 'react-icons/fa';
 
-// Definición de tipos completa para evitar errores de overload
+// Interfaz completa para TypeScript
 interface FormInputs {
   tipo: string;
   modalidad: string;
@@ -56,13 +56,19 @@ interface FormInputs {
   mantenimiento: string;
   fotoPrincipal: any;
   galeria: any;
-  fichaTecnica: any;
   link1: string;
   link2: string;
   link3: string;
   link4: string;
   link5: string;
 }
+
+const distritosArequipa = [
+    "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
+    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
+    "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
+    "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
+];
 
 const CustomDocCheckbox = ({ label, name, register, watch }: any) => {
     const isChecked = watch(name);
@@ -83,13 +89,7 @@ export default function NuevaPropiedadPage() {
   const router = useRouter();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
   const { register, handleSubmit, watch, setValue } = useForm<FormInputs>({
-    defaultValues: {
-        moneda: 'USD',
-        modalidad: 'Venta',
-        tipo: 'Casa',
-        tieneMantenimiento: 'no',
-        comision: ''
-    }
+    defaultValues: { moneda: 'USD', modalidad: 'Venta', tipo: 'Casa', tieneMantenimiento: 'no' }
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,93 +98,61 @@ export default function NuevaPropiedadPage() {
   const [propietarioSelectId, setPropietarioSelectId] = useState('');
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
-  const [asesorSeleccionado, setAsesorSeleccionado] = useState<any>(null);
-  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+  const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
+  
+  const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
+  const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
+
   const [previewMain, setPreviewMain] = useState<string | null>(null);
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  // Observadores
-  const tipoInmueble = watch('tipo');
   const modalidadActual = watch('modalidad');
+  const tipoInmueble = watch('tipo');
+  const tieneMantenimientoValue = watch('tieneMantenimiento');
   const esDepartamento = tipoInmueble === 'Departamento';
-  const tieneMantenimientoValue = watch('tieneMantenimiento'); 
 
   useEffect(() => {
     fetchPropietarios();
     const fetchUsuarios = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE_URL}/usuarios`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await fetch(`${API_BASE_URL}/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             setAsesoresDB(data);
-        } catch (error) {
-            console.error("Error cargando asesores", error);
-        }
+        } catch (error) { console.error("Error asesores", error); }
     };
     fetchUsuarios();
-  }, []);
+  }, [fetchPropietarios]);
 
   const handleGenerarIA = async () => {
-    const datosContexto = {
-        tipo: watch('tipo'),
-        modalidad: watch('modalidad'),
-        ubicacion: watch('ubicacion'),
-        direccion: watch('direccion'),
-        habitaciones: watch('habitaciones'),
-        banos: watch('banos'),
-        area: watch('area'),
-        precio: watch('precio')
-    };
-
-    if (!datosContexto.tipo || !datosContexto.ubicacion) {
-        alert("⚠️ Por favor selecciona al menos el TIPO y la UBICACIÓN para que la IA sepa qué escribir.");
-        return;
-    }
-
+    const datosContexto = { tipo: watch('tipo'), modalidad: watch('modalidad'), ubicacion: watch('ubicacion'), direccion: watch('direccion'), habitaciones: watch('habitaciones'), banos: watch('banos'), area: watch('area'), precio: watch('precio') };
+    if (!datosContexto.tipo || !datosContexto.ubicacion) return alert("⚠️ Selecciona TIPO y UBICACIÓN para la IA.");
     setGenerandoIA(true);
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/ai/generar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(datosContexto)
-        });
+        const res = await fetch(`${API_BASE_URL}/ai/generar`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(datosContexto) });
         const data = await res.json();
         setValue('descripcion', data.descripcion);
-    } catch (error) {
-        alert("La IA está despertando en Render. Intenta de nuevo en unos segundos.");
-    } finally {
-        setGenerandoIA(false);
-    }
+    } catch (error) { alert("Error IA."); } finally { setGenerandoIA(false); }
   };
-
-  const agregarPropietario = () => {
-      if (!propietarioSelectId) return;
-      const existe = propietariosSeleccionados.find(p => p.id === propietarioSelectId);
-      if (existe) return alert('Este propietario ya está agregado.');
-      const propObj = propietarios.find(p => p.id === propietarioSelectId);
-      if (propObj) {
-          setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-          setPropietarioSelectId('');
-      }
-  };
-
-  const filtrarAsesores = asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase()));
 
   const seleccionarAsesor = (asesor: any) => {
-      setAsesorSeleccionado(asesor);
       setBusquedaAsesor(asesor.nombre);
-      setMostrarSugerencias(false);
+      setMostrarSugerenciasAsesor(false);
       setValue('asesor', asesor.nombre);
   };
 
+  const seleccionarDistrito = (distrito: string) => {
+      setBusquedaUbicacion(distrito);
+      setValue('ubicacion', distrito);
+      setMostrarSugerenciasUbi(false);
+  };
+
+  // FUNCIONES DE FOTOS RECUPERADAS
   const handleMainPhotoChange = (e: any) => {
-      if (e.target.files?.[0]) setPreviewMain(URL.createObjectURL(e.target.files[0]));
+      if (e.target.files && e.target.files[0]) {
+          setPreviewMain(URL.createObjectURL(e.target.files[0]));
+      }
   };
 
   const handleGalleryChange = (e: any) => {
@@ -195,51 +163,37 @@ export default function NuevaPropiedadPage() {
   };
 
   const onSubmit = async (data: FormInputs) => {
-    if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega al menos un propietario.');
+    if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
     setIsSubmitting(true);
     try {
         const formData = new FormData();
-        const excluded = [
-            'fotoPrincipal', 'galeria', 'fichaTecnica', 'tieneMantenimiento',
-            'testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral',
-            'cri', 'reciboAguaLuz'
-        ];
-
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
             if (!excluded.includes(k)) formData.append(k, String(data[k]));
         });
-
         if (data.tieneMantenimiento === 'no') formData.set('mantenimiento', '0');
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         if (data.fotoPrincipal?.[0]) formData.append('fotoPrincipal', data.fotoPrincipal[0]);
-        if (data.fichaTecnica?.[0]) formData.append('pdf', data.fichaTecnica[0]);
         if (data.galeria) Array.from(data.galeria).forEach((f: any) => formData.append('galeria', f));
-
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
         docs.forEach(doc => formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false'));
-
         await createPropiedad(formData);
-        alert('✅ Propiedad registrada con éxito');
+        alert('✅ Propiedad Publicada');
         router.push('/propiedades');
-    } catch (error) {
-        alert('❌ Error al registrar.');
-    } finally {
-        setIsSubmitting(false);
-    }
+    } catch (error) { alert('❌ Error'); } finally { setIsSubmitting(false); }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-800">
       <Navbar />
-      
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-4">
-                  <button onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
-                  <h1 className="text-xl font-bold text-indigo-900">Ficha de Captación</h1>
+                  <button type="button" onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
+                  <h1 className="text-xl font-bold text-indigo-900">Captación de Propiedad</h1>
               </div>
-              <button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2">
+              <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold uppercase text-xs">
                 {isSubmitting ? 'Guardando...' : <><FaSave/> Publicar</>}
               </button>
           </div>
@@ -248,181 +202,183 @@ export default function NuevaPropiedadPage() {
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* 1. PROPIETARIOS */}
+            {/* SECCIÓN 1 */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2">
-                    <FaUserTie className="text-indigo-600 text-lg"/> 1. Propietarios (Captación)
-                </h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. Propietarios</h3>
                 <div className="flex gap-4 items-end mb-4">
                     <div className="form-control flex-1">
-                        <label className="label font-bold text-gray-600 text-xs">Buscar Propietario</label>
-                        <select className="select select-bordered w-full bg-white text-gray-700" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
+                        <label className="label font-bold text-gray-600 text-xs">BUSCAR EN BASE DE DATOS</label>
+                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
                             <option value="">-- Seleccione --</option>
                             {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
                         </select>
                     </div>
-                    <button type="button" onClick={agregarPropietario} className="btn btn-primary bg-indigo-600 text-white border-none"><FaPlus/> Agregar</button>
+                    <button type="button" onClick={() => {
+                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
+                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 uppercase font-bold text-xs"><FaPlus/> Agregar</button>
                 </div>
-                <div className="space-y-2">
-                    {propietariosSeleccionados.map((p, index) => (
-                        <div key={index} className="flex justify-between items-center bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                            <div><p className="font-bold text-indigo-900">{p.nombre}</p><p className="text-xs text-indigo-600">DNI: {p.dni}</p></div>
-                            <button type="button" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))} className="btn btn-ghost btn-sm text-red-500"><FaTrash/></button>
+                <div className="flex flex-wrap gap-2">
+                    {propietariosSeleccionados.map(p => (
+                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold">
+                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 2. DATOS DEL INMUEBLE */}
+            {/* SECCIÓN 2: UBICACIÓN DIDÁCTICA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2">
-                    <FaHome className="text-indigo-500 text-lg"/> 2. Datos del Inmueble
-                </h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. Datos del Inmueble</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600">Tipo *</label><select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white text-gray-700"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local Comercial</option><option value="Oficina">Oficina</option></select></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600">Categoría *</label><select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-gray-700"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option><option value="Anticresis">Anticresis</option></select></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600">Ubicación *</label><select {...register('ubicacion', {required:true})} className="select select-bordered w-full bg-white text-gray-700"><option value="">-- Seleccione --</option><option value="Arequipa">Arequipa</option><option value="Yanahuara">Yanahuara</option><option value="Cayma">Cayma</option><option value="Cerro Colorado">Cerro Colorado</option></select></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">TIPO *</label>
+                        <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local Comercial</option><option value="Oficina">Oficina</option></select>
+                    </div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">CATEGORÍA *</label>
+                        <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option><option value="Anticresis">Anticresis</option></select>
+                    </div>
+                    <div className="form-control relative">
+                        <label className="label font-bold text-gray-600 text-xs uppercase">Distrito (Buscador) *</label>
+                        <div className="flex items-center">
+                            <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
+                            <input 
+                                type="text" 
+                                className="input input-bordered w-full bg-white pl-9 text-sm" 
+                                placeholder="Ej: Cayma"
+                                value={busquedaUbicacion}
+                                onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }}
+                                onFocus={() => setMostrarSugerenciasUbi(true)}
+                            />
+                        </div>
+                        {mostrarSugerenciasUbi && busquedaUbicacion.length > 0 && (
+                            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
+                                {distritosArequipa.filter(d => d.toLowerCase().includes(busquedaUbicacion.toLowerCase())).map((d, i) => (
+                                    <div key={i} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 font-bold text-slate-700 text-xs" onClick={() => seleccionarDistrito(d)}>{d}</div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div className="form-control mb-6"><label className="label font-bold text-gray-600">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white text-gray-700"/></div>
+                <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-xs uppercase">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="form-control">
-                        <label className="label font-bold text-gray-600 text-sm">Precio (Dólares/Soles) *</label>
-                        <div className="flex shadow-sm rounded-xl overflow-hidden border border-gray-300">
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">PRECIO *</label>
+                        <div className="flex shadow-sm rounded-lg overflow-hidden border border-gray-300">
                             <select {...register('moneda')} className="bg-gray-100 px-3 font-bold text-indigo-700 outline-none border-r border-gray-300 text-xs"><option value="USD">USD ($)</option><option value="PEN">PEN (S/)</option></select>
                             <input type="number" step="0.01" {...register('precio', {required:true})} className="input w-full bg-white font-bold text-lg focus:outline-none border-none text-gray-800" placeholder="0.00"/>
                         </div>
                     </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600">Área Total (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white text-gray-700" placeholder="0.00"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600">Área Construida (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white text-gray-700" placeholder="0.00"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">ÁREA TOTAL (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Área Construida (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
                 {esDepartamento && (
-                    <div className="form-control bg-blue-50 p-4 rounded-xl border border-blue-100 transition-all mt-6 shadow-sm">
-                        <label className="label font-bold text-blue-800 text-sm mb-4 flex items-center gap-2 border-b border-blue-200 pb-2"><FaCheckCircle/> ¿Tiene Mantenimiento?</label>
-                        <div className="flex gap-4 mb-4 pl-2 justify-around">
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200'}`}><input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'si' ? <FaCheckCircle className="text-blue-600 text-3xl" /> : <FaRegCircle className="text-gray-300 text-3xl" />}<span className="text-lg font-bold text-blue-900">Sí</span></label>
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400' : 'bg-white border-gray-200'}`}><input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'no' ? <FaCheckCircle className="text-gray-600 text-3xl" /> : <FaRegCircle className="text-gray-300 text-3xl" />}<span className="text-lg font-bold text-gray-800">No</span></label>
+                    <div className="form-control bg-blue-50 p-4 rounded-xl border border-blue-200 mt-6 shadow-inner">
+                        <label className="label font-bold text-blue-800 text-[10px] mb-4 flex items-center gap-2 border-b border-blue-100 pb-2 uppercase tracking-widest"><FaCheckCircle/> ¿TIENE MANTENIMIENTO?</label>
+                        <div className="flex gap-4 mb-4 justify-around">
+                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-300'}`}><input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'si' ? <FaCheckCircle className="text-blue-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">SÍ</span></label>
+                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400' : 'bg-white border-gray-300'}`}><input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'no' ? <FaCheckCircle className="text-gray-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">NO</span></label>
                         </div>
                         {tieneMantenimientoValue === 'si' && (
-                            <div className="relative animate-in slide-in-from-top-2 pl-2"><span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span><input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900 text-lg border-blue-300 focus:border-blue-500" placeholder="Monto mensual"/></div>
+                            <div className="relative animate-in slide-in-from-top-2 pl-2"><span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span><input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900" placeholder="Monto mensual"/></div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* 3. DETALLES Y DISTRIBUCIÓN */}
+            {/* SECCIÓN 3: DETALLES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500 text-lg"/> 3. Detalles y Distribución</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. Detalles</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm">
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-700 font-bold"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white text-gray-700 font-bold"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white text-gray-700 font-bold"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2 text-xs uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white font-bold"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2 text-xs uppercase"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white font-bold"/></div>
+                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2 text-xs uppercase"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white font-bold"/></div>
                 </div>
                 <div className="grid grid-cols-1 gap-8">
-                    <div className="form-control"><div className="flex justify-between items-center mb-2"><label className="label font-bold text-gray-700 text-lg flex gap-2 items-center"><FaMagic className="text-purple-500"/> Descripción Comercial</label><button type="button" onClick={handleGenerarIA} disabled={generandoIA} className={`btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all ${generandoIA ? 'bg-gray-200 text-gray-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:scale-105'}`}><FaMagic className={generandoIA ? "animate-spin" : "text-yellow-300"} />{generandoIA ? "Procesando..." : "Redactar con IA"}</button></div><textarea {...register('descripcion')} className="textarea textarea-bordered h-48 w-full text-base bg-gray-50 focus:bg-white p-4 rounded-xl text-gray-700 shadow-inner" placeholder="Descripción con gancho..."></textarea></div>
-                    <div className="form-control"><label className="label font-bold text-gray-700 text-lg flex gap-2 items-center"><FaListUl className="text-blue-500"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-48 w-full text-base bg-gray-50 focus:bg-white p-4 rounded-xl text-gray-700 shadow-inner" placeholder="Piso por piso..."></textarea></div>
+                    <div className="form-control"><div className="flex justify-between items-center mb-2"><label className="label font-bold text-gray-700 text-sm flex gap-2 items-center uppercase"><FaMagic className="text-purple-500"/> Descripción Comercial</label><button type="button" onClick={handleGenerarIA} disabled={generandoIA} className={`btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all ${generandoIA ? 'bg-gray-200 text-gray-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:scale-105'}`}><FaMagic className={generandoIA ? "animate-spin" : "text-yellow-300 text-xs"} />{generandoIA ? "Procesando..." : "Redactar con IA"}</button></div><textarea {...register('descripcion')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner" placeholder="Descripción con gancho..."></textarea></div>
+                    <div className="form-control"><label className="label font-bold text-gray-700 text-sm uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner" placeholder="Piso por piso..."></textarea></div>
                 </div>
             </div>
 
-            {/* 4. DATOS LEGALES (CORREGIDO COMISIÓN DINÁMICA Y CHECKLIST) */}
+            {/* SECCIÓN 4: DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500 text-lg"/> 4. Datos Legales</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. Datos Legales</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono text-gray-700"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Partida Registral</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600 flex items-center gap-2">
-                           <FaPercent className="text-xs text-blue-500" /> Comisión {modalidadActual === 'Alquiler' ? '(en meses)' : '(en %)'}
-                        </label>
+                        <label className="label font-bold text-gray-600 flex items-center gap-2 text-xs uppercase"><FaPercent className="text-blue-500 text-[10px]" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <div className="relative">
-                            <input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white text-gray-700 font-bold" placeholder={modalidadActual === 'Alquiler' ? "Ej: 1" : "Ej: 5"}/>
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs uppercase">
-                                {modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}
-                            </span>
+                            <input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white font-bold" placeholder={modalidadActual === 'Alquiler' ? "Ej: 1" : "Ej: 5"}/>
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">{modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Inicio Contrato</label><input type="date" {...register('inicioContrato')} className="input input-bordered w-full bg-white text-gray-700"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Vencimiento</label><input type="date" {...register('finContrato')} className="input input-bordered w-full bg-white text-gray-700"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Tipo Contrato</label><select {...register('tipoContrato')} className="select select-bordered w-full bg-white text-gray-700"><option value="Sin Exclusiva">Sin Exclusiva</option><option value="Exclusiva">Exclusiva</option></select></div>
-                </div>
-
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6 shadow-inner">
-                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2 text-xs uppercase"><FaFilePdf className="text-gray-500"/> Documentación en Regla</label>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
+                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {modalidadActual !== 'Alquiler' && (
-                            <>
-                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} />
-                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} />
-                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} />
-                            </>
+                            <><CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} /><CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} /><CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} /></>
                         )}
                         <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} />
                         <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} />
                         <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} />
                         {modalidadActual === 'Alquiler' && (
-                            <>
-                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} />
-                                <CustomDocCheckbox label="Recibos de agua y luz" name="reciboAguaLuz" register={register} watch={watch} />
-                            </>
+                            <><CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} /><CustomDocCheckbox label="Recibos de agua y luz" name="reciboAguaLuz" register={register} watch={watch} /></>
                         )}
                     </div>
                 </div>
-
-                <div className="form-control"><label className="label font-bold text-gray-600 text-sm">Observaciones Legales / Notas</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 w-full bg-white text-gray-700 shadow-inner" placeholder="Escribe aquí cualquier detalle legal importante..."></textarea></div>
+                <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 w-full bg-white text-sm" placeholder="Anotaciones importantes..."></textarea></div>
             </div>
 
-            {/* 5. LINKS */}
+            {/* SECCIÓN 5: 5 LINKS */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaLink className="text-blue-400 text-lg"/> 5. Links Externos</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaLink className="text-blue-400"/> 5. Links Externos (Máx 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
-                    <input {...register('link1')} className="input input-bordered input-sm w-full bg-white text-gray-700" placeholder="Link Principal (Drive)"/>
-                    <input {...register('link2')} className="input input-bordered input-sm w-full bg-white text-gray-700" placeholder="Enlace adicional 2"/>
-                    <input {...register('link3')} className="input input-bordered input-sm w-full bg-white text-gray-700" placeholder="Enlace adicional 3"/>
+                    {[1,2,3,4,5].map(num => (
+                        <input key={num} {...register(`link${num}` as keyof FormInputs)} className="input input-bordered input-sm w-full bg-white font-medium" placeholder={`Link ${num}: (Drive, Video Drone, Redes...)`}/>
+                    ))}
                 </div>
             </div>
 
-            {/* 6. ASIGNACIÓN */}
+            {/* SECCIÓN 6: ASIGNACIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaUserTie className="text-indigo-500 text-lg"/> 6. Asignación</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaUserTie className="text-indigo-500"/> 6. Asesor Encargado</h3>
                 <div className="form-control relative">
-                    <label className="label font-bold text-gray-600 text-sm">Asesor Encargado</label>
-                    <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-gray-700" placeholder="Nombre del asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerencias(true); }} onFocus={() => setMostrarSugerencias(true)}/></div>
-                    {mostrarSugerencias && busquedaAsesor.length > 0 && (
+                    <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerenciasAsesor(true); }} onFocus={() => setMostrarSugerenciasAsesor(true)}/></div>
+                    {mostrarSugerenciasAsesor && busquedaAsesor.length > 0 && (
                         <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1 border-t-4 border-indigo-500">
-                            {filtrarAsesores.length > 0 ? filtrarAsesores.map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800">{asesor.nombre}</span><span className="text-[10px] text-indigo-500 font-bold uppercase">{asesor.rol}</span></div>)) : <div className="p-3 text-gray-400 text-sm italic text-center">No hay coincidencias</div>}
+                            {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())).map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800 text-xs uppercase">{asesor.nombre}</span></div>))}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* 7. MULTIMEDIA */}
+            {/* SECCIÓN 7: MULTIMEDIA Y MAPA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaImages className="text-yellow-500 text-lg"/> 7. Multimedia</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaImages className="text-yellow-500"/> 7. Multimedia y Mapa</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600">Foto Portada</label>
-                        <input type="file" accept="image/*" {...register('fotoPrincipal')} onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white" />
-                        {previewMain && <img src={previewMain} alt="Portada" className="mt-4 h-48 w-full object-cover rounded-2xl border shadow-lg"/>}
+                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest">Foto de Portada</label>
+                        <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
+                        {previewMain && <img src={previewMain} alt="Portada" className="mt-4 h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>}
                     </div>
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600">Álbum Galería</label>
-                        <input type="file" multiple accept="image/*" {...register('galeria')} onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white" />
-                        {previewGallery.length > 0 && (<div className="mt-4 flex gap-2 overflow-x-auto pb-4">{previewGallery.map((src, i) => <img key={i} src={src} className="h-20 w-20 object-cover rounded-xl border flex-shrink-0"/>)}</div>)}
+                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest">Galería de Fotos</label>
+                        <input type="file" multiple accept="image/*" onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white shadow-sm h-10" />
+                        {previewGallery.length > 0 && (<div className="mt-4 flex gap-2 overflow-x-auto pb-4 custom-scrollbar">{previewGallery.map((src, i) => <img key={i} src={src} className="h-16 w-16 object-cover rounded-xl border border-white shadow flex-shrink-0"/>)}</div>)}
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase tracking-wider"><FaVideo className="text-red-500"/> YouTube URL</label><input type="text" {...register('videoUrl')} className="input input-bordered w-full bg-white text-gray-700"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase tracking-wider"><FaFilePdf className="text-red-700"/> PDF Externo</label><input type="file" accept="application/pdf" {...register('fichaTecnica')} className="file-input file-input-bordered file-input-sm w-full bg-white"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaVideo className="text-red-500 mr-2"/> Enlace YouTube</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://youtube.com/..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaMapMarkerAlt className="text-green-600 mr-2"/> Mapa (Iframe URL)</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="Enlace src del iframe..."/></div>
                 </div>
             </div>
 
             <div className="flex justify-end pt-10">
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all duration-300">
-                    {isSubmitting ? <span className="flex items-center gap-3"><span className="loading loading-spinner"></span> Guardando...</span> : <span className="flex items-center gap-3"><FaSave/> Publicar Captación</span>}
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all">
+                    {isSubmitting ? 'Publicando...' : 'Publicar Captación'}
                 </button>
             </div>
         </form>
