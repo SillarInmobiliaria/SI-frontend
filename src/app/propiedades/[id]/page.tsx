@@ -63,15 +63,24 @@ export default function PropiedadDetallePage() {
       setEstadosDocs({ ...estadosDocs, [key]: nuevo });
   };
 
+  // CAMBIO REALIZADO AQUÍ: Aseguramos que el FormData sea el correcto para el Back
   const handleSubirPdfAuditoria = async (key: string, file: File) => {
+    if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentKey', key);
+    
     try {
-        const { data } = await api.post(`/propiedades/${id}/upload-pdf`, formData);
+        // Usamos la URL completa para evitar errores de prefijo
+        const { data } = await api.post(`${BACKEND_URL}/api/propiedades/${id}/upload-pdf`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         setDocumentosUrls({ ...documentosUrls, [key]: data.url });
         alert('✅ Archivo PDF subido con éxito.');
-    } catch (e) { alert('❌ Error al subir PDF.'); }
+    } catch (e) { 
+        console.error(e);
+        alert('❌ Error al subir PDF. Verifica la conexión con el servidor.'); 
+    }
   };
 
   const guardarCambios = async () => {
@@ -225,7 +234,10 @@ export default function PropiedadDetallePage() {
                                                                 <a href={`${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary gap-1"><FaEye/> Ver</a>
                                                             ) : (
                                                                 <label className="btn btn-xs btn-ghost gap-1 cursor-pointer text-indigo-600 font-bold uppercase">
-                                                                    <FaFileUpload/> <input type="file" accept=".pdf" className="hidden" onChange={(e) => handleSubirPdfAuditoria(doc.key, e.target.files![0])} /> Adjuntar
+                                                                    <FaFileUpload/> <input type="file" accept=".pdf" className="hidden" onChange={(e) => {
+                                                                      const f = e.target.files?.[0];
+                                                                      if(f) handleSubirPdfAuditoria(doc.key, f);
+                                                                    }} /> Adjuntar
                                                                 </label>
                                                             )}
                                                         </div>
