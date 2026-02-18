@@ -12,7 +12,6 @@ import {
   FaAlignLeft
 } from 'react-icons/fa';
 
-// URL DE TU BACKEND
 const BACKEND_URL = 'https://sillar-backend.onrender.com/';
 
 export default function PropiedadDetallePage() {
@@ -37,12 +36,18 @@ export default function PropiedadDetallePage() {
             setPropiedad(data);
             setObservaciones(data.observaciones || {});
             setEstadosDocs({
-                testimonio: data.testimonio, hr: data.hr, pu: data.pu,
-                impuestoPredial: data.impuestoPredial, arbitrios: data.arbitrios,
+                testimonio: data.testimonio,
+                hr: data.hr,
+                pu: data.pu,
+                impuestoPredial: data.impuestoPredial,
+                arbitrios: data.arbitrios,
                 copiaLiteral: data.copiaLiteral
             });
             setLoading(false);
-        } catch (e) { console.error(e); setLoading(false); }
+        } catch (e) { 
+            console.error(e);
+            setLoading(false); 
+        }
     };
     cargar();
   }, [id]);
@@ -60,78 +65,95 @@ export default function PropiedadDetallePage() {
     setGuardandoObs(true);
     try {
         await api.put(`/propiedades/${id}`, { observaciones, ...estadosDocs });
-        alert('✅ Datos actualizados.');
-    } catch (e) { alert('❌ Error'); }
+        alert('✅ Auditoría actualizada.');
+    } catch (e) { alert('❌ Error al guardar.'); }
     finally { setGuardandoObs(false); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
-  if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
+  if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold">No se cargaron los datos.</div>;
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
   const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+
+  const documentosList = [
+      { key: 'testimonio', label: 'Testimonio' },
+      { key: 'hr', label: 'Hoja Resumen (HR)' },
+      { key: 'pu', label: 'Predio Urbano (PU)' },
+      { key: 'impuestoPredial', label: 'Impuesto Predial' },
+      { key: 'arbitrios', label: 'Arbitrios' },
+      { key: 'copiaLiteral', label: 'Copia Literal' },
+  ];
+
+  const getIcono = (estado: any) => {
+      if (estado === true) return <FaCheckCircle className="text-emerald-500 text-2xl"/>;
+      if (estado === null) return <FaExclamationCircle className="text-amber-500 text-2xl"/>;
+      return <FaTimesCircle className="text-red-500 text-2xl"/>;
+  };
+
   const linksExternos = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
       
-      {/* 1. HERO - MÁS AIRE */}
+      {/* MEJORA SUPERIOR: Se añadió padding superior e inferior para que no esté apretado */}
       <div className="relative bg-gray-900 h-[45vh] lg:h-[55vh] w-full overflow-hidden">
           {images.length > 0 ? (
-              <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105" alt="Hero background"/>
+              <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105"/>
           ) : <div className="w-full h-full bg-gray-800"></div>}
           
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent flex items-end pb-32 lg:pb-40 px-10">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-10 lg:p-20">
               <div className="container mx-auto max-w-7xl">
-                  <div className="flex gap-4 mb-8">
-                      <span className={`badge badge-lg border-none text-white font-black py-6 px-10 uppercase text-xs tracking-widest shadow-2xl ${propiedad.modalidad === 'Venta' ? 'bg-orange-600' : 'bg-blue-600'}`}>{propiedad.modalidad}</span>
-                      <span className="badge badge-lg bg-white/10 backdrop-blur-2xl border border-white/20 text-white py-6 px-10 font-black uppercase text-xs tracking-widest">{propiedad.tipo}</span>
+                  {/* Espaciado mejorado entre etiquetas y título */}
+                  <div className="flex gap-3 mb-6">
+                      <span className={`badge badge-lg border-none text-white font-bold py-5 px-8 ${propiedad.modalidad === 'Venta' ? 'bg-orange-600' : 'bg-blue-600'}`}>{propiedad.modalidad}</span>
+                      <span className="badge badge-lg bg-white/20 backdrop-blur-md border-none text-white py-5 px-8 font-bold">{propiedad.tipo}</span>
                   </div>
-                  <h1 className="text-4xl lg:text-7xl font-black text-white uppercase tracking-tighter mb-6 leading-none drop-shadow-2xl">{propiedad.ubicacion}</h1>
-                  <p className="text-white/80 text-2xl flex items-center gap-4 font-bold uppercase tracking-tighter"><FaMapMarkerAlt className="text-orange-500"/> {propiedad.direccion}</p>
+                  <h1 className="text-4xl lg:text-6xl font-black text-white uppercase tracking-tight mb-4 leading-tight">{propiedad.ubicacion}</h1>
+                  <p className="text-white/80 text-2xl flex items-center gap-3 font-medium"><FaMapMarkerAlt className="text-orange-400"/> {propiedad.direccion}</p>
               </div>
           </div>
       </div>
 
-      <main className="container mx-auto p-10 max-w-7xl -mt-28 relative z-10 pb-32">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <main className="container mx-auto p-6 max-w-7xl -mt-20 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* IZQUIERDA - CONTENIDO */}
-            <div className="lg:col-span-2 space-y-12">
-                <div className="bg-white/90 backdrop-blur-xl rounded-[40px] shadow-2xl p-4 flex gap-4 border border-white/50">
-                    <button onClick={() => setActiveTab('informacion')} className={`flex-1 py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all ${activeTab==='informacion' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}>Información</button>
-                    <button onClick={() => setActiveTab('ubicacion')} className={`flex-1 py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all ${activeTab==='ubicacion' ? 'bg-orange-500 text-white shadow-xl shadow-orange-100' : 'text-gray-400 hover:bg-gray-50'}`}>Ubicación</button>
-                    {isAdmin && <button onClick={() => setActiveTab('legal')} className={`flex-1 py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all ${activeTab==='legal' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-100' : 'text-gray-400 hover:bg-gray-50'}`}>Legal</button>}
+            <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white rounded-2xl shadow-lg p-2 flex gap-2 overflow-x-auto no-scrollbar">
+                    <button onClick={() => setActiveTab('informacion')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='informacion' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaInfoCircle/> Información</button>
+                    <button onClick={() => setActiveTab('ubicacion')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='ubicacion' ? 'bg-orange-50 text-orange-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaMap/> Ubicación</button>
+                    {propiedad.videoUrl && <button onClick={() => setActiveTab('video')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='video' ? 'bg-red-50 text-red-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaPlayCircle/> Video</button>}
+                    {isAdmin && <button onClick={() => setActiveTab('legal')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='legal' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaFileContract/> Legal</button>}
                 </div>
 
-                <div className="bg-white rounded-[50px] shadow-2xl border border-slate-100 p-10 lg:p-16">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 lg:p-8 min-h-[400px]">
                     {activeTab === 'informacion' && (
-                        <div className="space-y-16 animate-fade-in">
+                        <div className="space-y-8 animate-fade-in">
                             {images.length > 0 ? (
-                                <div className="space-y-10">
-                                    <div className="h-[500px] rounded-[40px] overflow-hidden bg-slate-50 border border-slate-100 shadow-inner">
-                                        <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-contain p-6" alt="Propiedad"/>
+                                <div className="space-y-4">
+                                    <div className="h-[400px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200">
+                                        <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-contain"/>
                                     </div>
-                                    <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
+                                    <div className="flex gap-3 overflow-x-auto pb-2">
                                         {images.map((img:string, idx:number) => (
-                                            <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} className={`w-28 h-28 object-cover rounded-3xl cursor-pointer border-4 transition-all duration-300 ${currentImageIndex===idx ? 'border-indigo-600 scale-110 shadow-2xl' : 'border-transparent opacity-50 hover:opacity-100'}`}/>
+                                            <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all ${currentImageIndex===idx ? 'border-indigo-600 scale-95' : 'border-transparent hover:border-gray-300'}`}/>
                                         ))}
                                     </div>
                                 </div>
-                            ) : <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest">Sin imágenes</div>}
+                            ) : <div className="text-center py-10 text-gray-400">Sin imágenes</div>}
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-10 py-12 border-y border-slate-100">
-                                <div className="text-center"><FaRulerCombined className="mx-auto text-4xl text-emerald-500 mb-4"/><p className="font-black text-2xl text-slate-800">{propiedad.area} m²</p><p className="text-[10px] font-black text-slate-400 uppercase">Área Total</p></div>
-                                <div className="text-center"><FaBed className="mx-auto text-4xl text-indigo-500 mb-4"/><p className="font-black text-2xl text-slate-800">{propiedad.habitaciones}</p><p className="text-[10px] font-black text-slate-400 uppercase">Dormitorios</p></div>
-                                <div className="text-center"><FaBath className="mx-auto text-4xl text-sky-500 mb-4"/><p className="font-black text-2xl text-slate-800">{propiedad.banos}</p><p className="text-[10px] font-black text-slate-400 uppercase">Baños</p></div>
-                                <div className="text-center"><FaCar className="mx-auto text-4xl text-orange-500 mb-4"/><p className="font-black text-2xl text-slate-800">{propiedad.cocheras}</p><p className="text-[10px] font-black text-slate-400 uppercase">Cocheras</p></div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100">
+                                <div className="text-center"><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.area} m²</p><p className="text-xs font-bold text-gray-400 uppercase">Área Total</p></div>
+                                <div className="text-center"><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.habitaciones}</p><p className="text-xs font-bold text-gray-400 uppercase">Habitaciones</p></div>
+                                <div className="text-center"><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.banos}</p><p className="text-xs font-bold text-gray-400 uppercase">Baños</p></div>
+                                <div className="text-center"><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.cocheras}</p><p className="text-xs font-bold text-gray-400 uppercase">Cocheras</p></div>
                             </div>
 
                             {propiedad.descripcion && (
-                                <div className="space-y-6">
-                                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Descripción Comercial</h3>
-                                    <p className="text-slate-600 leading-relaxed whitespace-pre-line text-xl font-medium">{propiedad.descripcion}</p>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><FaTag className="text-indigo-500"/> Descripción Comercial</h3>
+                                    <p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p>
                                 </div>
                             )}
                         </div>
@@ -139,39 +161,54 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* DERECHA - SIDEBAR */}
-            <div className="lg:col-span-1 space-y-10">
-                <div className="bg-white p-12 rounded-[50px] shadow-2xl shadow-indigo-100 border border-slate-100 sticky top-32">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Precio Inmueble</p>
-                    <div className="flex items-baseline gap-2 text-indigo-950 mb-12">
-                        <span className="text-6xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
+            <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Precio de {propiedad.modalidad}</p>
+                    <div className="flex items-baseline gap-1 text-indigo-900 mb-6">
+                        <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
 
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[40px] border border-blue-100 mb-12">
-                        <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 bg-blue-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-blue-200"><FaUserTie size={24} /></div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] text-blue-500 font-black uppercase tracking-widest">Titular Inmueble</span>
-                                <span className="text-xl font-black text-slate-900 truncate max-w-[180px]">
-                                    {propiedad.Propietarios?.[0]?.nombre || "No asignado"}
-                                </span>
-                            </div>
+                    {/* MOSTRAR PROPIETARIO REAL - Corregido para usar la relación de la BD */}
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-6">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                            <FaUserTie size={18} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tight">Propietario Titular</span>
+                            <span className="text-sm font-black text-slate-800">
+                                {propiedad.Propietarios && propiedad.Propietarios.length > 0 
+                                    ? propiedad.Propietarios[0].nombre 
+                                    : "No asignado"}
+                            </span>
                         </div>
                     </div>
+                    
+                    <div className="divider my-6"></div>
 
-                    <div className="flex items-center gap-6 mb-12">
-                        <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-[25px] w-20 h-20 flex items-center justify-center text-3xl font-black shadow-2xl shadow-indigo-100">{propiedad.asesor?.charAt(0).toUpperCase() || 'S'}</div></div>
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold shadow-md">{propiedad.asesor ? propiedad.asesor.charAt(0).toUpperCase() : 'S'}</div></div>
                         <div>
-                            <p className="font-black text-slate-900 text-2xl leading-tight">{propiedad.asesor || 'Asesor Sillar'}</p>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Agente Encargado</p>
+                            <p className="font-bold text-gray-800 text-lg leading-tight">{propiedad.asesor || 'Sillar Inmobiliaria'}</p>
+                            <p className="text-sm text-gray-500">Agente Certificado</p>
                         </div>
                     </div>
-
-                    {propiedad.Propietarios?.[0]?.celular1 && (
-                        <a href={`https://wa.me/51${propiedad.Propietarios[0].celular1}`} target="_blank" className="btn bg-emerald-500 hover:bg-emerald-600 text-white border-none w-full font-black gap-4 shadow-2xl shadow-emerald-100 h-20 rounded-[30px] text-xl flex items-center justify-center transition-all hover:-translate-y-2">
-                            <FaWhatsapp size={28}/> CONTACTAR DUEÑO
+                    
+                    {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
+                        <a 
+                            href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion}.`}
+                            target="_blank"
+                            className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-bold gap-2 shadow-xl shadow-green-100 h-14 text-lg flex items-center justify-center"
+                        >
+                            <FaWhatsapp className="text-2xl"/> Contactar Dueño
                         </a>
                     )}
+
+                    {/* EL BOTÓN DE COMPARTIR HA SIDO ELIMINADO SEGÚN TU SOLICITUD */}
+                    
+                    <div className="mt-6 text-center">
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
+                        <p className="text-xs text-gray-300 mt-1">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
+                    </div>
                 </div>
             </div>
         </div>
