@@ -13,7 +13,7 @@ import {
   FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
-  FaCheckCircle, FaRegCircle, FaCheck, FaPercent, FaTimes 
+  FaCheckCircle, FaRegCircle, FaCheck, FaPercent, FaTimes, FaFilePdf, FaFileUpload 
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -39,18 +39,29 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-const CustomDocCheckbox = ({ label, name, register, watch }: any) => {
+const CustomDocCheckbox = ({ label, name, register, watch, onFileChange }: any) => {
     const isChecked = watch(name);
     return (
-      <label className={`label cursor-pointer justify-start gap-4 p-4 rounded-xl transition-all border shadow-sm group h-full
-          ${isChecked ? 'bg-blue-50 border-blue-200 shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-        <input type="checkbox" {...register(name)} className="hidden" />
-        <div className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all
-            ${isChecked ? 'border-blue-500 bg-white' : 'border-gray-300 bg-white group-hover:border-blue-300'}`}>
-           <FaCheck className={`text-blue-600 text-sm transition-all transform ${isChecked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
-        </div>
-        <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
-      </label>
+      <div className="flex flex-col gap-2 h-full">
+        <label className={`label cursor-pointer justify-start gap-4 p-4 rounded-xl transition-all border shadow-sm group w-full
+            ${isChecked ? 'bg-blue-50 border-blue-200 shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
+          <input type="checkbox" {...register(name)} className="hidden" />
+          <div className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all
+              ${isChecked ? 'border-blue-500 bg-white' : 'border-gray-300 bg-white group-hover:border-blue-300'}`}>
+             <FaCheck className={`text-blue-600 text-sm transition-all transform ${isChecked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
+          </div>
+          <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
+        </label>
+        {isChecked && (
+            <div className="animate-in fade-in slide-in-from-top-1">
+                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                    <FaFileUpload className="text-blue-500 text-xs"/>
+                    <span className="text-[10px] font-bold text-blue-600 uppercase">Subir PDF</span>
+                    <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
+                </label>
+            </div>
+        )}
+      </div>
     );
 };
 
@@ -70,6 +81,7 @@ export default function NuevaPropiedadPage() {
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
+  const [pdfFiles, setPdfFiles] = useState<Record<string, File>>({});
 
   const [fotoPrincipalFile, setFotoPrincipalFile] = useState<File | null>(null);
   const [previewMain, setPreviewMain] = useState<string | null>(null);
@@ -123,6 +135,10 @@ export default function NuevaPropiedadPage() {
       }
   };
 
+  const handlePdfFile = (name: string, file?: File) => {
+    if (file) setPdfFiles(prev => ({ ...prev, [name]: file }));
+  };
+
   const removerFotoGaleria = (idx: number) => {
       setGaleriaFiles(galeriaFiles.filter((_, i) => i !== idx));
       setPreviewGallery(previewGallery.filter((_, i) => i !== idx));
@@ -145,8 +161,13 @@ export default function NuevaPropiedadPage() {
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
+        
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
-        docs.forEach(doc => formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false'));
+        docs.forEach(doc => {
+            formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
+            if (pdfFiles[doc]) formData.append(`file_${doc}`, pdfFiles[doc]);
+        });
+
         await createPropiedad(formData);
         alert('✅ Propiedad Publicada');
         router.push('/propiedades');
@@ -170,8 +191,6 @@ export default function NuevaPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            
-            {/* 1. PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
                 <div className="flex gap-4 items-end mb-4">
@@ -195,7 +214,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 2. DATOS INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -248,7 +266,6 @@ export default function NuevaPropiedadPage() {
                 )}
             </div>
 
-            {/* 3. DISTRIBUCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
@@ -264,7 +281,6 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-gray-50 focus:bg-white text-sm" placeholder="Detalle piso por piso..."></textarea></div>
             </div>
 
-            {/* 4. DATOS LEGALES (RESTAURADO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -300,16 +316,15 @@ export default function NuevaPropiedadPage() {
 
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
                     <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 font-bold">
-                        {modalidadActual !== 'Alquiler' && (<><CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} /><CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} /><CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} /></>)}
-                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} /><CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} /><CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} />
-                        {modalidadActual === 'Alquiler' && (<><CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} /><CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} /></>)}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
+                        {modalidadActual !== 'Alquiler' && (<><CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} /></>)}
+                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} />
+                        {modalidadActual === 'Alquiler' && (<><CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} /></>)}
                     </div>
                 </div>
                 <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 bg-white text-sm" placeholder="Detalles legales..."></textarea></div>
             </div>
 
-            {/* 5. LINKS EXTERNOS (RESTAURADO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
@@ -319,7 +334,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 6. ASESOR ENCARGADO (RESTAURADO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
                 <div className="form-control relative">
@@ -332,7 +346,6 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* 7. MULTIMEDIA Y MAPA (RESTAURADO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
