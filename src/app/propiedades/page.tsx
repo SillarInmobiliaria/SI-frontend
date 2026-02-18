@@ -178,7 +178,7 @@ export default function PropiedadesPage() {
                                 <img 
                                     src={`${BACKEND_URL}/${prop.fotoPrincipal}`} 
                                     alt={prop.ubicacion} 
-                                    crossOrigin="anonymous"
+                                    crossOrigin="anonymous" // Corrección para CORS
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 />
                             ) : (
