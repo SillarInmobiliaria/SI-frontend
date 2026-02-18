@@ -39,8 +39,10 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-const CustomDocCheckbox = ({ label, name, register, watch, onFileChange }: any) => {
+const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles }: any) => {
     const isChecked = watch(name);
+    const selectedFile = pdfFiles[name]; // Accedemos al archivo guardado en el estado
+    
     return (
       <div className="flex flex-col gap-2 h-full">
         <label className={`label cursor-pointer justify-start gap-4 p-4 rounded-xl transition-all border shadow-sm group w-full
@@ -54,9 +56,11 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange }: any) 
         </label>
         {isChecked && (
             <div className="animate-in fade-in slide-in-from-top-1">
-                <label className="flex items-center gap-2 px-4 py-2 bg-white border border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
-                    <FaFileUpload className="text-blue-500 text-xs"/>
-                    <span className="text-[10px] font-bold text-blue-600 uppercase">Subir PDF</span>
+                <label className={`flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
+                    {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
+                    <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
+                        {selectedFile ? selectedFile.name : 'Subir PDF'}
+                    </span>
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
                 </label>
             </div>
@@ -251,19 +255,6 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA TOTAL (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
-
-                {esDepartamento && (
-                    <div className="form-control bg-blue-50 p-4 rounded-xl border border-blue-200 mt-6 shadow-inner">
-                        <label className="label font-bold text-blue-800 text-[10px] mb-4 flex items-center gap-2 border-b border-blue-100 pb-2 uppercase tracking-widest"><FaCheckCircle/> ¿TIENE MANTENIMIENTO?</label>
-                        <div className="flex gap-4 mb-4 justify-around">
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-300'}`}><input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'si' ? <FaCheckCircle className="text-blue-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">SÍ</span></label>
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400' : 'bg-white border-gray-300'}`}><input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'no' ? <FaCheckCircle className="text-gray-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">NO</span></label>
-                        </div>
-                        {tieneMantenimientoValue === 'si' && (
-                            <div className="relative animate-in slide-in-from-top-2 pl-2"><span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span><input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900 border-blue-300" placeholder="Monto mensual"/></div>
-                        )}
-                    </div>
-                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
@@ -294,32 +285,25 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
-                {esDepartamento && (
-                    <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Adicional</label><input {...register('partidaAdicional')} className="input input-bordered input-sm bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera</label><input {...register('partidaCochera')} className="input input-bordered input-sm bg-white"/></div>
-                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Depósito</label><input {...register('partidaDeposito')} className="input input-bordered input-sm bg-white"/></div>
-                    </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Fecha Captación</label><input type="date" {...register('fechaCaptacion')} className="input input-bordered w-full text-sm bg-white"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Tipo Contrato</label>
-                        <select {...register('tipoContrato')} className="select select-bordered w-full text-sm bg-white font-bold"><option value="Sin Exclusiva">Sin Exclusiva</option><option value="Exclusiva">Exclusiva</option></select>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 shadow-sm">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Inicio Contrato</label><input type="date" {...register('inicioContrato')} className="input input-bordered w-full text-sm bg-white"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Vencimiento</label><input type="date" {...register('finContrato')} className="input input-bordered w-full text-sm bg-white"/></div>
-                </div>
-
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
                     <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
-                        {modalidadActual !== 'Alquiler' && (<><CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} /></>)}
-                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} />
-                        {modalidadActual === 'Alquiler' && (<><CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} /><CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} /></>)}
+                        {modalidadActual !== 'Alquiler' && (
+                            <>
+                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                            </>
+                        )}
+                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                        <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                        {modalidadActual === 'Alquiler' && (
+                            <>
+                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                                <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                            </>
+                        )}
                     </div>
                 </div>
                 <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 bg-white text-sm" placeholder="Detalles legales..."></textarea></div>
