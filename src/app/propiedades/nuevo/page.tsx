@@ -52,7 +52,7 @@ const CustomDocCheckbox = ({ label, name, register, watch }: any) => {
         <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
       </label>
     );
-  };
+};
 
 export default function NuevaPropiedadPage() {
   const router = useRouter();
@@ -150,7 +150,7 @@ export default function NuevaPropiedadPage() {
         await createPropiedad(formData);
         alert('✅ Propiedad Publicada');
         router.push('/propiedades');
-    } catch (e) { alert('❌ Error al guardar'); } finally { setIsSubmitting(false); }
+    } catch (e) { alert('❌ Error técnico al enviar.'); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -160,26 +160,20 @@ export default function NuevaPropiedadPage() {
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-4">
                   <button type="button" onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
-                  <h1 className="text-xl font-bold text-indigo-900 uppercase">Ficha_Captación_v3</h1>
+                  <h1 className="text-xl font-bold text-indigo-900 uppercase">FICHA_CAPTACIÓN_V3</h1>
               </div>
-              {/* CAMBIO VITAL: Conectamos el botón al handleSubmit del formulario */}
-              <button 
-                type="button" 
-                onClick={handleSubmit(onSubmit)} 
-                disabled={isSubmitting} 
-                className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold text-xs uppercase tracking-wider"
-              >
-                {isSubmitting ? 'Procesando...' : <><FaSave/> Publicar</>}
+              <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold text-xs uppercase">
+                {isSubmitting ? 'Guardando...' : <><FaSave/> PUBLICAR</>}
               </button>
           </div>
       </div>
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
-        {/* CAMBIO VITAL: El onSubmit ahora está en la etiqueta form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
+            {/* 1. PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. Propietarios</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
                 <div className="flex gap-4 items-end mb-4">
                     <div className="form-control flex-1">
                         <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
@@ -190,19 +184,20 @@ export default function NuevaPropiedadPage() {
                     <button type="button" onClick={() => {
                         const propObj = propietarios.find(p => p.id === propietarioSelectId);
                         if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> Agregar</button>
+                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
-                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-100 border-indigo-200 text-indigo-800 font-bold">
+                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
                             {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
                         </div>
                     ))}
                 </div>
             </div>
 
+            {/* 2. DATOS INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. Datos Inmueble</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
                         <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local Comercial</option><option value="Oficina">Oficina</option></select>
@@ -253,8 +248,9 @@ export default function NuevaPropiedadPage() {
                 )}
             </div>
 
+            {/* 3. DISTRIBUCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. Distribución</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
                     <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
                     <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
@@ -268,8 +264,9 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-gray-50 focus:bg-white text-sm" placeholder="Detalle piso por piso..."></textarea></div>
             </div>
 
+            {/* 4. DATOS LEGALES (RESTAURADO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. Datos Legales</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
                     <div className="form-control">
@@ -281,11 +278,24 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
+                {esDepartamento && (
+                    <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Adicional</label><input {...register('partidaAdicional')} className="input input-bordered input-sm bg-white"/></div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera</label><input {...register('partidaCochera')} className="input input-bordered input-sm bg-white"/></div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Depósito</label><input {...register('partidaDeposito')} className="input input-bordered input-sm bg-white"/></div>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Fecha Captación</label><input type="date" {...register('fechaCaptacion')} className="input input-bordered w-full text-sm bg-white"/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Tipo Contrato</label>
                         <select {...register('tipoContrato')} className="select select-bordered w-full text-sm bg-white font-bold"><option value="Sin Exclusiva">Sin Exclusiva</option><option value="Exclusiva">Exclusiva</option></select>
                     </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 shadow-sm">
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Inicio Contrato</label><input type="date" {...register('inicioContrato')} className="input input-bordered w-full text-sm bg-white"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Vencimiento</label><input type="date" {...register('finContrato')} className="input input-bordered w-full text-sm bg-white"/></div>
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
@@ -299,14 +309,65 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 bg-white text-sm" placeholder="Detalles legales..."></textarea></div>
             </div>
 
-            <div className="flex justify-end pt-10 pb-20">
-                {/* Botón inferior convertido a type submit para mayor seguridad */}
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all active:scale-95"
-                >
-                    {isSubmitting ? <span className="flex items-center gap-3"><span className="loading loading-spinner"></span> Guardando...</span> : <span className="flex items-center gap-3"><FaSave/> Publicar</span>}
+            {/* 5. LINKS EXTERNOS (RESTAURADO) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
+                <div className="grid grid-cols-1 gap-3">
+                    {[1,2,3,4,5].map(num => (
+                        <input key={num} {...register(`link${num}` as keyof FormInputs)} className="input input-bordered input-sm w-full bg-white text-sm font-medium" placeholder={`Link ${num}: Drive, Drone, etc.`}/>
+                    ))}
+                </div>
+            </div>
+
+            {/* 6. ASESOR ENCARGADO (RESTAURADO) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
+                <div className="form-control relative">
+                    <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerenciasAsesor(true); }} onFocus={() => setMostrarSugerenciasAsesor(true)}/></div>
+                    {mostrarSugerenciasAsesor && busquedaAsesor.length > 0 && (
+                        <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1 border-t-4 border-indigo-500">
+                            {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())).map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800 text-xs uppercase">{asesor.nombre}</span></div>))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 7. MULTIMEDIA Y MAPA (RESTAURADO) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Foto Portada</label>
+                        <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
+                        {previewMain && (
+                            <div className="relative mt-4">
+                                <img src={previewMain} alt="Portada" className="h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>
+                                <button type="button" onClick={() => {setFotoPrincipalFile(null); setPreviewMain(null);}} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all"><FaTimes/></button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Galería (Máx 30)</label>
+                        <input type="file" multiple accept="image/*" onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white shadow-sm h-10" />
+                        <div className="mt-4 flex flex-wrap gap-3">
+                            {previewGallery.map((src, i) => (
+                                <div key={i} className="relative group">
+                                    <img src={src} className="h-20 w-20 object-cover rounded-xl border border-white shadow flex-shrink-0"/>
+                                    <button type="button" onClick={() => removerFotoGaleria(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><FaTimes className="text-[10px]"/></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaVideo className="text-red-500 mr-2"/> Enlace YouTube</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaMapMarkerAlt className="text-green-600 mr-2"/> Google Maps URL</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="src iframe..."/></div>
+                </div>
+            </div>
+
+            <div className="flex justify-end pt-10">
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all active:scale-95">
+                    {isSubmitting ? <span className="flex items-center gap-3"><span className="loading loading-spinner"></span> GUARDANDO...</span> : <span className="flex items-center gap-3"><FaSave/> PUBLICAR</span>}
                 </button>
             </div>
         </form>
