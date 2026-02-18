@@ -74,7 +74,7 @@ export default function PropiedadDetallePage() {
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
-  const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+  const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}/${path}`;
 
   const documentosList = [
       { key: 'testimonio', label: 'Testimonio' },
@@ -97,10 +97,15 @@ export default function PropiedadDetallePage() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
       
-      {/* 1. HERO SECTION - Mejorado el espaciado superior e inferior */}
+      {/* 1. HERO SECTION */}
       <div className="relative bg-gray-900 h-[40vh] lg:h-[50vh] w-full overflow-hidden">
           {images.length > 0 ? (
-              <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105" alt="Propiedad"/>
+              <img 
+                src={getFullImageUrl(images[0])} 
+                className="w-full h-full object-cover opacity-60 blur-sm scale-105" 
+                alt="Propiedad"
+                crossOrigin="anonymous"
+              />
           ) : <div className="w-full h-full bg-gray-800"></div>}
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-10 lg:p-16">
@@ -132,17 +137,27 @@ export default function PropiedadDetallePage() {
                 {/* 3. CONTENIDO TABS */}
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 lg:p-8 min-h-[400px]">
                     
-                    {/* TAB INFORMACIÓN - RESTAURADO COMPLETAMENTE */}
                     {activeTab === 'informacion' && (
                         <div className="space-y-8 animate-fade-in">
                             {images.length > 0 ? (
                                 <div className="space-y-4">
                                     <div className="h-[400px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200">
-                                        <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-contain" alt="Gallery preview"/>
+                                        <img 
+                                          src={getFullImageUrl(images[currentImageIndex])} 
+                                          className="w-full h-full object-contain" 
+                                          alt="Gallery preview"
+                                          crossOrigin="anonymous"
+                                        />
                                     </div>
                                     <div className="flex gap-3 overflow-x-auto pb-2">
                                         {images.map((img:string, idx:number) => (
-                                            <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all ${currentImageIndex===idx ? 'border-indigo-600 scale-95' : 'border-transparent hover:border-gray-300'}`}/>
+                                            <img 
+                                              key={idx} 
+                                              src={getFullImageUrl(img)} 
+                                              onClick={() => setCurrentImageIndex(idx)} 
+                                              crossOrigin="anonymous"
+                                              className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all ${currentImageIndex===idx ? 'border-indigo-600 scale-95' : 'border-transparent hover:border-gray-300'}`}
+                                            />
                                         ))}
                                     </div>
                                 </div>
@@ -172,7 +187,6 @@ export default function PropiedadDetallePage() {
                                 </div>
                             )}
 
-                            {/* DESCRIPCIÓN TÉCNICA RESTAURADA */}
                             {(propiedad.detalles || propiedad.observaciones) && (
                                 <div className="mt-8 pt-6 border-t border-gray-100">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
@@ -188,7 +202,6 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* TAB UBICACIÓN RESTAURADA */}
                     {activeTab === 'ubicacion' && (
                         <div className="animate-fade-in h-full flex flex-col items-center justify-center min-h-[300px]">
                             <h3 className="text-2xl font-bold text-gray-800 mb-2">{propiedad.ubicacion}</h3>
@@ -201,7 +214,6 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* TAB VIDEO RESTAURADO */}
                     {activeTab === 'video' && propiedad.videoUrl && (
                         <div className="animate-fade-in">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FaYoutube className="text-red-600"/> Video Recorrido</h3>
@@ -211,7 +223,6 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* TAB LEGAL RESTAURADO */}
                     {activeTab === 'legal' && isAdmin && (
                         <div className="animate-fade-in space-y-8">
                             <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
@@ -306,8 +317,6 @@ export default function PropiedadDetallePage() {
                             <FaWhatsapp size={24}/> CONTACTAR DUEÑO
                         </a>
                     )}
-
-                    {/* EL BOTÓN DE COMPARTIR HA SIDO ELIMINADO SEGÚN TU SOLICITUD */}
                     
                     <div className="mt-8 text-center border-t border-gray-50 pt-6">
                         <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>

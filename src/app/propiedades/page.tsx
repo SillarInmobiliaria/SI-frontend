@@ -176,8 +176,9 @@ export default function PropiedadesPage() {
                         <div className="h-64 overflow-hidden bg-gray-200 relative">
                             {prop.fotoPrincipal ? (
                                 <img 
-                                    src={`${BACKEND_URL}${prop.fotoPrincipal}`} 
+                                    src={`${BACKEND_URL}/${prop.fotoPrincipal}`} 
                                     alt={prop.ubicacion} 
+                                    crossOrigin="anonymous"
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 />
                             ) : (
