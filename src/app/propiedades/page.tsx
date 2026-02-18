@@ -10,7 +10,7 @@ import {
   FaHome, FaSearch, FaTrash, FaBan, FaCheck, FaBuilding, FaPlus, FaFilter
 } from 'react-icons/fa';
 
-const BACKEND_URL = 'http://localhost:4000/';
+const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 export default function PropiedadesPage() {
   const { propiedades, fetchPropiedades, loading } = useInmobiliariaStore();

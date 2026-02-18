@@ -12,7 +12,7 @@ import {
   FaAlignLeft
 } from 'react-icons/fa';
 
-const BACKEND_URL = 'https://sillar-backend.onrender.com/';
+const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 export default function PropiedadDetallePage() {
   const { id } = useParams();
