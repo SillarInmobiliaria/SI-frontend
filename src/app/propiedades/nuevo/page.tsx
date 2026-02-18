@@ -13,10 +13,10 @@ import {
   FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
-  FaCheckCircle, FaRegCircle, FaCheck, FaPercent 
+  FaCheckCircle, FaRegCircle, FaCheck, FaPercent, FaBoxOpen 
 } from 'react-icons/fa';
 
-// Interfaz completa para TypeScript
+// Interfaz para blindar TypeScript
 interface FormInputs {
   tipo: string;
   modalidad: string;
@@ -148,7 +148,6 @@ export default function NuevaPropiedadPage() {
       setMostrarSugerenciasUbi(false);
   };
 
-  // FUNCIONES DE FOTOS RECUPERADAS
   const handleMainPhotoChange = (e: any) => {
       if (e.target.files && e.target.files[0]) {
           setPreviewMain(URL.createObjectURL(e.target.files[0]));
@@ -191,7 +190,7 @@ export default function NuevaPropiedadPage() {
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-4">
                   <button type="button" onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
-                  <h1 className="text-xl font-bold text-indigo-900">Captación de Propiedad</h1>
+                  <h1 className="text-xl font-bold text-indigo-900 uppercase">Captación de Propiedad</h1>
               </div>
               <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold uppercase text-xs">
                 {isSubmitting ? 'Guardando...' : <><FaSave/> Publicar</>}
@@ -202,7 +201,7 @@ export default function NuevaPropiedadPage() {
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* SECCIÓN 1 */}
+            {/* 1. PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. Propietarios</h3>
                 <div className="flex gap-4 items-end mb-4">
@@ -227,28 +226,21 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
-            {/* SECCIÓN 2: UBICACIÓN DIDÁCTICA */}
+            {/* 2. DATOS DEL INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. Datos del Inmueble</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">TIPO *</label>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Tipo *</label>
                         <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local Comercial</option><option value="Oficina">Oficina</option></select>
                     </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">CATEGORÍA *</label>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Categoría *</label>
                         <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option><option value="Anticresis">Anticresis</option></select>
                     </div>
                     <div className="form-control relative">
                         <label className="label font-bold text-gray-600 text-xs uppercase">Distrito (Buscador) *</label>
                         <div className="flex items-center">
                             <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
-                            <input 
-                                type="text" 
-                                className="input input-bordered w-full bg-white pl-9 text-sm" 
-                                placeholder="Ej: Cayma"
-                                value={busquedaUbicacion}
-                                onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }}
-                                onFocus={() => setMostrarSugerenciasUbi(true)}
-                            />
+                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" placeholder="Ej: Cayma" value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
                         </div>
                         {mostrarSugerenciasUbi && busquedaUbicacion.length > 0 && (
                             <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
@@ -260,7 +252,7 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
-                <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-xs uppercase">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
+                <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-xs uppercase uppercase">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-xs">PRECIO *</label>
@@ -269,7 +261,7 @@ export default function NuevaPropiedadPage() {
                             <input type="number" step="0.01" {...register('precio', {required:true})} className="input w-full bg-white font-bold text-lg focus:outline-none border-none text-gray-800" placeholder="0.00"/>
                         </div>
                     </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs">ÁREA TOTAL (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Área Total (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Área Construida (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
@@ -277,17 +269,17 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control bg-blue-50 p-4 rounded-xl border border-blue-200 mt-6 shadow-inner">
                         <label className="label font-bold text-blue-800 text-[10px] mb-4 flex items-center gap-2 border-b border-blue-100 pb-2 uppercase tracking-widest"><FaCheckCircle/> ¿TIENE MANTENIMIENTO?</label>
                         <div className="flex gap-4 mb-4 justify-around">
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-300'}`}><input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'si' ? <FaCheckCircle className="text-blue-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">SÍ</span></label>
-                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400' : 'bg-white border-gray-300'}`}><input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'no' ? <FaCheckCircle className="text-gray-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold">NO</span></label>
+                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'si' ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-300'}`}><input type="radio" value="si" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'si' ? <FaCheckCircle className="text-blue-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold uppercase uppercase">Sí</span></label>
+                            <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-all w-full justify-center ${tieneMantenimientoValue === 'no' ? 'bg-gray-100 border-gray-400' : 'bg-white border-gray-300'}`}><input type="radio" value="no" {...register('tieneMantenimiento')} className="hidden" />{tieneMantenimientoValue === 'no' ? <FaCheckCircle className="text-gray-600 text-2xl" /> : <FaRegCircle className="text-gray-300 text-2xl" />}<span className="text-sm font-bold uppercase uppercase">No</span></label>
                         </div>
                         {tieneMantenimientoValue === 'si' && (
-                            <div className="relative animate-in slide-in-from-top-2 pl-2"><span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span><input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900" placeholder="Monto mensual"/></div>
+                            <div className="relative animate-in slide-in-from-top-2 pl-2"><span className="absolute left-4 top-3 text-blue-500 font-bold text-lg">S/</span><input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full pl-12 bg-white font-bold text-blue-900 border-blue-300" placeholder="Monto mensual"/></div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* SECCIÓN 3: DETALLES */}
+            {/* 3. DETALLES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. Detalles</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm">
@@ -296,23 +288,39 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label justify-center font-bold text-gray-600 gap-2 text-xs uppercase"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white font-bold"/></div>
                 </div>
                 <div className="grid grid-cols-1 gap-8">
-                    <div className="form-control"><div className="flex justify-between items-center mb-2"><label className="label font-bold text-gray-700 text-sm flex gap-2 items-center uppercase"><FaMagic className="text-purple-500"/> Descripción Comercial</label><button type="button" onClick={handleGenerarIA} disabled={generandoIA} className={`btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all ${generandoIA ? 'bg-gray-200 text-gray-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:scale-105'}`}><FaMagic className={generandoIA ? "animate-spin" : "text-yellow-300 text-xs"} />{generandoIA ? "Procesando..." : "Redactar con IA"}</button></div><textarea {...register('descripcion')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner" placeholder="Descripción con gancho..."></textarea></div>
-                    <div className="form-control"><label className="label font-bold text-gray-700 text-sm uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner" placeholder="Piso por piso..."></textarea></div>
+                    <div className="form-control"><div className="flex justify-between items-center mb-2"><label className="label font-bold text-gray-700 text-sm flex gap-2 items-center uppercase uppercase"><FaMagic className="text-purple-500"/> Descripción Comercial</label><button type="button" onClick={handleGenerarIA} disabled={generandoIA} className={`btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all ${generandoIA ? 'bg-gray-200 text-gray-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:scale-105'}`}><FaMagic className={generandoIA ? "animate-spin" : "text-yellow-300 text-xs"} />{generandoIA ? "Procesando..." : "Redactar con IA"}</button></div><textarea {...register('descripcion')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner leading-relaxed" placeholder="Descripción gancho..."></textarea></div>
+                    <div className="form-control"><label className="label font-bold text-gray-700 text-sm uppercase uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-48 w-full text-sm bg-gray-50 focus:bg-white p-4 rounded-xl shadow-inner leading-relaxed" placeholder="Detalle por pisos..."></textarea></div>
                 </div>
             </div>
 
-            {/* SECCIÓN 4: DATOS LEGALES */}
+            {/* 4. DATOS LEGALES (COMISIÓN DINÁMICA, CHECKLIST Y PARTIDAS DEPTO) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. Datos Legales</h3>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Partida Registral</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 flex items-center gap-2 text-xs uppercase"><FaPercent className="text-blue-500 text-[10px]" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <div className="relative">
                             <input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white font-bold" placeholder={modalidadActual === 'Alquiler' ? "Ej: 1" : "Ej: 5"}/>
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">{modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}</span>
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase uppercase">{modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}</span>
                         </div>
                     </div>
+                </div>
+
+                {/* BLOQUE REINTEGRADO: PARTIDAS ADICIONALES PARA DEPARTAMENTOS */}
+                {esDepartamento && (
+                    <div className="bg-blue-50 rounded-xl p-6 mb-6 border border-blue-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase tracking-tighter">Partida Adicional</label><input {...register('partidaAdicional')} className="input input-bordered input-sm w-full bg-white"/></div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase tracking-tighter">Partida Cochera</label><input {...register('partidaCochera')} className="input input-bordered input-sm w-full bg-white"/></div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase tracking-tighter">Partida Depósito</label><input {...register('partidaDeposito')} className="input input-bordered input-sm w-full bg-white"/></div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Fecha Captación</label><input type="date" {...register('fechaCaptacion')} className="input input-bordered w-full bg-white text-sm"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-tighter">Inicio Contrato</label><input type="date" {...register('inicioContrato')} className="input input-bordered w-full bg-white text-sm"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-tighter">Vencimiento</label><input type="date" {...register('finContrato')} className="input input-bordered w-full bg-white text-sm"/></div>
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
@@ -329,56 +337,56 @@ export default function NuevaPropiedadPage() {
                         )}
                     </div>
                 </div>
-                <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 w-full bg-white text-sm" placeholder="Anotaciones importantes..."></textarea></div>
+                <div className="form-control"><label className="label font-bold text-gray-600 text-xs uppercase uppercase uppercase">Observaciones Legales / Notas</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 w-full bg-white text-sm shadow-inner" placeholder="Anotaciones importantes..."></textarea></div>
             </div>
 
-            {/* SECCIÓN 5: 5 LINKS */}
+            {/* 5. LINKS (MAX 5) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaLink className="text-blue-400"/> 5. Links Externos (Máx 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
                     {[1,2,3,4,5].map(num => (
-                        <input key={num} {...register(`link${num}` as keyof FormInputs)} className="input input-bordered input-sm w-full bg-white font-medium" placeholder={`Link ${num}: (Drive, Video Drone, Redes...)`}/>
+                        <input key={num} {...register(`link${num}` as keyof FormInputs)} className="input input-bordered input-sm w-full bg-white font-medium shadow-sm" placeholder={`Enlace ${num}: (Drive, Video Drone, Redes Sociales...)`}/>
                     ))}
                 </div>
             </div>
 
-            {/* SECCIÓN 6: ASIGNACIÓN */}
+            {/* 6. ASIGNACIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaUserTie className="text-indigo-500"/> 6. Asesor Encargado</h3>
                 <div className="form-control relative">
                     <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerenciasAsesor(true); }} onFocus={() => setMostrarSugerenciasAsesor(true)}/></div>
                     {mostrarSugerenciasAsesor && busquedaAsesor.length > 0 && (
                         <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1 border-t-4 border-indigo-500">
-                            {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())).map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800 text-xs uppercase">{asesor.nombre}</span></div>))}
+                            {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())).map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800 text-xs uppercase uppercase uppercase">{asesor.nombre}</span></div>))}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* SECCIÓN 7: MULTIMEDIA Y MAPA */}
+            {/* 7. MULTIMEDIA Y MAPA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaImages className="text-yellow-500"/> 7. Multimedia y Mapa</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest">Foto de Portada</label>
+                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest uppercase">Foto de Portada</label>
                         <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
-                        {previewMain && <img src={previewMain} alt="Portada" className="mt-4 h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>}
+                        {previewMain && <img src={previewMain} alt="Portada" className="mt-4 h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl animate-in zoom-in-50"/>}
                     </div>
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest">Galería de Fotos</label>
+                        <label className="label font-bold text-gray-600 text-xs uppercase tracking-widest uppercase">Galería de Fotos (Múltiple)</label>
                         <input type="file" multiple accept="image/*" onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white shadow-sm h-10" />
                         {previewGallery.length > 0 && (<div className="mt-4 flex gap-2 overflow-x-auto pb-4 custom-scrollbar">{previewGallery.map((src, i) => <img key={i} src={src} className="h-16 w-16 object-cover rounded-xl border border-white shadow flex-shrink-0"/>)}</div>)}
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaVideo className="text-red-500 mr-2"/> Enlace YouTube</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://youtube.com/..."/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaMapMarkerAlt className="text-green-600 mr-2"/> Mapa (Iframe URL)</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="Enlace src del iframe..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest uppercase"><FaVideo className="text-red-500 mr-2"/> Enlace YouTube</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://youtube.com/..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest uppercase"><FaMapMarkerAlt className="text-green-600 mr-2"/> Mapa (Iframe URL)</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="Enlace src del iframe..."/></div>
                 </div>
             </div>
 
             <div className="flex justify-end pt-10">
-                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all">
-                    {isSubmitting ? 'Publicando...' : 'Publicar Captación'}
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all duration-300 active:scale-95">
+                    {isSubmitting ? <span className="flex items-center gap-3"><span className="loading loading-spinner"></span> Sincronizando...</span> : <span className="flex items-center gap-3"><FaSave/> Publicar Propiedad</span>}
                 </button>
             </div>
         </form>
