@@ -58,7 +58,7 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
                 <label className={`flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
                     {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
                     <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
-                        {selectedFile ? (selectedFile.name || 'PDF Cargado') : 'Subir PDF'}
+                        {selectedFile ? selectedFile.name : 'Subir PDF'}
                     </span>
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
                 </label>
@@ -93,7 +93,7 @@ export default function EditarPropiedadPage() {
 
   const modalidadActual = watch('modalidad');
 
-  // CARGAR DATOS
+  // CARGAR DATOS INICIALES
   useEffect(() => {
     const init = async () => {
         try {
@@ -110,13 +110,11 @@ export default function EditarPropiedadPage() {
                 if(key !== 'fotoPrincipal' && key !== 'galeria') setValue(key as any, p[key]);
             });
 
-            // Especiales
             setBusquedaUbicacion(p.ubicacion);
             setBusquedaAsesor(p.asesor || '');
-            if(p.Propietarios) setPropietariosSeleccionados(p.Propietarios);
+            if(p.Propietarios) setPropietariosSeleccionados(p.Propietarios); // Cargamos los actuales
             if(p.mantenimiento > 0) setValue('tieneMantenimiento', 'si');
             
-            // Previsualización de imágenes actuales
             if(p.fotoPrincipal) setPreviewMain(p.fotoPrincipal.startsWith('http') ? p.fotoPrincipal : `https://sillar-backend.onrender.com${p.fotoPrincipal}`);
             if(p.galeria) setPreviewGallery(p.galeria.map((g:string) => g.startsWith('http') ? g : `https://sillar-backend.onrender.com${g}`));
 
@@ -209,25 +207,41 @@ export default function EditarPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS */}
+            {/* 1. PROPIETARIOS (LÓGICA HABILITADA) */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
                 <div className="flex gap-4 items-end mb-4">
                     <div className="form-control flex-1">
-                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
+                        <select 
+                            className="select select-bordered w-full bg-white text-sm" 
+                            value={propietarioSelectId} 
+                            onChange={(e) => setPropietarioSelectId(e.target.value)}
+                        >
                             <option value="">-- Buscar en Base de Datos --</option>
                             {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
                         </select>
                     </div>
-                    <button type="button" onClick={() => {
-                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
-                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
+                    <button 
+                        type="button" 
+                        onClick={() => {
+                            const propObj = propietarios.find(p => p.id === propietarioSelectId);
+                            if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) {
+                                setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+                            }
+                        }} 
+                        className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"
+                    >
+                        <FaPlus/> AGREGAR
+                    </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
                         <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
-                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
+                            {p.nombre} 
+                            <FaTrash 
+                                className="cursor-pointer text-red-500 text-xs hover:scale-125 transition-transform" 
+                                onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}
+                            />
                         </div>
                     ))}
                 </div>
