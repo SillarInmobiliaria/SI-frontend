@@ -70,13 +70,17 @@ export default function PropiedadDetallePage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentKey', key);
+    
     try {
         const { data } = await api.post(`${BACKEND_URL}/api/propiedades/${id}/upload-pdf`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         setDocumentosUrls({ ...documentosUrls, [key]: data.url });
         alert('✅ Archivo PDF subido con éxito.');
-    } catch (e) { alert('❌ Error al subir PDF.'); }
+    } catch (e) { 
+        console.error(e);
+        alert('❌ Error al subir PDF.'); 
+    }
   };
 
   const guardarCambios = async () => {
@@ -91,7 +95,7 @@ export default function PropiedadDetallePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
 
-  // LÓGICA DE FILTRADO DE DOCUMENTOS SEGÚN MODALIDAD
+  // --- LÓGICA DE FILTRADO DE DOCUMENTOS POR MODALIDAD ---
   const esVenta = propiedad.modalidad === 'Venta';
   
   const documentosVenta = [
@@ -127,7 +131,6 @@ export default function PropiedadDetallePage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
-      
       <div className="relative bg-gray-900 h-[40vh] lg:h-[50vh] w-full overflow-hidden">
           {images.length > 0 ? (
               <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105" alt="Propiedad" crossOrigin="anonymous" />
@@ -157,7 +160,6 @@ export default function PropiedadDetallePage() {
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 lg:p-8 min-h-[400px]">
                     {activeTab === 'informacion' && (
                         <div className="space-y-8 animate-fade-in">
-                            {/* Información original intacta */}
                             {images.length > 0 ? (
                                 <div className="space-y-4">
                                     <div className="h-[400px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200">
@@ -170,7 +172,43 @@ export default function PropiedadDetallePage() {
                                     </div>
                                 </div>
                             ) : <div className="text-center py-10 text-gray-400">Sin imágenes</div>}
-                            {/* ... (resto de descripción comercial y técnica) */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100">
+                                <div className="text-center"><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.area} m²</p><p className="text-xs font-bold text-gray-400 uppercase">Área Total</p></div>
+                                <div className="text-center"><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.habitaciones}</p><p className="text-xs font-bold text-gray-400 uppercase">Habitaciones</p></div>
+                                <div className="text-center"><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.banos}</p><p className="text-xs font-bold text-gray-400 uppercase">Baños</p></div>
+                                <div className="text-center"><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.cocheras}</p><p className="text-xs font-bold text-gray-400 uppercase">Cocheras</p></div>
+                            </div>
+                            {propiedad.descripcion && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter"><FaTag className="text-indigo-500"/> Descripción Comercial</h3>
+                                    <p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p>
+                                </div>
+                            )}
+                            {(propiedad.detalles || propiedad.observaciones) && (
+                                <div className="mt-8 pt-6 border-t border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaAlignLeft className="text-purple-600"/> Detalles Técnicos y Distribución</h3>
+                                    <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm"><p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg">{propiedad.detalles || propiedad.observaciones}</p></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'ubicacion' && (
+                        <div className="animate-fade-in h-full flex flex-col items-center justify-center min-h-[300px]">
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2">{propiedad.ubicacion}</h3>
+                            <p className="text-gray-500 text-lg mb-6">{propiedad.direccion}</p>
+                            {propiedad.mapaUrl ? (
+                                <div className="w-full h-96 rounded-xl overflow-hidden shadow-lg" dangerouslySetInnerHTML={{ __html: propiedad.mapaUrl }} />
+                            ) : (
+                                <div className="bg-gray-100 w-full h-64 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300"><span className="text-gray-400 font-bold">Mapa no disponible</span></div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'video' && propiedad.videoUrl && (
+                        <div className="animate-fade-in">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FaYoutube className="text-red-600"/> Video Recorrido</h3>
+                            <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg"><iframe width="100%" height="100%" src={propiedad.videoUrl.replace('watch?v=', 'embed/')} frameBorder="0" allowFullScreen title="Video recorido"></iframe></div>
                         </div>
                     )}
 
@@ -228,7 +266,28 @@ export default function PropiedadDetallePage() {
                     )}
                 </div>
             </div>
-            {/* ... (Sidebar intacto) */}
+
+            <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
+                    <div className="flex items-baseline gap-1 text-indigo-950 mb-6">
+                        <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-6">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md shadow-blue-100"><FaUserTie size={18} /></div>
+                        <div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular Propietario</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propiedad.Propietarios && propiedad.Propietarios.length > 0 ? propiedad.Propietarios[0].nombre : "No asignado"}</span></div>
+                    </div>
+                    <div className="divider my-6"></div>
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold shadow-md">{propiedad.asesor ? propiedad.asesor.charAt(0).toUpperCase() : 'S'}</div></div>
+                        <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
+                    </div>
+                    {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
+                        <a href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion}.`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg flex items-center justify-center transition-all hover:scale-[1.02]" rel="noreferrer" > <FaWhatsapp size={24}/> CONTACTAR DUEÑO </a>
+                    )}
+                    <div className="mt-8 text-center border-t border-gray-50 pt-6"><p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p><p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p></div>
+                </div>
+            </div>
         </div>
       </main>
     </div>
