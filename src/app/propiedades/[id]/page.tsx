@@ -56,6 +56,30 @@ export default function PropiedadDetallePage() {
     cargar();
   }, [id]);
 
+  // Función para limpiar URL de Google Maps (Iframe o Link directo)
+  const getCleanMapUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('<iframe')) {
+        const match = url.match(/src="([^"]+)"/);
+        return match ? match[1] : '';
+    }
+    return url;
+  };
+
+  // Función para convertir link de YouTube a Embed
+  const getYoutubeEmbedUrl = (url: string) => {
+    if (!url) return '';
+    let videoId = '';
+    if (url.includes('v=')) {
+        videoId = url.split('v=')[1].split('&')[0];
+    } else if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1].split('?')[0];
+    } else if (url.includes('embed/')) {
+        return url;
+    }
+    return `https://www.youtube.com/embed/${videoId}`;
+  };
+
   const toggleEstado = (key: string) => {
       const actual = estadosDocs[key];
       let nuevo = false; 
@@ -95,7 +119,6 @@ export default function PropiedadDetallePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
 
-  // Lógica de filtrado de documentos por modalidad
   const esVenta = propiedad.modalidad === 'Venta';
   const documentosList = esVenta ? [
     { key: 'testimonio', label: 'Testimonio' },
@@ -121,14 +144,12 @@ export default function PropiedadDetallePage() {
       return <FaTimesCircle className="text-red-500 text-2xl"/>;
   };
 
-  // Filtrar links existentes
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
       
-      {/* Banner Principal */}
       <div className="relative bg-gray-900 h-[40vh] lg:h-[50vh] w-full overflow-hidden">
           {images.length > 0 ? (
               <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105" alt="Propiedad" crossOrigin="anonymous" />
@@ -147,7 +168,6 @@ export default function PropiedadDetallePage() {
 
       <main className="container mx-auto p-6 max-w-7xl -mt-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Columna Izquierda: Contenido Principal */}
             <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-2xl shadow-lg p-2 flex gap-2 overflow-x-auto no-scrollbar">
                     <button onClick={() => setActiveTab('informacion')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='informacion' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaInfoCircle/> Información</button>
@@ -192,6 +212,48 @@ export default function PropiedadDetallePage() {
                                     <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm"><p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg">{propiedad.detalles || propiedad.observaciones}</p></div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {activeTab === 'ubicacion' && (
+                        <div className="animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+                            <h3 className="text-2xl font-bold text-gray-800 mb-2 uppercase tracking-tighter">{propiedad.ubicacion}</h3>
+                            <p className="text-gray-500 text-lg mb-6">{propiedad.direccion}</p>
+                            {propiedad.mapaUrl ? (
+                                <div className="w-full h-[450px] rounded-2xl overflow-hidden shadow-xl border border-gray-200">
+                                    <iframe 
+                                        src={getCleanMapUrl(propiedad.mapaUrl)} 
+                                        width="100%" 
+                                        height="100%" 
+                                        style={{ border: 0 }} 
+                                        allowFullScreen 
+                                        loading="lazy"
+                                    ></iframe>
+                                </div>
+                            ) : (
+                                <div className="bg-gray-100 w-full h-64 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300">
+                                    <FaMapMarkerAlt className="text-gray-300 text-5xl mb-2"/>
+                                    <span className="text-gray-400 font-bold uppercase">Mapa no disponible</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'video' && propiedad.videoUrl && (
+                        <div className="animate-fade-in space-y-4">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tighter">
+                                <FaYoutube className="text-red-600"/> Video Recorrido
+                            </h3>
+                            <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-xl">
+                                <iframe 
+                                    width="100%" 
+                                    height="100%" 
+                                    src={getYoutubeEmbedUrl(propiedad.videoUrl)} 
+                                    frameBorder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                ></iframe>
+                            </div>
                         </div>
                     )}
 
@@ -250,7 +312,6 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            {/* Columna Derecha: Sidebar Sticky */}
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
@@ -258,7 +319,6 @@ export default function PropiedadDetallePage() {
                         <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
                     
-                    {/* Botón Contactar Dueño */}
                     {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
@@ -269,7 +329,6 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* SECCIÓN RECURSOS Y PRESENTACIÓN (LINKS EXTERNOS) */}
                     {linksDisponibles.length > 0 && (
                         <div className="space-y-3 mb-6 pt-4 border-t border-gray-50">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recursos y Presentación</p>
@@ -295,7 +354,6 @@ export default function PropiedadDetallePage() {
 
                     <div className="divider my-6"></div>
                     
-                    {/* Info Agente Encargado */}
                     <div className="flex items-center gap-4 mb-8">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold shadow-md">{propiedad.asesor ? propiedad.asesor.charAt(0).toUpperCase() : 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
