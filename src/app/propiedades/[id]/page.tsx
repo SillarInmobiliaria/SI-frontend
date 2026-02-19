@@ -9,7 +9,7 @@ import {
   FaMapMarkerAlt, FaBed, FaBath, FaCar, FaRulerCombined, 
   FaUserTie, FaWhatsapp, FaFileContract, FaTag, FaBuilding,
   FaYoutube, FaFilePdf, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
-  FaAlignLeft, FaFileUpload, FaEye 
+  FaAlignLeft, FaFileUpload, FaEye, FaExternalLinkAlt 
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -95,7 +95,6 @@ export default function PropiedadDetallePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
 
-  // --- LÓGICA DE FILTRADO DE DOCUMENTOS POR MODALIDAD ---
   const esVenta = propiedad.modalidad === 'Venta';
   const documentosList = esVenta ? [
     { key: 'testimonio', label: 'Testimonio' },
@@ -120,6 +119,9 @@ export default function PropiedadDetallePage() {
       if (estado === null) return <FaExclamationCircle className="text-amber-500 text-2xl"/>;
       return <FaTimesCircle className="text-red-500 text-2xl"/>;
   };
+
+  // Preparamos la lista de links externos
+  const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -177,36 +179,6 @@ export default function PropiedadDetallePage() {
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter"><FaTag className="text-indigo-500"/> Descripción Comercial</h3>
                                     <p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p>
-                                </div>
-                            )}
-
-                            {/* --- SECCIÓN DE LINKS EXTERNOS --- */}
-                            {(propiedad.link1 || propiedad.link2 || propiedad.link3 || propiedad.link4 || propiedad.link5) && (
-                                <div className="mt-8 pt-6 border-t border-gray-100">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
-                                        <FaLink className="text-blue-500"/> Enlaces y Recursos Adicionales
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {[propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].map((link, index) => (
-                                            link && (
-                                                <a 
-                                                    key={index} 
-                                                    href={link.startsWith('http') ? link : `https://${link}`} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all group"
-                                                >
-                                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
-                                                        <FaLink />
-                                                    </div>
-                                                    <div className="flex flex-col overflow-hidden">
-                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Recurso Adicional {index + 1}</span>
-                                                        <span className="text-sm font-bold text-blue-900 truncate">{link}</span>
-                                                    </div>
-                                                </a>
-                                            )
-                                        ))}
-                                    </div>
                                 </div>
                             )}
 
@@ -299,18 +271,50 @@ export default function PropiedadDetallePage() {
                     <div className="flex items-baseline gap-1 text-indigo-950 mb-6">
                         <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-6">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md shadow-blue-100"><FaUserTie size={18} /></div>
-                        <div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular Propietario</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propiedad.Propietarios && propiedad.Propietarios.length > 0 ? propiedad.Propietarios[0].nombre : "No asignado"}</span></div>
-                    </div>
+                    
+                    {/* BOTÓN CONTACTAR DUEÑO */}
+                    {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
+                        <div className="space-y-4 mb-6">
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md shadow-blue-100"><FaUserTie size={18} /></div>
+                                <div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular Propietario</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propiedad.Propietarios[0].nombre}</span></div>
+                            </div>
+                            <a href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion}.`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg flex items-center justify-center transition-all hover:scale-[1.02]" rel="noreferrer" > <FaWhatsapp size={24}/> CONTACTAR DUEÑO </a>
+                        </div>
+                    )}
+
+                    {/* NUEVA SECCIÓN DE ENLACES ADICIONALES (CARTA DE PRESENTACIÓN) */}
+                    {linksDisponibles.length > 0 && (
+                        <div className="space-y-3 mb-6 pt-4 border-t border-gray-50">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recursos y Presentación</p>
+                            {linksDisponibles.map((link, idx) => (
+                                <a 
+                                    key={idx}
+                                    href={link.startsWith('http') ? link : `https://${link}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-between w-full p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl border border-indigo-100 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <FaLink className="flex-shrink-0 text-indigo-500" />
+                                        <span className="text-xs font-bold truncate max-w-[150px]">
+                                            {link.includes('sillar') ? 'Ficha Web Sillar' : `Recurso Adicional ${idx + 1}`}
+                                        </span>
+                                    </div>
+                                    <FaExternalLinkAlt className="text-[10px] opacity-50 group-hover:opacity-100" />
+                                </a>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="divider my-6"></div>
+                    
+                    {/* INFO ASESOR */}
                     <div className="flex items-center gap-4 mb-8">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold shadow-md">{propiedad.asesor ? propiedad.asesor.charAt(0).toUpperCase() : 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
-                    {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
-                        <a href={`https://wa.me/51${propiedad.Propietarios[0].celular1}?text=Hola, te escribo por tu propiedad en ${propiedad.direccion}.`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg flex items-center justify-center transition-all hover:scale-[1.02]" rel="noreferrer" > <FaWhatsapp size={24}/> CONTACTAR DUEÑO </a>
-                    )}
+                    
                     <div className="mt-8 text-center border-t border-gray-50 pt-6"><p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p><p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p></div>
                 </div>
             </div>
