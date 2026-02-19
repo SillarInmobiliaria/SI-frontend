@@ -97,25 +97,20 @@ export default function PropiedadDetallePage() {
 
   // --- LÓGICA DE FILTRADO DE DOCUMENTOS POR MODALIDAD ---
   const esVenta = propiedad.modalidad === 'Venta';
-  
-  const documentosVenta = [
+  const documentosList = esVenta ? [
     { key: 'testimonio', label: 'Testimonio' },
     { key: 'hr', label: 'Hoja Resumen (HR)' },
     { key: 'pu', label: 'Predio Urbano (PU)' },
     { key: 'impuestoPredial', label: 'Impuesto Predial' },
     { key: 'arbitrios', label: 'Arbitrios' },
     { key: 'copiaLiteral', label: 'Copia Literal' }
-  ];
-
-  const documentosAlquiler = [
+  ] : [
     { key: 'impuestoPredial', label: 'Impuesto Predial' },
     { key: 'arbitrios', label: 'Arbitrios Municipales' },
     { key: 'copiaLiteral', label: 'Copia Literal' },
     { key: 'cri', label: 'CRI' },
     { key: 'reciboAguaLuz', label: 'Recibos Luz/Agua' }
   ];
-
-  const documentosList = esVenta ? documentosVenta : documentosAlquiler;
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
   const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path}`;
@@ -125,8 +120,6 @@ export default function PropiedadDetallePage() {
       if (estado === null) return <FaExclamationCircle className="text-amber-500 text-2xl"/>;
       return <FaTimesCircle className="text-red-500 text-2xl"/>;
   };
-
-  const linksExternos = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -172,18 +165,51 @@ export default function PropiedadDetallePage() {
                                     </div>
                                 </div>
                             ) : <div className="text-center py-10 text-gray-400">Sin imágenes</div>}
+                            
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100">
                                 <div className="text-center"><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.area} m²</p><p className="text-xs font-bold text-gray-400 uppercase">Área Total</p></div>
                                 <div className="text-center"><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.habitaciones}</p><p className="text-xs font-bold text-gray-400 uppercase">Habitaciones</p></div>
                                 <div className="text-center"><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.banos}</p><p className="text-xs font-bold text-gray-400 uppercase">Baños</p></div>
                                 <div className="text-center"><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl text-gray-800">{propiedad.cocheras}</p><p className="text-xs font-bold text-gray-400 uppercase">Cocheras</p></div>
                             </div>
+
                             {propiedad.descripcion && (
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter"><FaTag className="text-indigo-500"/> Descripción Comercial</h3>
                                     <p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p>
                                 </div>
                             )}
+
+                            {/* --- SECCIÓN DE LINKS EXTERNOS --- */}
+                            {(propiedad.link1 || propiedad.link2 || propiedad.link3 || propiedad.link4 || propiedad.link5) && (
+                                <div className="mt-8 pt-6 border-t border-gray-100">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
+                                        <FaLink className="text-blue-500"/> Enlaces y Recursos Adicionales
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {[propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].map((link, index) => (
+                                            link && (
+                                                <a 
+                                                    key={index} 
+                                                    href={link.startsWith('http') ? link : `https://${link}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all group"
+                                                >
+                                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
+                                                        <FaLink />
+                                                    </div>
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Recurso Adicional {index + 1}</span>
+                                                        <span className="text-sm font-bold text-blue-900 truncate">{link}</span>
+                                                    </div>
+                                                </a>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {(propiedad.detalles || propiedad.observaciones) && (
                                 <div className="mt-8 pt-6 border-t border-gray-100">
                                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaAlignLeft className="text-purple-600"/> Detalles Técnicos y Distribución</h3>
