@@ -78,7 +78,6 @@ export default function EditarPropiedadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
-  const [propietarioSelectId, setPropietarioSelectId] = useState('');
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
@@ -120,7 +119,7 @@ export default function EditarPropiedadPage() {
         } catch (e) { router.back(); }
     };
     init();
-  }, [id]);
+  }, [id, fetchPropietarios, setValue, router]);
 
   const handleGenerarIA = async () => {
     const context = { tipo: watch('tipo'), modalidad: watch('modalidad'), ubicacion: watch('ubicacion'), direccion: watch('direccion'), habitaciones: watch('habitaciones'), banos: watch('banos'), area: watch('area'), precio: watch('precio') };
@@ -164,7 +163,7 @@ export default function EditarPropiedadPage() {
         const formData = new FormData();
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
         
-        // CAMPOS QUE NO SE TOCAN O VAN POR SEPARADO
+        // LIMPIEZA ESTRICTA: Evitamos enviar objetos o fechas de sistema que rompen Render (Error 500)
         const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'Propietarios', 'propietariosIds', 'usuarioId', 'createdAt', 'updatedAt', ...docs];
         
         Object.keys(data).forEach(key => {
@@ -176,20 +175,17 @@ export default function EditarPropiedadPage() {
 
         if (data.tieneMantenimiento === 'no') formData.set('mantenimiento', '0');
         
-        // MULTIMEDIA: Solo si hay archivos nuevos
+        // Archivos multimedia nuevos
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
-        if (galeriaFiles.length > 0) {
-            galeriaFiles.forEach(f => formData.append('galeria', f));
-        }
+        if (galeriaFiles.length > 0) galeriaFiles.forEach(f => formData.append('galeria', f));
         
-        // DOCUMENTOS Y PDFS
+        // Documentos y sus archivos PDF
         docs.forEach(doc => {
-            formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
+            if (data[doc as keyof FormInputs] !== undefined) {
+                formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
+            }
             if (pdfFiles[doc]) formData.append(`file_${doc}`, pdfFiles[doc]);
         });
-
-        // IMPORTANTE: MANTENER PROPIETARIOS FIJOS EN EL BACKEND
-        // No los adjuntamos al formData para que el controlador no intente procesarlos y falle
 
         await api.put(`/propiedades/${id}`, formData, { 
             headers: { 'Content-Type': 'multipart/form-data' } 
@@ -199,7 +195,7 @@ export default function EditarPropiedadPage() {
         router.push(`/propiedades/${id}`);
     } catch (e: any) { 
         console.error(e);
-        alert('❌ Error técnico al guardar.'); 
+        alert('❌ Error técnico al guardar. Los propietarios son fijos.'); 
     } finally { 
         setIsSubmitting(false); 
     }
@@ -224,9 +220,9 @@ export default function EditarPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS (SÓLO VISTA) */}
+            {/* 1. PROPIETARIOS (SÓLO LECTURA POR SEGURIDAD) */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS (SÓLO LECTURA)</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS (FIJOS)</h3>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
                         <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
