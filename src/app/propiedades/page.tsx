@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toggleEstadoPropiedad, eliminarPropiedad } from '../../services/api';
 import { 
   FaMapMarkerAlt, FaBed, FaBath, FaCar, FaRulerCombined, 
-  FaHome, FaSearch, FaTrash, FaBan, FaCheck, FaBuilding, FaPlus, FaFilter
+  FaHome, FaSearch, FaTrash, FaBan, FaCheck, FaBuilding, FaPlus, FaFilter, FaEdit
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -46,6 +46,13 @@ export default function PropiedadesPage() {
       if(!confirm('⚠️ ¿Estás seguro de eliminar permanentemente esta propiedad?')) return;
       try { await eliminarPropiedad(id); fetchPropiedades(); } 
       catch (e) { alert('Error al eliminar'); }
+  };
+
+  // ACCIÓN PARA EDITAR
+  const handleEditar = (e: React.MouseEvent, id: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = `/propiedades/editar/${id}`;
   };
 
   return (
@@ -155,6 +162,15 @@ export default function PropiedadesPage() {
                         {/* BOTONES ADMIN FLOTANTES */}
                         {isAdmin && (
                             <div className="absolute top-3 right-3 z-20 flex gap-2">
+                                {/* BOTÓN EDITAR AGREGADO */}
+                                <button 
+                                    onClick={(e) => handleEditar(e, prop.id)}
+                                    className="btn btn-circle btn-sm bg-white text-blue-600 border-none shadow-lg hover:bg-blue-50"
+                                    title="Editar"
+                                >
+                                    <FaEdit/>
+                                </button>
+
                                 <button 
                                     onClick={(e) => handleSuspender(e, prop.id, prop.activo || false)}
                                     className={`btn btn-circle btn-sm border-none shadow-lg ${prop.activo ? 'bg-white text-amber-500 hover:bg-amber-50' : 'bg-green-500 text-white hover:bg-green-600'}`}
