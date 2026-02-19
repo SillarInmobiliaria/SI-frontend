@@ -13,7 +13,7 @@ import {
   FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
-  FaCheckCircle, FaRegCircle, FaCheck, FaPercent, FaTimes, FaFilePdf, FaFileUpload 
+  FaCheckCircle, FaCheck, FaPercent, FaTimes, FaFileUpload 
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -41,7 +41,7 @@ const distritosArequipa = [
 
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles }: any) => {
     const isChecked = watch(name);
-    const selectedFile = pdfFiles[name]; // Accedemos al archivo guardado en el estado
+    const selectedFile = pdfFiles[name]; 
     
     return (
       <div className="flex flex-col gap-2 h-full">
@@ -94,8 +94,6 @@ export default function NuevaPropiedadPage() {
 
   const modalidadActual = watch('modalidad');
   const tipoInmueble = watch('tipo');
-  const tieneMantenimientoValue = watch('tieneMantenimiento');
-  const esDepartamento = tipoInmueble === 'Departamento';
 
   useEffect(() => {
     fetchPropietarios();
@@ -156,26 +154,51 @@ export default function NuevaPropiedadPage() {
     setIsSubmitting(true);
     try {
         const formData = new FormData();
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
+        // Lista de booleanos para manejar correctamente
+        const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', ...docs];
+        
+        // Adjuntar campos normales
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
-            if (!excluded.includes(k)) formData.append(k, String(data[k]));
+            if (!excluded.includes(k) && data[k] !== undefined && data[k] !== '') {
+                formData.append(k, String(data[k]));
+            }
         });
-        if (data.tieneMantenimiento === 'no') formData.set('mantenimiento', '0');
+
+        // Manejo de mantenimiento
+        if (data.tieneMantenimiento === 'no') {
+            formData.set('mantenimiento', '0');
+        } else {
+            formData.set('mantenimiento', String(data.mantenimiento));
+        }
+
+        // Propietarios
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
+        
+        // Archivos multimedia
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
         
-        const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
+        // Manejo de Checkboxes y sus PDFs
         docs.forEach(doc => {
+            // Enviamos el booleano
             formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
-            if (pdfFiles[doc]) formData.append(`file_${doc}`, pdfFiles[doc]);
+            // Si hay un archivo adjunto para este documento
+            if (pdfFiles[doc]) {
+                formData.append(`file_${doc}`, pdfFiles[doc]);
+            }
         });
 
         await createPropiedad(formData);
-        alert('✅ Propiedad Publicada');
+        alert('✅ Propiedad Publicada con éxito');
         router.push('/propiedades');
-    } catch (e) { alert('❌ Error técnico al enviar.'); } finally { setIsSubmitting(false); }
+    } catch (e) { 
+        console.error(e);
+        alert('❌ Error al publicar. Revisa la consola para más detalles.'); 
+    } finally { 
+        setIsSubmitting(false); 
+    }
   };
 
   return (
@@ -185,7 +208,7 @@ export default function NuevaPropiedadPage() {
           <div className="container mx-auto px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-4">
                   <button type="button" onClick={() => router.back()} className="btn btn-circle btn-ghost btn-sm text-gray-500"><FaArrowLeft/></button>
-                  <h1 className="text-xl font-bold text-indigo-900 uppercase">FICHA_CAPTACIÓN_V3</h1>
+                  <h1 className="text-xl font-bold text-indigo-900 uppercase">CAPTACIÓN DE PROPIEDAD</h1>
               </div>
               <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold text-xs uppercase">
                 {isSubmitting ? 'Guardando...' : <><FaSave/> PUBLICAR</>}
@@ -195,6 +218,7 @@ export default function NuevaPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {/* 1. PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
                 <div className="flex gap-4 items-end mb-4">
@@ -218,20 +242,31 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
+            {/* 2. DATOS INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
-                        <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white"><option value="Casa">Casa</option><option value="Departamento">Departamento</option><option value="Terreno">Terreno</option><option value="Local">Local Comercial</option><option value="Oficina">Oficina</option></select>
+                        <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white">
+                            <option value="Casa">Casa</option>
+                            <option value="Departamento">Departamento</option>
+                            <option value="Terreno">Terreno</option>
+                            <option value="Local">Local Comercial</option>
+                            <option value="Oficina">Oficina</option>
+                        </select>
                     </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">CATEGORÍA *</label>
-                        <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-sm"><option value="Venta">Venta</option><option value="Alquiler">Alquiler</option><option value="Anticresis">Anticresis</option></select>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
+                        <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-sm">
+                            <option value="Venta">Venta</option>
+                            <option value="Alquiler">Alquiler</option>
+                            <option value="Anticresis">Anticresis</option>
+                        </select>
                     </div>
                     <div className="form-control relative">
-                        <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO (BUSCADOR) *</label>
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO *</label>
                         <div className="flex items-center">
                             <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
-                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" placeholder="Cayma..." value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
+                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" placeholder="Buscar distrito..." value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
                         </div>
                         {mostrarSugerenciasUbi && busquedaUbicacion.length > 0 && (
                             <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
@@ -257,6 +292,7 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
+            {/* 3. DISTRIBUCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
@@ -272,6 +308,7 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-gray-50 focus:bg-white text-sm" placeholder="Detalle piso por piso..."></textarea></div>
             </div>
 
+            {/* 4. DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -288,7 +325,7 @@ export default function NuevaPropiedadPage() {
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
                     <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
-                        {modalidadActual !== 'Alquiler' && (
+                        {modalidadActual === 'Venta' && (
                             <>
                                 <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
                                 <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
@@ -298,7 +335,7 @@ export default function NuevaPropiedadPage() {
                         <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
                         <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
                         <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                        {modalidadActual === 'Alquiler' && (
+                        {(modalidadActual === 'Alquiler' || modalidadActual === 'Anticresis') && (
                             <>
                                 <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
                                 <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
@@ -309,6 +346,7 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 bg-white text-sm" placeholder="Detalles legales..."></textarea></div>
             </div>
 
+            {/* 5. LINKS EXTERNOS */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
@@ -318,6 +356,7 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
+            {/* 6. ASESOR */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
                 <div className="form-control relative">
@@ -330,6 +369,7 @@ export default function NuevaPropiedadPage() {
                 </div>
             </div>
 
+            {/* 7. MULTIMEDIA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
