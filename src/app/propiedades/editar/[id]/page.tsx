@@ -78,6 +78,7 @@ export default function EditarPropiedadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
+  const [propietarioSelectId, setPropietarioSelectId] = useState('');
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
@@ -195,7 +196,7 @@ export default function EditarPropiedadPage() {
         router.push(`/propiedades/${id}`);
     } catch (e: any) { 
         console.error(e);
-        alert('❌ Error técnico al guardar. Los propietarios son fijos.'); 
+        alert('❌ Error técnico al guardar.'); 
     } finally { 
         setIsSubmitting(false); 
     }
@@ -220,8 +221,8 @@ export default function EditarPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS (SÓLO LECTURA POR SEGURIDAD) */}
-            <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
+            {/* 1. PROPIETARIOS (SÓLO VISTA) */}
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-50 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS (FIJOS)</h3>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
