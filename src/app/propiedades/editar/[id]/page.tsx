@@ -78,6 +78,7 @@ export default function EditarPropiedadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
+  const [propietarioSelectId, setPropietarioSelectId] = useState('');
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
@@ -92,7 +93,6 @@ export default function EditarPropiedadPage() {
 
   const modalidadActual = watch('modalidad');
 
-  // CARGAR DATOS
   useEffect(() => {
     const init = async () => {
         try {
@@ -163,28 +163,46 @@ export default function EditarPropiedadPage() {
     try {
         const formData = new FormData();
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', ...docs];
+        
+        // CAMPOS QUE NO SE TOCAN O VAN POR SEPARADO
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'Propietarios', 'propietariosIds', 'usuarioId', 'createdAt', 'updatedAt', ...docs];
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
-            // No enviamos propietariosIds porque son fijos
-            if (!excluded.includes(k) && data[k] !== undefined) formData.append(k, String(data[k]));
+            if (!excluded.includes(k) && data[k] !== undefined && data[k] !== null) {
+                formData.append(k, String(data[k]));
+            }
         });
 
         if (data.tieneMantenimiento === 'no') formData.set('mantenimiento', '0');
         
+        // MULTIMEDIA: Solo si hay archivos nuevos
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
-        galeriaFiles.forEach(f => formData.append('galeria', f));
+        if (galeriaFiles.length > 0) {
+            galeriaFiles.forEach(f => formData.append('galeria', f));
+        }
         
+        // DOCUMENTOS Y PDFS
         docs.forEach(doc => {
             formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
             if (pdfFiles[doc]) formData.append(`file_${doc}`, pdfFiles[doc]);
         });
 
-        await api.put(`/propiedades/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-        alert('✅ Propiedad Actualizada');
+        // IMPORTANTE: MANTENER PROPIETARIOS FIJOS EN EL BACKEND
+        // No los adjuntamos al formData para que el controlador no intente procesarlos y falle
+
+        await api.put(`/propiedades/${id}`, formData, { 
+            headers: { 'Content-Type': 'multipart/form-data' } 
+        });
+
+        alert('✅ Cambios guardados correctamente');
         router.push(`/propiedades/${id}`);
-    } catch (e) { alert('❌ Error técnico.'); } finally { setIsSubmitting(false); }
+    } catch (e: any) { 
+        console.error(e);
+        alert('❌ Error técnico al guardar.'); 
+    } finally { 
+        setIsSubmitting(false); 
+    }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
@@ -199,14 +217,14 @@ export default function EditarPropiedadPage() {
                   <h1 className="text-xl font-bold text-indigo-900 uppercase">EDITAR_CAPTACIÓN_V3</h1>
               </div>
               <button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none shadow-md px-8 text-white gap-2 font-bold text-xs uppercase">
-                {isSubmitting ? 'Guardando...' : <><FaSave/> ACTUALIZAR</>}
+                {isSubmitting ? 'Guardando...' : <><FaSave/> GUARDAR CAMBIOS</>}
               </button>
           </div>
       </div>
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS (FIJOS - SOLO VISTA) */}
+            {/* 1. PROPIETARIOS (SÓLO VISTA) */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS (SÓLO LECTURA)</h3>
                 <div className="flex flex-wrap gap-2">
