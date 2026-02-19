@@ -57,8 +57,8 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
             <div className="animate-in fade-in slide-in-from-top-1">
                 <label className={`flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
                     {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
-                    <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
-                        {selectedFile ? selectedFile.name : 'Subir PDF'}
+                    <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? (selectedFile.name || 'PDF Cargado') : 'Subir PDF'}`}>
+                        {selectedFile ? (selectedFile.name || 'PDF Cargado') : 'Subir PDF'}
                     </span>
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
                 </label>
@@ -93,7 +93,7 @@ export default function EditarPropiedadPage() {
 
   const modalidadActual = watch('modalidad');
 
-  // CARGAR DATOS INICIALES
+  // CARGAR DATOS
   useEffect(() => {
     const init = async () => {
         try {
@@ -105,14 +105,13 @@ export default function EditarPropiedadPage() {
 
             const { data: p } = await api.get(`/propiedades/${id}`);
             
-            // Setear valores básicos
             Object.keys(p).forEach(key => {
                 if(key !== 'fotoPrincipal' && key !== 'galeria') setValue(key as any, p[key]);
             });
 
             setBusquedaUbicacion(p.ubicacion);
             setBusquedaAsesor(p.asesor || '');
-            if(p.Propietarios) setPropietariosSeleccionados(p.Propietarios); // Cargamos los actuales
+            if(p.Propietarios) setPropietariosSeleccionados(p.Propietarios);
             if(p.mantenimiento > 0) setValue('tieneMantenimiento', 'si');
             
             if(p.fotoPrincipal) setPreviewMain(p.fotoPrincipal.startsWith('http') ? p.fotoPrincipal : `https://sillar-backend.onrender.com${p.fotoPrincipal}`);
@@ -169,11 +168,14 @@ export default function EditarPropiedadPage() {
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
-            if (!excluded.includes(k)) formData.append(k, String(data[k]));
+            if (!excluded.includes(k) && data[k] !== undefined) formData.append(k, String(data[k]));
         });
 
         if (data.tieneMantenimiento === 'no') formData.set('mantenimiento', '0');
+        
+        // ENVÍO DE PROPIETARIOS IDS
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
+        
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
         
@@ -207,47 +209,29 @@ export default function EditarPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS (LÓGICA HABILITADA) */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
                 <div className="flex gap-4 items-end mb-4">
                     <div className="form-control flex-1">
-                        <select 
-                            className="select select-bordered w-full bg-white text-sm" 
-                            value={propietarioSelectId} 
-                            onChange={(e) => setPropietarioSelectId(e.target.value)}
-                        >
+                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
                             <option value="">-- Buscar en Base de Datos --</option>
                             {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
                         </select>
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={() => {
-                            const propObj = propietarios.find(p => p.id === propietarioSelectId);
-                            if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) {
-                                setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-                            }
-                        }} 
-                        className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"
-                    >
-                        <FaPlus/> AGREGAR
-                    </button>
+                    <button type="button" onClick={() => {
+                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
+                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
                         <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
-                            {p.nombre} 
-                            <FaTrash 
-                                className="cursor-pointer text-red-500 text-xs hover:scale-125 transition-transform" 
-                                onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}
-                            />
+                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 2. DATOS INMUEBLE */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -287,7 +271,6 @@ export default function EditarPropiedadPage() {
                 </div>
             </div>
 
-            {/* 3. DISTRIBUCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
@@ -303,7 +286,6 @@ export default function EditarPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-gray-50 focus:bg-white text-sm" placeholder="Detalle piso por piso..."></textarea></div>
             </div>
 
-            {/* 4. DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -340,7 +322,6 @@ export default function EditarPropiedadPage() {
                 </div>
             </div>
 
-            {/* 5. LINKS */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
@@ -350,7 +331,6 @@ export default function EditarPropiedadPage() {
                 </div>
             </div>
 
-            {/* 6. ASESOR */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
                 <div className="form-control relative">
@@ -363,7 +343,6 @@ export default function EditarPropiedadPage() {
                 </div>
             </div>
 
-            {/* 7. MULTIMEDIA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
