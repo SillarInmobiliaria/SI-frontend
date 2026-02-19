@@ -95,6 +95,7 @@ export default function PropiedadDetallePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
   if (!propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold uppercase">Error de carga</div>;
 
+  // Lógica de filtrado de documentos por modalidad
   const esVenta = propiedad.modalidad === 'Venta';
   const documentosList = esVenta ? [
     { key: 'testimonio', label: 'Testimonio' },
@@ -120,12 +121,14 @@ export default function PropiedadDetallePage() {
       return <FaTimesCircle className="text-red-500 text-2xl"/>;
   };
 
-  // Preparamos la lista de links externos
+  // Filtrar links existentes
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       <Navbar />
+      
+      {/* Banner Principal */}
       <div className="relative bg-gray-900 h-[40vh] lg:h-[50vh] w-full overflow-hidden">
           {images.length > 0 ? (
               <img src={getFullImageUrl(images[0])} className="w-full h-full object-cover opacity-60 blur-sm scale-105" alt="Propiedad" crossOrigin="anonymous" />
@@ -144,6 +147,7 @@ export default function PropiedadDetallePage() {
 
       <main className="container mx-auto p-6 max-w-7xl -mt-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Columna Izquierda: Contenido Principal */}
             <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-2xl shadow-lg p-2 flex gap-2 overflow-x-auto no-scrollbar">
                     <button onClick={() => setActiveTab('informacion')} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-bold transition-all text-sm uppercase justify-center ${activeTab==='informacion' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-400 hover:bg-gray-50'}`}><FaInfoCircle/> Información</button>
@@ -188,25 +192,6 @@ export default function PropiedadDetallePage() {
                                     <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm"><p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg">{propiedad.detalles || propiedad.observaciones}</p></div>
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {activeTab === 'ubicacion' && (
-                        <div className="animate-fade-in h-full flex flex-col items-center justify-center min-h-[300px]">
-                            <h3 className="text-2xl font-bold text-gray-800 mb-2">{propiedad.ubicacion}</h3>
-                            <p className="text-gray-500 text-lg mb-6">{propiedad.direccion}</p>
-                            {propiedad.mapaUrl ? (
-                                <div className="w-full h-96 rounded-xl overflow-hidden shadow-lg" dangerouslySetInnerHTML={{ __html: propiedad.mapaUrl }} />
-                            ) : (
-                                <div className="bg-gray-100 w-full h-64 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300"><span className="text-gray-400 font-bold">Mapa no disponible</span></div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'video' && propiedad.videoUrl && (
-                        <div className="animate-fade-in">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FaYoutube className="text-red-600"/> Video Recorrido</h3>
-                            <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg"><iframe width="100%" height="100%" src={propiedad.videoUrl.replace('watch?v=', 'embed/')} frameBorder="0" allowFullScreen title="Video recorido"></iframe></div>
                         </div>
                     )}
 
@@ -265,6 +250,7 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
+            {/* Columna Derecha: Sidebar Sticky */}
             <div className="lg:col-span-1 space-y-6">
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
@@ -272,7 +258,7 @@ export default function PropiedadDetallePage() {
                         <span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span>
                     </div>
                     
-                    {/* BOTÓN CONTACTAR DUEÑO */}
+                    {/* Botón Contactar Dueño */}
                     {propiedad.Propietarios && propiedad.Propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
@@ -283,7 +269,7 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* NUEVA SECCIÓN DE ENLACES ADICIONALES (CARTA DE PRESENTACIÓN) */}
+                    {/* SECCIÓN RECURSOS Y PRESENTACIÓN (LINKS EXTERNOS) */}
                     {linksDisponibles.length > 0 && (
                         <div className="space-y-3 mb-6 pt-4 border-t border-gray-50">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recursos y Presentación</p>
@@ -298,7 +284,7 @@ export default function PropiedadDetallePage() {
                                     <div className="flex items-center gap-3 overflow-hidden">
                                         <FaLink className="flex-shrink-0 text-indigo-500" />
                                         <span className="text-xs font-bold truncate max-w-[150px]">
-                                            {link.includes('sillar') ? 'Ficha Web Sillar' : `Recurso Adicional ${idx + 1}`}
+                                            {link.includes('sillar') ? 'Ficha Web Sillar' : `Enlace Externo ${idx + 1}`}
                                         </span>
                                     </div>
                                     <FaExternalLinkAlt className="text-[10px] opacity-50 group-hover:opacity-100" />
@@ -309,13 +295,16 @@ export default function PropiedadDetallePage() {
 
                     <div className="divider my-6"></div>
                     
-                    {/* INFO ASESOR */}
+                    {/* Info Agente Encargado */}
                     <div className="flex items-center gap-4 mb-8">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold shadow-md">{propiedad.asesor ? propiedad.asesor.charAt(0).toUpperCase() : 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
                     
-                    <div className="mt-8 text-center border-t border-gray-50 pt-6"><p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p><p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p></div>
+                    <div className="mt-8 text-center border-t border-gray-50 pt-6">
+                        <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
+                        <p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
+                    </div>
                 </div>
             </div>
         </div>
