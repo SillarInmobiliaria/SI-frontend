@@ -36,17 +36,23 @@ export default function PropiedadDetallePage() {
         try {
             const { data } = await api.get(`/propiedades/${id}`);
             setPropiedad(data);
-            setObservaciones(data.observaciones || {});
-            setDocumentosUrls(data.documentosUrls || {});
+            // Notas: pueden venir como JSON string o como objeto
+            const obs = data.observaciones;
+            setObservaciones(
+              typeof obs === 'string' && obs
+                ? (() => { try { return JSON.parse(obs); } catch { return {}; } })()
+                : (obs && typeof obs === 'object' ? obs : {})
+            );
+            setDocumentosUrls(data.documentosUrls || data.documentosurls || {});
             setEstadosDocs({
-                testimonio: data.testimonio,
-                hr: data.hr,
-                pu: data.pu,
-                impuestoPredial: data.impuestoPredial,
-                arbitrios: data.arbitrios,
-                copiaLiteral: data.copiaLiteral,
-                cri: data.cri,
-                reciboAguaLuz: data.reciboAguaLuz
+                testimonio: data.testimonio ?? null,
+                hr: data.hr ?? null,
+                pu: data.pu ?? null,
+                impuestoPredial: data.impuestoPredial ?? null,
+                arbitrios: data.arbitrios ?? null,
+                copiaLiteral: data.copiaLiteral ?? null,
+                cri: data.cri ?? null,
+                reciboAguaLuz: data.reciboAguaLuz ?? data.reciboagualuz ?? null
             });
             setLoading(false);
         } catch (e) { 
@@ -113,7 +119,10 @@ export default function PropiedadDetallePage() {
   const guardarCambios = async () => {
     setGuardandoObs(true);
     try {
-        await api.put(`/propiedades/${id}`, { observaciones, ...estadosDocs });
+        await api.put(`/propiedades/${id}`, { 
+          observaciones: JSON.stringify(observaciones), 
+          ...estadosDocs 
+        });
         alert('✅ Auditoría actualizada.');
     } catch (e) { alert('❌ Error al guardar.'); }
     finally { setGuardandoObs(false); }
@@ -132,7 +141,12 @@ export default function PropiedadDetallePage() {
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
   const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path}`;
-  const getIcono = (estado: any) => estado === true ? <FaCheckCircle className="text-emerald-500 text-2xl"/> : estado === null ? <FaExclamationCircle className="text-amber-500 text-2xl"/> : <FaTimesCircle className="text-red-500 text-2xl"/>;
+  // Semáforo: verde (ok), amarillo (pendiente), rojo (falta)
+  const getIconoSemaforo = (estado: boolean | null) => {
+    if (estado === true) return <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-md" title="OK"><FaCheckCircle className="text-white text-sm"/></div>;
+    if (estado === null) return <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shadow-md" title="Pendiente"><FaExclamationCircle className="text-white text-sm"/></div>;
+    return <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-md" title="Falta"><FaTimesCircle className="text-white text-sm"/></div>;
+  };
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
 
   return (
@@ -208,7 +222,7 @@ export default function PropiedadDetallePage() {
                             <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100"><h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>{propiedad.Propietarios?.length > 0 ? <div className="space-y-3">{propiedad.Propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}</div>
                             <div>
                                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaFileContract className="text-emerald-600"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-bold text-xs">{guardandoObs ? '...' : <><FaSave/> Guardar</>}</button></div>
-                                <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIcono(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={`${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
+                                <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIconoSemaforo(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={`${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
                             </div>
                         </div>
                     )}
