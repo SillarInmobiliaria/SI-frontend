@@ -40,7 +40,8 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles }: any) => {
+// --- COMPONENTE MODIFICADO: AHORA INCLUYE EL TEXTAREA DE NOTAS ---
+const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFile = pdfFiles[name]; 
     
@@ -56,7 +57,7 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
           <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
         </label>
         {isChecked && (
-            <div className="animate-in fade-in slide-in-from-top-1">
+            <div className="animate-in fade-in slide-in-from-top-1 flex flex-col gap-2">
                 <label className={`flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
                     {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
                     <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
@@ -64,6 +65,12 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
                     </span>
                     <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
                 </label>
+                <textarea 
+                    className="textarea textarea-bordered w-full text-xs p-2 h-14 leading-tight resize-none" 
+                    placeholder="Notas / Comentarios..."
+                    value={notasDocs[name] || ''}
+                    onChange={(e) => setNotasDocs({...notasDocs, [name]: e.target.value})}
+                ></textarea>
             </div>
         )}
       </div>
@@ -93,13 +100,15 @@ export default function NuevaPropiedadPage() {
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
   const [pdfFiles, setPdfFiles] = useState<Record<string, File>>({});
+  
+  // --- NUEVO ESTADO PARA ALMACENAR LAS NOTAS DE LOS DOCUMENTOS ---
+  const [notasDocs, setNotasDocs] = useState<Record<string, string>>({});
 
   const [fotoPrincipalFile, setFotoPrincipalFile] = useState<File | null>(null);
   const [previewMain, setPreviewMain] = useState<string | null>(null);
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  // ESTOS WATCHERS SON LOS QUE HACEN LA MAGIA EN VIVO
   const modalidadActual = watch('modalidad', 'Venta');
   const tipoInmueble = watch('tipo', 'Casa');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
@@ -181,7 +190,8 @@ export default function NuevaPropiedadPage() {
     try {
         const formData = new FormData();
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', ...docs];
+        // Añadimos 'observaciones' a la lista de excluidos para procesarlo manualmente como JSON
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'observaciones', ...docs];
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
@@ -196,6 +206,9 @@ export default function NuevaPropiedadPage() {
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
         }
+
+        // GUARDADO DE NOTAS COMO OBJETO JSON PARA QUE EL DETALLE LO LEA PERFECTAMENTE
+        formData.set('observaciones', JSON.stringify(notasDocs));
 
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         
@@ -310,7 +323,6 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
-                {/* MANTENIMIENTO: SOLO VISIBLE SI ES ALQUILER */}
                 {modalidadActual === 'Alquiler' && (
                     <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
                         <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -339,7 +351,6 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 
-                {/* HABITACIONES: OCULTAS SI ES TERRENO */}
                 {tipoInmueble !== 'Terreno' && (
                     <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
                         <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
@@ -360,7 +371,6 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
-                {/* PARTIDAS REGISTRALES */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
@@ -410,18 +420,18 @@ export default function NuevaPropiedadPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
                         {modalidadActual === 'Venta' && (
                             <>
-                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                             </>
                         )}
-                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                        <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         {(modalidadActual === 'Alquiler' || modalidadActual === 'Anticresis') && (
                             <>
-                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
-                                <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} />
+                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                             </>
                         )}
                     </div>
