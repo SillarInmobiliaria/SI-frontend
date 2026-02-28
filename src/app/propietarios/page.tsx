@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { useAuth } from '../../context/AuthContext';
-import { createPropietario, toggleEstadoPropietario, eliminarPropietario } from '../../services/api';
+import { createPropietario, toggleEstadoPropietario, eliminarPropietario, updatePropietario } from '../../services/api';
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt
+  FaBirthdayCake, FaCalendarAlt, FaEdit // <-- NUEVO ÍCONO
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -20,8 +20,11 @@ export default function PropietariosPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProp, setSelectedProp] = useState<any>(null);
+  
+  // NUEVO ESTADO: Para saber si estamos creando o editando
+  const [editingPropId, setEditingPropId] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset } = useForm();
+  const { register, handleSubmit, reset, setValue } = useForm();
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => { fetchPropietarios(); }, []);
@@ -36,19 +39,71 @@ export default function PropietariosPage() {
       try { await eliminarPropietario(id); fetchPropietarios(); } catch(e){ alert('Error'); }
   };
 
+  // NUEVA FUNCIÓN: Abrir modal para crear
+  const openCrearModal = () => {
+      setEditingPropId(null);
+      reset({ fechaNacimiento: today }); // Valores por defecto vacíos
+      setModalOpen(true);
+  };
+
+  // NUEVA FUNCIÓN: Abrir modal para editar
+  const openEditarModal = (prop: any) => {
+      setEditingPropId(prop.id);
+      
+      // Llenamos el formulario con los datos existentes
+      setValue('nombre', prop.nombre);
+      setValue('dni', prop.dni);
+      setValue('celular1', prop.celular1);
+      setValue('celular2', prop.celular2);
+      setValue('email', prop.email);
+      setValue('direccion', prop.direccion);
+      setValue('banco', prop.banco);
+      setValue('cuenta', prop.cuenta);
+      setValue('cci', prop.cci);
+      setValue('detalles', prop.detalles);
+      
+      // Si tiene fecha de nacimiento, la formateamos para el input type="date"
+      if (prop.fechaNacimiento) {
+          setValue('fechaNacimiento', prop.fechaNacimiento.split('T')[0]);
+      } else {
+          setValue('fechaNacimiento', '');
+      }
+      
+      setModalOpen(true);
+  };
+
+  // FUNCIÓN MODIFICADA: Sirve para crear y para actualizar
   const onSubmit = async (data: any) => {
       setIsSubmitting(true);
-      try { await createPropietario(data); fetchPropietarios(); setModalOpen(false); reset(); alert('✅ Guardado'); }
-      catch(e){ alert('Error'); } finally { setIsSubmitting(false); }
+      try { 
+          if (editingPropId) {
+              await updatePropietario(editingPropId, data);
+              alert('✅ Propietario actualizado');
+          } else {
+              await createPropietario(data); 
+              alert('✅ Propietario creado');
+          }
+          fetchPropietarios(); 
+          setModalOpen(false); 
+          reset(); 
+      }
+      catch(e){ alert('Error al guardar'); } 
+      finally { setIsSubmitting(false); }
   };
 
   const handleNumberInput = (e: any) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
   const filtrados = propietarios.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.dni?.includes(busqueda));
 
+  // FUNCIÓN MODIFICADA: Evitar el error "Invalid Date"
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'No registrada';
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (!dateString || dateString === 'null' || dateString === '') return 'No registrada';
+    try {
+        const date = new Date(dateString.includes('T') ? dateString : dateString + 'T00:00:00');
+        if (isNaN(date.getTime())) return 'No registrada'; // Doble seguridad
+        return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch {
+        return 'No registrada';
+    }
   };
 
   return (
@@ -76,7 +131,7 @@ export default function PropietariosPage() {
                   />
                 </div>
                 <button 
-                  onClick={() => setModalOpen(true)} 
+                  onClick={openCrearModal} 
                   className="px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
                 >
                   <FaUserPlus /> Nuevo
@@ -168,6 +223,16 @@ export default function PropietariosPage() {
                                         >
                                           <FaEye/>
                                         </button>
+                                        
+                                        {/* BOTÓN EDITAR */}
+                                        <button 
+                                          onClick={()=>openEditarModal(p)} 
+                                          className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-110 transition-all duration-200 shadow-sm"
+                                          title="Editar Propietario"
+                                        >
+                                          <FaEdit/>
+                                        </button>
+
                                         {isAdmin && (
                                             <>
                                                 <button 
@@ -195,13 +260,13 @@ export default function PropietariosPage() {
             </div>
         </div>
 
-        {/* MODAL NUEVO */}
+        {/* MODAL NUEVO / EDITAR */}
         {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 flex justify-between items-center">
                       <h3 className="font-bold text-2xl flex items-center gap-3">
-                        <FaUserPlus/> Nuevo Propietario
+                        {editingPropId ? <><FaEdit/> Editar Propietario</> : <><FaUserPlus/> Nuevo Propietario</>}
                       </h3>
                       <button onClick={()=>setModalOpen(false)} className="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-all">
                         ✕
@@ -239,8 +304,8 @@ export default function PropietariosPage() {
                               <input {...register('direccion')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
                             <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">Fecha de Nacimiento *</label>
-                              <input {...register('fechaNacimiento', {required:true})} type="date" className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" defaultValue={today}/>
+                              <label className="label font-bold text-gray-700 text-sm">Fecha de Nacimiento</label>
+                              <input {...register('fechaNacimiento')} type="date" className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
 
                             <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2">
@@ -282,7 +347,7 @@ export default function PropietariosPage() {
                             Cancelar
                           </button>
                           <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none">
-                            {isSubmitting ? 'Guardando...' : 'Guardar Propietario'}
+                            {isSubmitting ? 'Guardando...' : editingPropId ? 'Actualizar Propietario' : 'Guardar Propietario'}
                           </button>
                         </div>
                     </form>

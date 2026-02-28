@@ -37,6 +37,11 @@ export const createPropietario = async (datos: Omit<Propietario, 'id'>) => {
   const { data } = await api.post<ApiResponse<Propietario>>('/propietarios', datos);
   return data;
 };
+// FUNCIÓN PARA ACTUALIZAR PROPIETARIO
+export const updatePropietario = async (id: string, datos: any) => {
+  const { data } = await api.put(`/propietarios/${id}`, datos);
+  return data;
+};
 export const toggleEstadoPropietario = async (id: string, activo: boolean) => {
   const { data } = await api.put(`/propietarios/${id}/estado`, { activo });
   return data;
