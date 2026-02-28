@@ -148,6 +148,7 @@ export default function PropiedadDetallePage() {
     return <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-md" title="Falta"><FaTimesCircle className="text-white text-sm"/></div>;
   };
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
+  const propietarios = propiedad.Propietarios ?? propiedad.propietarios ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -219,7 +220,7 @@ export default function PropiedadDetallePage() {
                     )}
                     {activeTab === 'legal' && isAdmin && (
                         <div className="animate-fade-in space-y-8">
-                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100"><h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>{propiedad.Propietarios?.length > 0 ? <div className="space-y-3">{propiedad.Propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}</div>
+                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100"><h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>{propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}</div>
                             <div>
                                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaFileContract className="text-emerald-600"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-bold text-xs">{guardandoObs ? '...' : <><FaSave/> Guardar</>}</button></div>
                                 <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIconoSemaforo(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={`${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
@@ -234,10 +235,10 @@ export default function PropiedadDetallePage() {
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
                     <div className="flex items-baseline gap-1 text-indigo-950 mb-6"><span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span></div>
                     
-                    {propiedad.Propietarios?.length > 0 && (
+                    {propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
-                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propiedad.Propietarios[0].nombre}</span></div></div>
-                            <a href={`https://wa.me/51${propiedad.Propietarios[0].celular1}`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propietarios[0].nombre}</span></div></div>
+                            <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
                         </div>
                     )}
 
@@ -265,10 +266,10 @@ export default function PropiedadDetallePage() {
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
-                    {propiedad.Propietarios?.length > 0 && (
+                    {propietarios.length > 0 && (
                         <div className="mb-8 pl-1">
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Propietario</p>
-                            <p className="font-bold text-gray-800">{propiedad.Propietarios.map((p: any) => p.nombre).join(', ')}</p>
+                            <p className="font-bold text-gray-800">{propietarios.map((p: any) => p.nombre).join(', ')}</p>
                         </div>
                     )}
                     <div className="mt-8 text-center border-t border-gray-50 pt-6">
