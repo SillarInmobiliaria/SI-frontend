@@ -10,7 +10,7 @@ import {
   FaUserTie, FaWhatsapp, FaFileContract, FaTag, 
   FaYoutube, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
   FaAlignLeft, FaFileUpload, FaEye, FaExternalLinkAlt,
-  FaInstagram, FaTiktok, FaGlobe
+  FaInstagram, FaTiktok, FaGlobe, FaHandshake, FaMoneyBillWave
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -36,7 +36,6 @@ export default function PropiedadDetallePage() {
         try {
             const { data } = await api.get(`/propiedades/${id}`);
             setPropiedad(data);
-            // Notas: pueden venir como JSON string o como objeto
             const obs = data.observaciones;
             setObservaciones(
               typeof obs === 'string' && obs
@@ -63,7 +62,6 @@ export default function PropiedadDetallePage() {
     cargar();
   }, [id]);
 
-  // --- FUNCIÓN PARA IDENTIFICAR PLATAFORMAS ---
   const getLinkConfig = (url: string) => {
     const link = url.toLowerCase();
     if (link.includes('sillarinmobiliaria.pe')) {
@@ -112,8 +110,8 @@ export default function PropiedadDetallePage() {
     try {
         const { data } = await api.post(`${BACKEND_URL}/api/propiedades/${id}/upload-pdf`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         setDocumentosUrls({ ...documentosUrls, [key]: data.url });
-        alert('✅ PDF subido.');
-    } catch (e) { alert('❌ Error.'); }
+        alert('✅ PDF subido a la nube correctamente.');
+    } catch (e) { alert('❌ Error al subir PDF.'); }
   };
 
   const guardarCambios = async () => {
@@ -142,7 +140,6 @@ export default function PropiedadDetallePage() {
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
   const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   
-  // Semáforo: verde (ok), amarillo (pendiente), rojo (falta)
   const getIconoSemaforo = (estado: boolean | null) => {
     if (estado === true) return <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-md" title="OK"><FaCheckCircle className="text-white text-sm"/></div>;
     if (estado === null) return <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shadow-md" title="Pendiente"><FaExclamationCircle className="text-white text-sm"/></div>;
@@ -221,10 +218,59 @@ export default function PropiedadDetallePage() {
                     )}
                     {activeTab === 'legal' && isAdmin && (
                         <div className="animate-fade-in space-y-8">
-                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100"><h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>{propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}</div>
+                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                                <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>
+                                {propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}
+                            </div>
+
+                            {/* --- NUEVO BLOQUE: DETALLES DEL CONTRATO --- */}
+                            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
+                                    <FaHandshake className="text-blue-600"/> Detalles del Contrato
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Exclusiva</p>
+                                        <div className={`badge ${propiedad.exclusiva ? 'badge-success text-white' : 'badge-ghost text-gray-500'} font-bold`}>
+                                            {propiedad.exclusiva ? 'SÍ' : 'NO'}
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Renovable</p>
+                                        <div className={`badge ${propiedad.renovable ? 'badge-info text-white' : 'badge-ghost text-gray-500'} font-bold`}>
+                                            {propiedad.renovable ? 'SÍ' : 'NO'}
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Inicio</p>
+                                        <p className="font-black text-gray-800 text-sm">
+                                            {propiedad.inicioContrato ? propiedad.inicioContrato.split('-').reverse().join('/') : '-'}
+                                        </p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Fin</p>
+                                        <p className="font-black text-gray-800 text-sm">
+                                            {propiedad.finContrato ? propiedad.finContrato.split('-').reverse().join('/') : '-'}
+                                        </p>
+                                    </div>
+                                    
+                                    {propiedad.modalidad === 'Alquiler' && Number(propiedad.mantenimiento) > 0 && (
+                                        <div className="col-span-2 md:col-span-4 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                            <span className="text-xs text-blue-700 font-bold uppercase tracking-widest flex items-center gap-2">
+                                                <FaMoneyBillWave className="text-blue-500 text-lg"/> Costo de Mantenimiento
+                                            </span>
+                                            <span className="font-black text-blue-900 text-2xl">
+                                                S/ {Number(propiedad.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            {/* ------------------------------------------- */}
+
                             <div>
                                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaFileContract className="text-emerald-600"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-bold text-xs">{guardandoObs ? '...' : <><FaSave/> Guardar</>}</button></div>
-                                <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIconoSemaforo(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={`${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
+                                <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIconoSemaforo(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
                             </div>
                         </div>
                     )}
@@ -236,7 +282,6 @@ export default function PropiedadDetallePage() {
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
                     <div className="flex items-baseline gap-1 text-indigo-950 mb-6"><span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span></div>
                     
-                    {/* BLOQUE AZUL: SOLO SE MUESTRA EL PRIMER PROPIETARIO COMO TITULAR */}
                     {propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]" title={propietarios[0].nombre}>{propietarios[0].nombre}</span></div></div>
@@ -244,7 +289,6 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    {/* --- BOTONES DE ENLACES INTELIGENTES --- */}
                     {linksDisponibles.length > 0 && (
                         <div className="space-y-3 mb-6 pt-4 border-t border-gray-50">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recursos y Presentación</p>
@@ -269,7 +313,6 @@ export default function PropiedadDetallePage() {
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
 
-                    {/* --- SECCIÓN LISTA: SOLO SE MUESTRA SI HAY 2 O MÁS PROPIETARIOS --- */}
                     {propietarios.length > 1 && (
                         <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
