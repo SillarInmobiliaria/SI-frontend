@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '../context/AuthContext';
 import AuthGuard from '../components/AuthGuard';
 import Mantenimiento from '../components/Mantenimiento';
-import FeedbackModal from '../components/FeedbackModal'; 
+import FeedbackModal from '../components/FeedbackModal';
+import { SpeedInsights } from '@vercel/speed-insights/next'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
             </AuthGuard>
           </AuthProvider>
         )}
+        <SpeedInsights />
 
       </body>
     </html>
