@@ -140,7 +140,8 @@ export default function PropiedadDetallePage() {
   ];
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
-  const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+  const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  
   // Semáforo: verde (ok), amarillo (pendiente), rojo (falta)
   const getIconoSemaforo = (estado: boolean | null) => {
     if (estado === true) return <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-md" title="OK"><FaCheckCircle className="text-white text-sm"/></div>;
@@ -186,7 +187,7 @@ export default function PropiedadDetallePage() {
                             {images.length > 0 && (
                                 <div className="space-y-4">
                                     <div className="h-[450px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200">
-                                        <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-contain" alt="Gallery" crossOrigin="anonymous"/>
+                                        <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-cover" alt="Gallery" crossOrigin="anonymous"/>
                                     </div>
                                     <div className="flex gap-3 overflow-x-auto pb-2">
                                         {images.map((img:string, idx:number) => (
@@ -235,9 +236,10 @@ export default function PropiedadDetallePage() {
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
                     <div className="flex items-baseline gap-1 text-indigo-950 mb-6"><span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span></div>
                     
+                    {/* BLOQUE AZUL: SOLO SE MUESTRA EL PRIMER PROPIETARIO COMO TITULAR */}
                     {propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
-                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propietarios[0].nombre}</span></div></div>
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]" title={propietarios[0].nombre}>{propietarios[0].nombre}</span></div></div>
                             <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
                         </div>
                     )}
@@ -267,12 +269,12 @@ export default function PropiedadDetallePage() {
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
 
-                    {/* --- SECCIÓN AÑADIDA: PROPIETARIO(S) --- */}
-                    {propietarios.length > 0 && (
+                    {/* --- SECCIÓN LISTA: SOLO SE MUESTRA SI HAY 2 O MÁS PROPIETARIOS --- */}
+                    {propietarios.length > 1 && (
                         <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Propietario(s)</p>
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
                             <div className="space-y-2">
-                                {propietarios.map((p: any) => (
+                                {propietarios.slice(1).map((p: any) => (
                                     <p key={p.id} className="font-bold text-gray-800 text-sm flex items-center gap-2">
                                         <FaUserTie className="text-gray-400" />
                                         {p.nombre}
