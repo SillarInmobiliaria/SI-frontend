@@ -238,7 +238,7 @@ export default function PropiedadDetallePage() {
                     {propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]">{propietarios[0].nombre}</span></div></div>
-                            <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
+                            <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
                         </div>
                     )}
 
@@ -266,12 +266,22 @@ export default function PropiedadDetallePage() {
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
+
+                    {/* --- SECCIÓN AÑADIDA: PROPIETARIO(S) --- */}
                     {propietarios.length > 0 && (
-                        <div className="mb-8 pl-1">
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Propietario</p>
-                            <p className="font-bold text-gray-800">{propietarios.map((p: any) => p.nombre).join(', ')}</p>
+                        <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Propietario(s)</p>
+                            <div className="space-y-2">
+                                {propietarios.map((p: any) => (
+                                    <p key={p.id} className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                        <FaUserTie className="text-gray-400" />
+                                        {p.nombre}
+                                    </p>
+                                ))}
+                            </div>
                         </div>
                     )}
+
                     <div className="mt-8 text-center border-t border-gray-50 pt-6">
                         <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
                         <p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
