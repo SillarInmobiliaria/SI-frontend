@@ -440,7 +440,7 @@ export default function NuevaPropiedadPage() {
 
             {/* 5. LINKS */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
                     {[1,2,3,4,5].map(num => (
                         <input key={num} {...register(`link${num}` as keyof FormInputs)} className="input input-bordered input-sm w-full bg-white text-sm font-medium" placeholder={`Link ${num}: Drive, Drone, etc.`}/>
@@ -450,7 +450,7 @@ export default function NuevaPropiedadPage() {
 
             {/* 6. ASESOR */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaUserTie className="text-indigo-500"/> 6. ASESOR ENCARGADO</h3>
                 <div className="form-control relative">
                     <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerenciasAsesor(true); }} onFocus={() => setMostrarSugerenciasAsesor(true)}/></div>
                     {mostrarSugerenciasAsesor && busquedaAsesor.length > 0 && (
@@ -463,7 +463,7 @@ export default function NuevaPropiedadPage() {
 
             {/* 7. MULTIMEDIA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Foto Portada</label>
