@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../store/useInmobiliariaStore';
 import { createPropiedad } from '../../../services/api';
+import imageCompression from 'browser-image-compression';
 
 const API_BASE_URL = 'https://sillar-backend.onrender.com/api';
 
@@ -128,20 +129,37 @@ export default function NuevaPropiedadPage() {
     } catch (e) { alert("Error IA."); } finally { setGenerandoIA(false); }
   };
 
-  const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files?.[0]) {
-          setFotoPrincipalFile(e.target.files[0]);
-          setPreviewMain(URL.createObjectURL(e.target.files[0]));
+          const file = e.target.files[0];
+          const compressed = await imageCompression(file, {
+              maxSizeMB: 0.6,
+              maxWidthOrHeight: 1600,
+              useWebWorker: true
+          });
+          setFotoPrincipalFile(compressed as File);
+          setPreviewMain(URL.createObjectURL(compressed as File));
       }
   };
 
-  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
           const filesArray = Array.from(e.target.files);
           if (galeriaFiles.length + filesArray.length > 30) return alert("⚠️ Máximo 30 fotos.");
-          const newPreviews = filesArray.map(f => URL.createObjectURL(f));
-          setGaleriaFiles([...galeriaFiles, ...filesArray]);
-          setPreviewGallery([...previewGallery, ...newPreviews]);
+
+          const compressedFiles: File[] = [];
+          for (const file of filesArray) {
+              const compressed = await imageCompression(file, {
+                  maxSizeMB: 0.6,
+                  maxWidthOrHeight: 1600,
+                  useWebWorker: true
+              });
+              compressedFiles.push(compressed as File);
+          }
+
+          const newPreviews = compressedFiles.map(f => URL.createObjectURL(f));
+          setGaleriaFiles(prev => [...prev, ...compressedFiles]);
+          setPreviewGallery(prev => [...prev, ...newPreviews]);
       }
   };
 
