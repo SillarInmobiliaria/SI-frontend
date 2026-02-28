@@ -154,11 +154,9 @@ export default function NuevaPropiedadPage() {
     setIsSubmitting(true);
     try {
         const formData = new FormData();
-        // Lista de booleanos para manejar correctamente
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
         const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', ...docs];
         
-        // Adjuntar campos normales
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
             if (!excluded.includes(k) && data[k] !== undefined && data[k] !== '') {
@@ -166,25 +164,19 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        // Manejo de mantenimiento
-        if (data.tieneMantenimiento === 'no') {
+        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
             formData.set('mantenimiento', '0');
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
         }
 
-        // Propietarios
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         
-        // Archivos multimedia
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
         
-        // Manejo de Checkboxes y sus PDFs
         docs.forEach(doc => {
-            // Enviamos el booleano
             formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
-            // Si hay un archivo adjunto para este documento
             if (pdfFiles[doc]) {
                 formData.append(`file_${doc}`, pdfFiles[doc]);
             }
@@ -290,16 +282,42 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA TOTAL (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
+
+                {/* MANTENIMIENTO: Solo visible si es alquiler */}
+                {modalidadActual === 'Alquiler' && (
+                    <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
+                        <div className="flex flex-col md:flex-row md:items-center gap-6">
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Tiene Mantenimiento?</label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                </div>
+                            </div>
+                            {watch('tieneMantenimiento') === 'si' && (
+                                <div className="form-control flex-1">
+                                    <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento</label>
+                                    <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full bg-white font-bold" placeholder="Monto en la moneda seleccionada"/>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 3. DISTRIBUCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
-                <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
-                    <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
-                </div>
+                
+                {/* HABITACIONES: Ocultas si es terreno */}
+                {tipoInmueble !== 'Terreno' && (
+                    <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
+                        <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
+                        <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
+                        <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaCar/> Cocheras</label><input type="number" {...register('cocheras')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
+                    </div>
+                )}
+
                 <div className="form-control mb-8">
                     <div className="flex justify-between items-center mb-2"><label className="label font-bold text-gray-700 text-xs uppercase"><FaMagic className="text-purple-500"/> Descripción Marketing</label>
                     <button type="button" onClick={handleGenerarIA} disabled={generandoIA} className={`btn btn-sm border-none gap-2 px-5 rounded-full shadow-md transition-all ${generandoIA ? 'bg-gray-200 text-gray-500' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold'}`}><FaMagic className={generandoIA ? "animate-spin" : ""} /> IA REDACTAR</button></div>
@@ -311,8 +329,15 @@ export default function NuevaPropiedadPage() {
             {/* 4. DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                
+                {/* 3 PARTIDAS REGISTRALES */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera (Opcional)</label><input {...register('partidaCochera')} className="input input-bordered w-full bg-white font-mono"/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Depósito (Opcional)</label><input {...register('partidaDeposito')} className="input input-bordered w-full bg-white font-mono"/></div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 flex items-center gap-2 text-[10px] uppercase"><FaPercent className="text-blue-500" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <div className="relative">
@@ -343,10 +368,9 @@ export default function NuevaPropiedadPage() {
                         )}
                     </div>
                 </div>
-                <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Observaciones Legales</label><textarea {...register('observaciones')} className="textarea textarea-bordered h-32 bg-white text-sm" placeholder="Detalles legales..."></textarea></div>
             </div>
 
-            {/* 5. LINKS EXTERNOS */}
+            {/* 5. LINKS */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 uppercase tracking-wide"><FaLink className="text-blue-400"/> 5. LINKS EXTERNOS (MÁX 5)</h3>
                 <div className="grid grid-cols-1 gap-3">
@@ -362,7 +386,7 @@ export default function NuevaPropiedadPage() {
                 <div className="form-control relative">
                     <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar asesor..." value={busquedaAsesor} onChange={(e) => { setBusquedaAsesor(e.target.value); setMostrarSugerenciasAsesor(true); }} onFocus={() => setMostrarSugerenciasAsesor(true)}/></div>
                     {mostrarSugerenciasAsesor && busquedaAsesor.length > 0 && (
-                        <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1 border-t-4 border-indigo-500">
+                        <div className="absolute top-full left-0 w-full bg-white border-x border-b border-indigo-500 rounded-b-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
                             {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAsesor.toLowerCase())).map((asesor) => (<div key={asesor.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarAsesor(asesor)}><span className="font-bold text-slate-800 text-xs uppercase">{asesor.nombre}</span></div>))}
                         </div>
                     )}
@@ -397,7 +421,7 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaVideo className="text-red-500 mr-2"/> Enlace YouTube</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaVideo className="text-red-500 mr-2"/> YouTube URL</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://..."/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest"><FaMapMarkerAlt className="text-green-600 mr-2"/> Google Maps URL</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="src iframe..."/></div>
                 </div>
             </div>
