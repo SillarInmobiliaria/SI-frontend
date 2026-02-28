@@ -164,10 +164,11 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
-            formData.set('mantenimiento', '0');
-        } else {
+        // LÓGICA DE MANTENIMIENTO: Solo si es alquiler y seleccionó "sí"
+        if (modalidadActual === 'Alquiler' && data.tieneMantenimiento === 'si') {
             formData.set('mantenimiento', String(data.mantenimiento));
+        } else {
+            formData.set('mantenimiento', '0');
         }
 
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
@@ -283,7 +284,7 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
-                {/* MANTENIMIENTO: Solo visible si es alquiler */}
+                {/* MANTENIMIENTO: Solo visible si es Alquiler */}
                 {modalidadActual === 'Alquiler' && (
                     <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
                         <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -296,8 +297,11 @@ export default function NuevaPropiedadPage() {
                             </div>
                             {watch('tieneMantenimiento') === 'si' && (
                                 <div className="form-control flex-1">
-                                    <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento</label>
-                                    <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full bg-white font-bold" placeholder="Monto en la moneda seleccionada"/>
+                                    <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento (SIEMPRE EN SOLES)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">S/</span>
+                                        <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full bg-white font-bold pl-9" placeholder="0.00"/>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -330,7 +334,7 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
-                {/* 3 PARTIDAS REGISTRALES */}
+                {/* LAS 3 PARTIDAS REGISTRALES */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera (Opcional)</label><input {...register('partidaCochera')} className="input input-bordered w-full bg-white font-mono"/></div>
