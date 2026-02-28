@@ -342,11 +342,39 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
-                {/* LAS 3 PARTIDAS REGISTRALES */}
+                {/* PARTIDAS REGISTRALES */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera (Opcional)</label><input {...register('partidaCochera')} className="input input-bordered w-full bg-white font-mono"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Depósito (Opcional)</label><input {...register('partidaDeposito')} className="input input-bordered w-full bg-white font-mono"/></div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">
+                            Partida Registral (Principal)
+                        </label>
+                        <input
+                          {...register('partidaRegistral')}
+                          className="input input-bordered w-full bg-white font-mono"
+                        />
+                    </div>
+                    {modalidadActual === 'Alquiler' && (
+                        <>
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-600 text-[10px] uppercase">
+                                    Partida Cochera (Opcional)
+                                </label>
+                                <input
+                                  {...register('partidaCochera')}
+                                  className="input input-bordered w-full bg-white font-mono"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-600 text-[10px] uppercase">
+                                    Partida Depósito (Opcional)
+                                </label>
+                                <input
+                                  {...register('partidaDeposito')}
+                                  className="input input-bordered w-full bg-white font-mono"
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
