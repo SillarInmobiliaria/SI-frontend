@@ -189,13 +189,13 @@ export default function PropiedadesPage() {
                         )}
 
                         {/* IMAGEN HERO */}
-                        <div className="h-64 overflow-hidden bg-gray-200 relative">
+                        <div className="h-64 overflow-hidden bg-gray-200 relative flex items-center justify-center">
                             {prop.fotoPrincipal ? (
                                 <img 
-                                    src={`${BACKEND_URL}/${prop.fotoPrincipal}`} 
+                                    src={prop.fotoPrincipal.startsWith('http') ? prop.fotoPrincipal : `${BACKEND_URL}${prop.fotoPrincipal.startsWith('/') ? '' : '/'}${prop.fotoPrincipal}`} 
                                     alt={prop.ubicacion} 
-                                    crossOrigin="anonymous" // Corrección para CORS
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    crossOrigin="anonymous"
+                                    className="w-full h-full object-cover block transition-transform duration-700 group-hover:scale-110"
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
