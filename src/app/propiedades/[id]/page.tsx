@@ -261,10 +261,16 @@ export default function PropiedadDetallePage() {
                     )}
 
                     <div className="divider my-6"></div>
-                    <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center gap-4 mb-4">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-bold">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
                         <div><p className="font-bold text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
+                    {propiedad.Propietarios?.length > 0 && (
+                        <div className="mb-8 pl-1">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Propietario</p>
+                            <p className="font-bold text-gray-800">{propiedad.Propietarios.map((p: any) => p.nombre).join(', ')}</p>
+                        </div>
+                    )}
                     <div className="mt-8 text-center border-t border-gray-50 pt-6">
                         <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
                         <p className="text-[10px] text-gray-300 mt-1 font-bold">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
