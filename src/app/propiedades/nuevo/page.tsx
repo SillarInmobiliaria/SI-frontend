@@ -29,6 +29,7 @@ interface FormInputs {
   cri: boolean; reciboAguaLuz: boolean; observaciones: string;
   videoUrl: string; mapaUrl: string; asesor: string;
   tieneMantenimiento: string; mantenimiento: string;
+  exclusiva: string; renovable: string; // <-- NUEVOS CAMPOS
   fotoPrincipal: any; galeria: any;
   link1: string; link2: string; link3: string; link4: string; link5: string;
 }
@@ -40,7 +41,6 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-// --- COMPONENTE MODIFICADO: AHORA INCLUYE EL TEXTAREA DE NOTAS ---
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFile = pdfFiles[name]; 
@@ -86,7 +86,9 @@ export default function NuevaPropiedadPage() {
         moneda: 'USD', 
         modalidad: 'Venta', 
         tipo: 'Casa', 
-        tieneMantenimiento: 'no' 
+        tieneMantenimiento: 'no',
+        exclusiva: 'no',
+        renovable: 'no'
     }
   });
 
@@ -100,8 +102,6 @@ export default function NuevaPropiedadPage() {
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
   const [pdfFiles, setPdfFiles] = useState<Record<string, File>>({});
-  
-  // --- NUEVO ESTADO PARA ALMACENAR LAS NOTAS DE LOS DOCUMENTOS ---
   const [notasDocs, setNotasDocs] = useState<Record<string, string>>({});
 
   const [fotoPrincipalFile, setFotoPrincipalFile] = useState<File | null>(null);
@@ -190,7 +190,7 @@ export default function NuevaPropiedadPage() {
     try {
         const formData = new FormData();
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
-        // Añadimos 'observaciones' a la lista de excluidos para procesarlo manualmente como JSON
+        // Agregamos exclusiones
         const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'observaciones', ...docs];
         
         Object.keys(data).forEach(key => {
@@ -200,14 +200,12 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        // LIMPIEZA DE DATOS: Asegura que Mantenimiento sea 0 si no es alquiler
         if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
             formData.set('mantenimiento', '0');
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
         }
 
-        // GUARDADO DE NOTAS COMO OBJETO JSON PARA QUE EL DETALLE LO LEA PERFECTAMENTE
         formData.set('observaciones', JSON.stringify(notasDocs));
 
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
@@ -403,6 +401,35 @@ export default function NuevaPropiedadPage() {
                             </div>
                         </>
                     )}
+                </div>
+
+                {/* --- NUEVA SECCIÓN DE CONTRATO --- */}
+                <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl mb-8">
+                    <label className="label font-bold text-indigo-900 mb-4 border-b border-indigo-200 pb-2 text-[10px] uppercase tracking-widest">Detalles del Contrato</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Es Exclusiva?</label>
+                            <div className="flex gap-4 mt-2">
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('exclusiva')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('exclusiva')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
+                            </div>
+                        </div>
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Es Renovable?</label>
+                            <div className="flex gap-4 mt-2">
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
+                            </div>
+                        </div>
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-600 text-[10px] uppercase">Inicio de Contrato</label>
+                            <input type="date" {...register('inicioContrato')} className="input input-bordered w-full bg-white text-sm"/>
+                        </div>
+                        <div className="form-control">
+                            <label className="label font-bold text-gray-600 text-[10px] uppercase">Fin de Contrato</label>
+                            <input type="date" {...register('finContrato')} className="input input-bordered w-full bg-white text-sm"/>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
