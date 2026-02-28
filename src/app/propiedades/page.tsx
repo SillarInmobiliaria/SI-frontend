@@ -134,7 +134,7 @@ export default function PropiedadesPage() {
                         href="/propiedades/nuevo" 
                         className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 border-none shadow-lg shadow-indigo-200 px-6 w-full md:w-auto flex items-center gap-2 text-white h-12"
                     >
-                        <FaPlus/> Publicar
+                        <FaPlus/> Agregar Propiedad
                     </Link>
                 </div>
             </div>
