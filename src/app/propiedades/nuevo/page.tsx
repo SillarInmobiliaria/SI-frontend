@@ -72,8 +72,14 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
 export default function NuevaPropiedadPage() {
   const router = useRouter();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
+  
   const { register, handleSubmit, watch, setValue } = useForm<FormInputs>({
-    defaultValues: { moneda: 'USD', modalidad: 'Venta', tipo: 'Casa', tieneMantenimiento: 'no', tipoContrato: 'Sin Exclusiva' }
+    defaultValues: { 
+        moneda: 'USD', 
+        modalidad: 'Venta', 
+        tipo: 'Casa', 
+        tieneMantenimiento: 'no' 
+    }
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,8 +98,10 @@ export default function NuevaPropiedadPage() {
   const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
-  const modalidadActual = watch('modalidad');
-  const tipoInmueble = watch('tipo');
+  // ESTOS WATCHERS SON LOS QUE HACEN LA MAGIA EN VIVO
+  const modalidadActual = watch('modalidad', 'Venta');
+  const tipoInmueble = watch('tipo', 'Casa');
+  const tieneMantenimiento = watch('tieneMantenimiento', 'no');
 
   useEffect(() => {
     fetchPropietarios();
@@ -164,11 +172,11 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        // LÓGICA DE MANTENIMIENTO: Solo si es alquiler y seleccionó "sí"
-        if (modalidadActual === 'Alquiler' && data.tieneMantenimiento === 'si') {
-            formData.set('mantenimiento', String(data.mantenimiento));
-        } else {
+        // LIMPIEZA DE DATOS: Asegura que Mantenimiento sea 0 si no es alquiler
+        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
             formData.set('mantenimiento', '0');
+        } else {
+            formData.set('mantenimiento', String(data.mantenimiento));
         }
 
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
@@ -284,7 +292,7 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
-                {/* MANTENIMIENTO: Solo visible si es Alquiler */}
+                {/* MANTENIMIENTO: SOLO VISIBLE SI ES ALQUILER */}
                 {modalidadActual === 'Alquiler' && (
                     <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
                         <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -295,7 +303,7 @@ export default function NuevaPropiedadPage() {
                                     <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
                                 </div>
                             </div>
-                            {watch('tieneMantenimiento') === 'si' && (
+                            {tieneMantenimiento === 'si' && (
                                 <div className="form-control flex-1">
                                     <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento (SIEMPRE EN SOLES)</label>
                                     <div className="relative">
@@ -313,7 +321,7 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 
-                {/* HABITACIONES: Ocultas si es terreno */}
+                {/* HABITACIONES: OCULTAS SI ES TERRENO */}
                 {tipoInmueble !== 'Terreno' && (
                     <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
                         <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
