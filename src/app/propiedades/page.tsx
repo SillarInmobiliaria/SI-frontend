@@ -100,15 +100,21 @@ export default function PropiedadesPage() {
 
                         {/* Select Tipo */}
                         <select 
-                            className="select select-sm select-ghost w-full md:w-36 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
+                            className="select select-sm select-ghost w-full md:w-44 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroTipo} 
                             onChange={e=>setFiltroTipo(e.target.value)}
                         >
                             <option value="Todos">Tipo</option>
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
+                            <option value="Duplex">Duplex</option>
                             <option value="Terreno">Terreno</option>
-                            <option value="Local">Local</option>
+                            <option value="Terreno Urbano">Terreno Urbano</option>
+                            <option value="Terreno Agricola">Terreno Agrícola</option>
+                            <option value="Terreno Industrial">Terreno Industrial</option>
+                            <option value="Local">Local Comercial</option>
+                            <option value="Local Industrial">Local Industrial</option>
+                            <option value="Oficina">Oficina</option>
                         </select>
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
@@ -151,124 +157,140 @@ export default function PropiedadesPage() {
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {propiedadesFiltradas.map((prop) => (
-                    
-                    <Link 
-                        key={prop.id} 
-                        href={`/propiedades/${prop.id}`} 
-                        className="group relative block bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 overflow-hidden hover:-translate-y-1"
-                    >
-                        
-                        {/* BOTONES ADMIN FLOTANTES */}
-                        {isAdmin && (
-                            <div className="absolute top-3 right-3 z-20 flex gap-2">
-                                {/* BOTÓN EDITAR AGREGADO */}
-                                <button 
-                                    onClick={(e) => handleEditar(e, prop.id)}
-                                    className="btn btn-circle btn-sm bg-white text-blue-600 border-none shadow-lg hover:bg-blue-50"
-                                    title="Editar"
-                                >
-                                    <FaEdit/>
-                                </button>
+                {propiedadesFiltradas.map((prop) => {
+                    // --- LÓGICA TERRENO ---
+                    const esTerreno = prop.tipo?.toLowerCase().includes('terreno');
 
-                                <button 
-                                    onClick={(e) => handleSuspender(e, prop.id, prop.activo || false)}
-                                    className={`btn btn-circle btn-sm border-none shadow-lg ${prop.activo ? 'bg-white text-amber-500 hover:bg-amber-50' : 'bg-green-500 text-white hover:bg-green-600'}`}
-                                    title={prop.activo ? "Suspender" : "Activar"}
-                                >
-                                    {prop.activo ? <FaBan/> : <FaCheck/>}
-                                </button>
-                                <button 
-                                    onClick={(e) => handleEliminar(e, prop.id)}
-                                    className="btn btn-circle btn-sm bg-white text-red-500 border-none shadow-lg hover:bg-red-50"
-                                    title="Eliminar"
-                                >
-                                    <FaTrash/>
-                                </button>
-                            </div>
-                        )}
+                    return (
+                        <Link 
+                            key={prop.id} 
+                            href={`/propiedades/${prop.id}`} 
+                            className="group relative block bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 overflow-hidden hover:-translate-y-1"
+                        >
+                            
+                            {/* BOTONES ADMIN FLOTANTES */}
+                            {isAdmin && (
+                                <div className="absolute top-3 right-3 z-20 flex gap-2">
+                                    {/* BOTÓN EDITAR AGREGADO */}
+                                    <button 
+                                        onClick={(e) => handleEditar(e, prop.id)}
+                                        className="btn btn-circle btn-sm bg-white text-blue-600 border-none shadow-lg hover:bg-blue-50"
+                                        title="Editar"
+                                    >
+                                        <FaEdit/>
+                                    </button>
 
-                        {/* IMAGEN HERO */}
-                        <div className="h-64 overflow-hidden bg-gray-200 relative flex items-center justify-center">
-                            {prop.fotoPrincipal ? (
-                                <img 
-                                    src={prop.fotoPrincipal.startsWith('http') ? prop.fotoPrincipal : `${BACKEND_URL}${prop.fotoPrincipal.startsWith('/') ? '' : '/'}${prop.fotoPrincipal}`} 
-                                    alt={prop.ubicacion} 
-                                    crossOrigin="anonymous"
-                                    className="w-full h-full object-cover block transition-transform duration-700 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
-                                    <FaBuilding className="text-5xl mb-2 opacity-50"/>
-                                    <span className="text-xs font-bold uppercase tracking-widest opacity-60">Sin Imagen</span>
+                                    <button 
+                                        onClick={(e) => handleSuspender(e, prop.id, prop.activo || false)}
+                                        className={`btn btn-circle btn-sm border-none shadow-lg ${prop.activo ? 'bg-white text-amber-500 hover:bg-amber-50' : 'bg-green-500 text-white hover:bg-green-600'}`}
+                                        title={prop.activo ? "Suspender" : "Activar"}
+                                    >
+                                        {prop.activo ? <FaBan/> : <FaCheck/>}
+                                    </button>
+                                    <button 
+                                        onClick={(e) => handleEliminar(e, prop.id)}
+                                        className="btn btn-circle btn-sm bg-white text-red-500 border-none shadow-lg hover:bg-red-50"
+                                        title="Eliminar"
+                                    >
+                                        <FaTrash/>
+                                    </button>
                                 </div>
                             )}
-                            
-                            {/* ETIQUETA MODALIDAD */}
-                            <div className="absolute bottom-3 left-3 flex gap-2">
-                                <div className={`badge badge-lg border-none text-white shadow-md font-bold px-4 py-3 ${
-                                    prop.modalidad === 'Venta' ? 'bg-gradient-to-r from-orange-500 to-red-500' : 
-                                    prop.modalidad === 'Alquiler' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                                    'bg-gradient-to-r from-purple-500 to-pink-500'
-                                }`}>
-                                    {prop.modalidad}
-                                </div>
-                            </div>
 
-                            {!prop.activo && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-10">
-                                    <span className="text-white font-bold text-lg border-2 border-white px-6 py-2 rounded-lg uppercase tracking-widest transform -rotate-12 shadow-2xl">Suspendida</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* CONTENIDO TARJETA */}
-                        <div className="p-6">
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-bold text-xl uppercase leading-tight text-gray-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                                    {prop.tipo} en {prop.ubicacion}
-                                </h3>
-                            </div>
-                            
-                            <p className="text-sm text-gray-500 flex items-center gap-1.5 mb-5 font-medium">
-                                <FaMapMarkerAlt className="text-red-400"/> {prop.direccion}
-                            </p>
-                            
-                            {/* CARACTERÍSTICAS GRID */}
-                            <div className="grid grid-cols-3 gap-2 py-4 border-t border-gray-100 mb-4 text-gray-600 text-sm bg-gray-50/50 rounded-xl px-2">
-                                <div className="flex flex-col items-center justify-center p-1">
-                                    <FaBed className="text-indigo-400 text-lg mb-1"/> 
-                                    <span className="font-bold text-gray-800">{prop.habitaciones} <span className="font-normal text-xs text-gray-500">Hab</span></span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center p-1 border-l border-r border-gray-200">
-                                    <FaBath className="text-sky-400 text-lg mb-1"/> 
-                                    <span className="font-bold text-gray-800">{prop.banos} <span className="font-normal text-xs text-gray-500">Baños</span></span>
-                                </div>
-                                <div className="flex flex-col items-center justify-center p-1">
-                                    <FaCar className="text-orange-400 text-lg mb-1"/> 
-                                    <span className="font-bold text-gray-800">{prop.cocheras} <span className="font-normal text-xs text-gray-500">Coch</span></span>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg mb-1.5 w-fit border border-emerald-100">
-                                        <FaRulerCombined/> {prop.area} m² Total
+                            {/* IMAGEN HERO */}
+                            <div className="h-64 overflow-hidden bg-gray-200 relative flex items-center justify-center">
+                                {prop.fotoPrincipal ? (
+                                    <img 
+                                        src={prop.fotoPrincipal.startsWith('http') ? prop.fotoPrincipal : `${BACKEND_URL}${prop.fotoPrincipal.startsWith('/') ? '' : '/'}${prop.fotoPrincipal}`} 
+                                        alt={prop.ubicacion} 
+                                        crossOrigin="anonymous"
+                                        className="w-full h-full object-cover block transition-transform duration-700 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
+                                        <FaBuilding className="text-5xl mb-2 opacity-50"/>
+                                        <span className="text-xs font-bold uppercase tracking-widest opacity-60">Sin Imagen</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg w-fit border border-purple-100">
-                                        <FaHome/> {prop.areaConstruida} m² Const.
+                                )}
+                                
+                                {/* ETIQUETA MODALIDAD */}
+                                <div className="absolute bottom-3 left-3 flex gap-2">
+                                    <div className={`badge badge-lg border-none text-white shadow-md font-bold px-4 py-3 ${
+                                        prop.modalidad === 'Venta' ? 'bg-gradient-to-r from-orange-500 to-red-500' : 
+                                        prop.modalidad === 'Alquiler' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
+                                        'bg-gradient-to-r from-purple-500 to-pink-500'
+                                    }`}>
+                                        {prop.modalidad}
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="block text-[10px] text-gray-400 font-black uppercase tracking-wider mb-0.5">Precio</span>
-                                    <span className="text-2xl font-black text-gray-900 tracking-tight flex items-center justify-end gap-1">
-                                        {prop.moneda === 'USD' ? '$' : 'S/'} {Number(prop.precio).toLocaleString()}
-                                    </span>
+
+                                {!prop.activo && (
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-10">
+                                        <span className="text-white font-bold text-lg border-2 border-white px-6 py-2 rounded-lg uppercase tracking-widest transform -rotate-12 shadow-2xl">Suspendida</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* CONTENIDO TARJETA */}
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-bold text-xl uppercase leading-tight text-gray-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                        {prop.tipo} en {prop.ubicacion}
+                                    </h3>
+                                </div>
+                                
+                                <p className="text-sm text-gray-500 flex items-center gap-1.5 mb-5 font-medium">
+                                    <FaMapMarkerAlt className="text-red-400"/> {prop.direccion}
+                                </p>
+                                
+                                {/* CARACTERÍSTICAS GRID */}
+                                {!esTerreno && (
+                                    <div className="grid grid-cols-3 gap-2 py-4 border-t border-gray-100 mb-4 text-gray-600 text-sm bg-gray-50/50 rounded-xl px-2">
+                                        <div className="flex flex-col items-center justify-center p-1">
+                                            <FaBed className="text-indigo-400 text-lg mb-1"/> 
+                                            <span className="font-bold text-gray-800">{prop.habitaciones || 0} <span className="font-normal text-xs text-gray-500">Hab</span></span>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center p-1 border-l border-r border-gray-200">
+                                            <FaBath className="text-sky-400 text-lg mb-1"/> 
+                                            <span className="font-bold text-gray-800">{prop.banos || 0} <span className="font-normal text-xs text-gray-500">Baños</span></span>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center p-1">
+                                            <FaCar className="text-orange-400 text-lg mb-1"/> 
+                                            <span className="font-bold text-gray-800">{prop.cocheras || 0} <span className="font-normal text-xs text-gray-500">Coch</span></span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {esTerreno && (
+                                    <div className="py-4 border-t border-gray-100 mb-4 text-center">
+                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 uppercase tracking-widest">
+                                            Propiedad tipo Terreno
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg mb-1.5 w-fit border border-emerald-100">
+                                            <FaRulerCombined/> {prop.area} m² Total
+                                        </div>
+                                        {Number(prop.areaConstruida) > 0 && (
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg w-fit border border-purple-100">
+                                                <FaHome/> {prop.areaConstruida} m² Const.
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block text-[10px] text-gray-400 font-black uppercase tracking-wider mb-0.5">Precio</span>
+                                        <span className="text-2xl font-black text-gray-900 tracking-tight flex items-center justify-end gap-1">
+                                            {prop.moneda === 'USD' ? '$' : 'S/'} {Number(prop.precio).toLocaleString()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Link>
-                ))}
+                        </Link>
+                    );
+                })}
             </div>
         )}
       </div>
