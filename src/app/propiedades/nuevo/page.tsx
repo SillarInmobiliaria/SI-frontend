@@ -27,9 +27,13 @@ interface FormInputs {
   comision: string; testimonio: boolean; hr: boolean; pu: boolean;
   impuestoPredial: boolean; arbitrios: boolean; copiaLiteral: boolean;
   cri: boolean; reciboAguaLuz: boolean; observaciones: string;
+  // --- NUEVOS CAMPOS DE AUDITORÍA ---
+  planos: boolean; certificadoParametros: boolean; 
+  certificadoZonificacion: boolean; otros: boolean;
+  // ----------------------------------
   videoUrl: string; mapaUrl: string; asesor: string;
   tieneMantenimiento: string; mantenimiento: string;
-  exclusiva: string; renovable: string; // <-- NUEVOS CAMPOS
+  exclusiva: string; renovable: string;
   fotoPrincipal: any; galeria: any;
   link1: string; link2: string; link3: string; link4: string; link5: string;
 }
@@ -189,8 +193,14 @@ export default function NuevaPropiedadPage() {
     setIsSubmitting(true);
     try {
         const formData = new FormData();
-        const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz'];
-        // Agregamos exclusiones
+        
+        // --- AQUÍ AÑADIMOS LOS 4 DOCUMENTOS NUEVOS A LA LISTA ---
+        const docs = [
+            'testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 
+            'copiaLiteral', 'cri', 'reciboAguaLuz', 
+            'planos', 'certificadoParametros', 'certificadoZonificacion', 'otros'
+        ];
+        
         const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'observaciones', ...docs];
         
         Object.keys(data).forEach(key => {
@@ -403,7 +413,6 @@ export default function NuevaPropiedadPage() {
                     )}
                 </div>
 
-                {/* --- NUEVA SECCIÓN DE CONTRATO --- */}
                 <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl mb-8">
                     <label className="label font-bold text-indigo-900 mb-4 border-b border-indigo-200 pb-2 text-[10px] uppercase tracking-widest">Detalles del Contrato</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -455,12 +464,20 @@ export default function NuevaPropiedadPage() {
                         <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        
                         {(modalidadActual === 'Alquiler' || modalidadActual === 'Anticresis') && (
                             <>
                                 <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                                 <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                             </>
                         )}
+
+                        {/* --- NUEVOS DOCUMENTOS AÑADIDOS --- */}
+                        <CustomDocCheckbox label="Planos" name="planos" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Certificado de Parámetros" name="certificadoParametros" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Certificado de Zonificación y Vías" name="certificadoZonificacion" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Otros" name="otros" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+
                     </div>
                 </div>
             </div>

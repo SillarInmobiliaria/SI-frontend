@@ -8,7 +8,7 @@ import { createPropietario, toggleEstadoPropietario, eliminarPropietario, update
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt, FaEdit // <-- NUEVO ÍCONO
+  FaBirthdayCake, FaCalendarAlt, FaEdit
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -39,14 +39,14 @@ export default function PropietariosPage() {
       try { await eliminarPropietario(id); fetchPropietarios(); } catch(e){ alert('Error'); }
   };
 
-  // NUEVA FUNCIÓN: Abrir modal para crear
+  // Abrir modal para crear
   const openCrearModal = () => {
       setEditingPropId(null);
       reset({ fechaNacimiento: today }); // Valores por defecto vacíos
       setModalOpen(true);
   };
 
-  // NUEVA FUNCIÓN: Abrir modal para editar
+  // Abrir modal para editar
   const openEditarModal = (prop: any) => {
       setEditingPropId(prop.id);
       
@@ -260,7 +260,7 @@ export default function PropietariosPage() {
             </div>
         </div>
 
-        {/* MODAL NUEVO / EDITAR */}
+        {/* EDITAR */}
         {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
