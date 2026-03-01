@@ -43,6 +43,7 @@ export default function PropiedadDetallePage() {
                 : (obs && typeof obs === 'object' ? obs : {})
             );
             setDocumentosUrls(data.documentosUrls || data.documentosurls || {});
+            
             setEstadosDocs({
                 testimonio: data.testimonio ?? null,
                 hr: data.hr ?? null,
@@ -51,7 +52,11 @@ export default function PropiedadDetallePage() {
                 arbitrios: data.arbitrios ?? null,
                 copiaLiteral: data.copiaLiteral ?? null,
                 cri: data.cri ?? null,
-                reciboAguaLuz: data.reciboAguaLuz ?? data.reciboagualuz ?? null
+                reciboAguaLuz: data.reciboAguaLuz ?? data.reciboagualuz ?? null,
+                planos: data.planos ?? null,
+                certificadoParametros: data.certificadoParametros ?? null,
+                certificadoZonificacion: data.certificadoZonificacion ?? null,
+                otros: data.otros ?? null
             });
             setLoading(false);
         } catch (e) { 
@@ -129,12 +134,21 @@ export default function PropiedadDetallePage() {
   if (loading || !propiedad) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
 
   const esVenta = propiedad.modalidad === 'Venta';
-  const documentosList = esVenta ? [
+  
+  const baseDocs = esVenta ? [
     { key: 'testimonio', label: 'Testimonio' }, { key: 'hr', label: 'Hoja Resumen (HR)' }, { key: 'pu', label: 'Predio Urbano (PU)' },
     { key: 'impuestoPredial', label: 'Impuesto Predial' }, { key: 'arbitrios', label: 'Arbitrios' }, { key: 'copiaLiteral', label: 'Copia Literal' }
   ] : [
     { key: 'impuestoPredial', label: 'Impuesto Predial' }, { key: 'arbitrios', label: 'Arbitrios' }, { key: 'copiaLiteral', label: 'Copia Literal' },
     { key: 'cri', label: 'CRI' }, { key: 'reciboAguaLuz', label: 'Recibos Luz/Agua' }
+  ];
+
+  const documentosList = [
+      ...baseDocs,
+      { key: 'planos', label: 'Planos' },
+      { key: 'certificadoParametros', label: 'Certificado de Parámetros' },
+      { key: 'certificadoZonificacion', label: 'Cert. Zonificación y Vías' },
+      { key: 'otros', label: 'Otros' }
   ];
 
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
@@ -145,8 +159,11 @@ export default function PropiedadDetallePage() {
     if (estado === null) return <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shadow-md" title="Pendiente"><FaExclamationCircle className="text-white text-sm"/></div>;
     return <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-md" title="Falta"><FaTimesCircle className="text-white text-sm"/></div>;
   };
+  
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
   const propietarios = propiedad.Propietarios ?? propiedad.propietarios ?? [];
+  
+  const esTerreno = propiedad.tipo?.toLowerCase().includes('terreno');
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -193,12 +210,33 @@ export default function PropiedadDetallePage() {
                                     </div>
                                 </div>
                             )}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100 text-center">
-                                <div><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl">{propiedad.area} m²</p><p className="text-xs font-bold text-gray-400 uppercase">Total</p></div>
-                                <div><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl">{propiedad.habitaciones}</p><p className="text-xs font-bold text-gray-400 uppercase">Hab.</p></div>
-                                <div><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl">{propiedad.banos}</p><p className="text-xs font-bold text-gray-400 uppercase">Baños</p></div>
-                                <div><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl">{propiedad.cocheras}</p><p className="text-xs font-bold text-gray-400 uppercase">Coch.</p></div>
-                            </div>
+
+                            {/* --- CONDICIONAL: TERRENOS VS OTROS --- */}
+                            {esTerreno ? (
+                                <div className="flex justify-center gap-12 py-6 border-t border-b border-gray-100 text-center">
+                                    <div>
+                                        <FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/>
+                                        <p className="font-black text-xl">{propiedad.area} m²</p>
+                                        <p className="text-xs font-bold text-gray-400 uppercase">Área Total</p>
+                                    </div>
+                                    {Number(propiedad.areaConstruida) > 0 && (
+                                        <div>
+                                            <FaRulerCombined className="mx-auto text-3xl text-blue-500 mb-2"/>
+                                            <p className="font-black text-xl">{propiedad.areaConstruida} m²</p>
+                                            <p className="text-xs font-bold text-gray-400 uppercase">Área Construida</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100 text-center">
+                                    <div><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl">{propiedad.area} m²</p><p className="text-xs font-bold text-gray-400 uppercase">Total</p></div>
+                                    <div><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl">{propiedad.habitaciones || 0}</p><p className="text-xs font-bold text-gray-400 uppercase">Hab.</p></div>
+                                    <div><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl">{propiedad.banos || 0}</p><p className="text-xs font-bold text-gray-400 uppercase">Baños</p></div>
+                                    <div><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl">{propiedad.cocheras || 0}</p><p className="text-xs font-bold text-gray-400 uppercase">Coch.</p></div>
+                                </div>
+                            )}
+                            {/* -------------------------------------- */}
+
                             {propiedad.descripcion && (
                                 <div><h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter"><FaTag className="text-indigo-500"/> Descripción</h3><p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg">{propiedad.descripcion}</p></div>
                             )}
@@ -223,7 +261,6 @@ export default function PropiedadDetallePage() {
                                 {propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-bold text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic">Sin registros.</p>}
                             </div>
 
-                            {/* --- NUEVO BLOQUE: DETALLES DEL CONTRATO --- */}
                             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
                                     <FaHandshake className="text-blue-600"/> Detalles del Contrato
@@ -266,11 +303,36 @@ export default function PropiedadDetallePage() {
                                     )}
                                 </div>
                             </div>
-                            {/* ------------------------------------------- */}
 
                             <div>
                                 <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaFileContract className="text-emerald-600"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-bold text-xs">{guardandoObs ? '...' : <><FaSave/> Guardar</>}</button></div>
-                                <div className="overflow-x-auto"><table className="table w-full"><thead><tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr></thead><tbody>{documentosList.map((doc) => (<tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50"><td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>{getIconoSemaforo(estadosDocs[doc.key])}</td><td className="font-bold text-gray-700 text-sm">{doc.label}</td><td>{documentosUrls[doc.key] ? <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> : <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>}</td><td><textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea></td></tr>))}</tbody></table></div>
+                                <div className="overflow-x-auto">
+                                    <table className="table w-full">
+                                        <thead>
+                                            <tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {documentosList.map((doc) => (
+                                                <tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50">
+                                                    <td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>
+                                                        {getIconoSemaforo(estadosDocs[doc.key])}
+                                                    </td>
+                                                    <td className="font-bold text-gray-700 text-sm">{doc.label}</td>
+                                                    <td>
+                                                        {documentosUrls[doc.key] ? (
+                                                            <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> 
+                                                        ) : (
+                                                            <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <textarea className="textarea textarea-bordered w-full h-10 text-xs" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
