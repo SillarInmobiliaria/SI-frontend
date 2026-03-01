@@ -5,13 +5,15 @@ import { useRouter, useParams } from 'next/navigation';
 import Navbar from '../../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../../store/useInmobiliariaStore';
 import api from '../../../../services/api';
+import imageCompression from 'browser-image-compression';
 
 const API_BASE_URL = 'https://sillar-backend.onrender.com/api';
+const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 import { 
   FaHome, FaBed, FaBath, FaCar, FaImages, FaSave, FaArrowLeft, FaVideo, 
-  FaUserTie, FaGavel, FaLink, FaSearch, FaMapMarkerAlt, 
-  FaMagic, FaListUl, FaCheck, FaPercent
+  FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch, FaMapMarkerAlt, 
+  FaMagic, FaListUl, FaPercent, FaTimes
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -21,12 +23,7 @@ interface FormInputs {
   detalles: string; partidaRegistral: string; partidaAdicional: string;
   partidaCochera: string; partidaDeposito: string; fechaCaptacion: string;
   inicioContrato: string; finContrato: string; tipoContrato: string;
-  comision: string; testimonio: boolean; hr: boolean; pu: boolean;
-  impuestoPredial: boolean; arbitrios: boolean; copiaLiteral: boolean;
-  cri: boolean; reciboAguaLuz: boolean; observaciones: string;
-  planos: boolean; certificadoParametros: boolean; 
-  certificadoZonificacion: boolean; otros: boolean;
-  videoUrl: string; mapaUrl: string; asesor: string;
+  comision: string; videoUrl: string; mapaUrl: string; asesor: string;
   tieneMantenimiento: string; mantenimiento: string;
   exclusiva: string; renovable: string;
   link1: string; link2: string; link3: string; link4: string; link5: string;
@@ -39,37 +36,35 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-// Checkbox simple (sin subida de PDF para edición rápida)
-const CustomDocCheckbox = ({ label, name, register, watch }: any) => {
-    const isChecked = watch(name);
-    return (
-        <label className={`label cursor-pointer justify-start gap-4 p-4 rounded-xl transition-all border shadow-sm group w-full
-            ${isChecked ? 'bg-blue-50 border-blue-200 shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-          <input type="checkbox" {...register(name)} className="hidden" />
-          <div className={`w-6 h-6 flex-shrink-0 rounded-md border-2 flex items-center justify-center transition-all
-              ${isChecked ? 'border-blue-500 bg-white' : 'border-gray-300 bg-white group-hover:border-blue-300'}`}>
-             <FaCheck className={`text-blue-600 text-sm transition-all transform ${isChecked ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
-          </div>
-          <span className={`text-sm font-medium transition-colors ${isChecked ? 'text-blue-800 font-semibold' : 'text-gray-700'}`}>{label}</span>
-        </label>
-    );
-};
-
 export default function EditarPropiedadPage() {
   const router = useRouter();
   const { id } = useParams();
-  const { fetchPropietarios } = useInmobiliariaStore();
+  const { propietarios, fetchPropietarios } = useInmobiliariaStore();
   const { register, handleSubmit, watch, setValue } = useForm<FormInputs>();
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
+  
+  // Estados para Propietarios
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
+  const [propietarioSelectId, setPropietarioSelectId] = useState('');
+  
+  // Estados para Asesores y Ubicaciones
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
+
+  // Estados de Imágenes (Antiguas y Nuevas)
+  const [existingMainPhoto, setExistingMainPhoto] = useState<string | null>(null);
+  const [existingGallery, setExistingGallery] = useState<string[]>([]);
+  
+  const [fotoPrincipalFile, setFotoPrincipalFile] = useState<File | null>(null);
+  const [previewMain, setPreviewMain] = useState<string | null>(null);
+  const [galeriaFiles, setGaleriaFiles] = useState<File[]>([]);
+  const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
   const modalidadActual = watch('modalidad');
   const tipoInmueble = watch('tipo', '');
@@ -85,16 +80,16 @@ export default function EditarPropiedadPage() {
             const dataU = await resU.json();
             setAsesoresDB(dataU);
 
+            // Cargar datos de la propiedad
             const { data: p } = await api.get(`/propiedades/${id}`);
             
-            // Cargar datos en el formulario
-            Object.keys(p).forEach(key => {
-                if(p[key] !== null && p[key] !== undefined) {
-                    setValue(key as any, p[key]);
-                }
+            // Llenar campos de texto y números
+            const campos = ['tipo', 'modalidad', 'ubicacion', 'direccion', 'precio', 'moneda', 'area', 'areaConstruida', 'habitaciones', 'banos', 'cocheras', 'descripcion', 'detalles', 'partidaRegistral', 'partidaCochera', 'partidaDeposito', 'comision', 'videoUrl', 'mapaUrl', 'asesor', 'link1', 'link2', 'link3', 'link4', 'link5'];
+            campos.forEach(key => {
+                if (p[key] !== null && p[key] !== undefined) setValue(key as any, p[key]);
             });
 
-            // Formatear Fechas para el input type="date"
+            // Formatear Fechas
             if(p.inicioContrato) setValue('inicioContrato', p.inicioContrato.split('T')[0]);
             if(p.finContrato) setValue('finContrato', p.finContrato.split('T')[0]);
             if(p.fechaCaptacion) setValue('fechaCaptacion', p.fechaCaptacion.split('T')[0]);
@@ -102,11 +97,22 @@ export default function EditarPropiedadPage() {
             // Formatear Radio Buttons
             setValue('exclusiva', p.exclusiva ? 'si' : 'no');
             setValue('renovable', p.renovable ? 'si' : 'no');
-            setValue('tieneMantenimiento', Number(p.mantenimiento) > 0 ? 'si' : 'no');
+            
+            if (Number(p.mantenimiento) > 0) {
+                setValue('tieneMantenimiento', 'si');
+                setValue('mantenimiento', p.mantenimiento);
+            } else {
+                setValue('tieneMantenimiento', 'no');
+            }
 
+            // Setear estados adicionales
             setBusquedaUbicacion(p.ubicacion);
             setBusquedaAsesor(p.asesor || '');
-            if(p.Propietarios) setPropietariosSeleccionados(p.Propietarios);
+            
+            // Llenar Propietarios y Fotos existentes
+            if(p.Propietarios || p.propietarios) setPropietariosSeleccionados(p.Propietarios || p.propietarios);
+            if(p.fotoPrincipal) setExistingMainPhoto(p.fotoPrincipal);
+            if(p.galeria) setExistingGallery(typeof p.galeria === 'string' ? JSON.parse(p.galeria) : p.galeria);
             
             setLoading(false);
         } catch (e) { router.back(); }
@@ -128,27 +134,94 @@ export default function EditarPropiedadPage() {
     } catch (e) { alert("Error IA."); } finally { setGenerandoIA(false); }
   };
 
+  const handleMainPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files?.[0]) {
+          const file = e.target.files[0];
+          const compressed = await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1600, useWebWorker: true });
+          setFotoPrincipalFile(compressed as File);
+          setPreviewMain(URL.createObjectURL(compressed as File));
+          setExistingMainPhoto(null); // Ocultar la antigua si suben una nueva
+      }
+  };
+
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+          const filesArray = Array.from(e.target.files);
+          if (existingGallery.length + galeriaFiles.length + filesArray.length > 30) return alert("⚠️ Máximo 30 fotos en total.");
+
+          const compressedFiles: File[] = [];
+          for (const file of filesArray) {
+              const compressed = await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1600, useWebWorker: true });
+              compressedFiles.push(compressed as File);
+          }
+
+          const newPreviews = compressedFiles.map(f => URL.createObjectURL(f));
+          setGaleriaFiles(prev => [...prev, ...compressedFiles]);
+          setPreviewGallery(prev => [...prev, ...newPreviews]);
+      }
+  };
+
+  const removerFotoGaleriaNueva = (idx: number) => {
+      setGaleriaFiles(galeriaFiles.filter((_, i) => i !== idx));
+      setPreviewGallery(previewGallery.filter((_, i) => i !== idx));
+  };
+
+  const removerFotoGaleriaAntigua = (idx: number) => {
+      setExistingGallery(existingGallery.filter((_, i) => i !== idx));
+  };
+
+  const seleccionarDistrito = (d: string) => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); };
+  const seleccionarAsesor = (a: any) => { setBusquedaAsesor(a.nombre); setValue('asesor', a.nombre); setMostrarSugerenciasAsesor(false); };
+
   const onSubmit = async (data: FormInputs) => {
+    if (propietariosSeleccionados.length === 0) return alert('⚠️ La propiedad debe tener al menos un propietario.');
     setIsSubmitting(true);
+    
     try {
-        const { ...datosEnvio } = data as any;
+        const formData = new FormData();
         
-        // Limpieza de datos antes de enviar
-        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') datosEnvio.mantenimiento = 0;
-        datosEnvio.exclusiva = data.exclusiva === 'si';
-        datosEnvio.renovable = data.renovable === 'si';
+        // 1. Agregar todos los textos
+        Object.keys(data).forEach(key => {
+            const k = key as keyof FormInputs;
+            if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+                formData.append(k, String(data[k]));
+            }
+        });
 
-        // Evitar sobreescribir archivos e imágenes
-        delete datosEnvio.fotoPrincipal;
-        delete datosEnvio.galeria;
-        delete datosEnvio.documentosUrls;
-        delete datosEnvio.documentosurls;
-        delete datosEnvio.Propietarios;
+        // 2. Lógica de campos especiales
+        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') formData.set('mantenimiento', '0');
+        formData.set('exclusiva', data.exclusiva === 'si' ? 'true' : 'false');
+        formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
 
-        await api.put(`/propiedades/${id}`, datosEnvio);
+        // 3. Propietarios vinculados
+        propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
+
+        // 4. Imágenes antiguas que se mantienen (para que el backend no las borre)
+        if (existingMainPhoto) formData.append('existingMainPhoto', existingMainPhoto);
+        formData.append('existingGallery', JSON.stringify(existingGallery));
+
+        // 5. Imágenes NUEVAS (Archivos)
+        if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
+        galeriaFiles.forEach(f => formData.append('galeria', f));
+
+        // Enviar con Fetch directamente para que Multer procese el FormData
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/propiedades/${id}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!res.ok) throw new Error('Error en el servidor');
+
         alert('✅ PROPIEDAD ACTUALIZADA CON ÉXITO');
         router.push(`/propiedades/${id}`);
-    } catch (e) { alert('❌ ERROR AL GUARDAR'); } finally { setIsSubmitting(false); }
+    } catch (e) { 
+        console.error(e);
+        alert('❌ ERROR AL GUARDAR. Revisa la consola.'); 
+    } finally { 
+        setIsSubmitting(false); 
+    }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><span className="loading loading-spinner loading-lg text-indigo-600"></span></div>;
@@ -171,12 +244,26 @@ export default function EditarPropiedadPage() {
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* 1. PROPIETARIOS (FIJOS) */}
+            {/* 1. PROPIETARIOS (EDITABLES) */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS (SOLO LECTURA)</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
+                <div className="flex gap-4 items-end mb-4">
+                    <div className="form-control flex-1">
+                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
+                            <option value="">-- Buscar en Base de Datos --</option>
+                            {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
+                        </select>
+                    </div>
+                    <button type="button" onClick={() => {
+                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
+                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                     {propietariosSeleccionados.map(p => (
-                        <div key={p.id} className="badge badge-lg p-4 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">{p.nombre}</div>
+                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
+                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -273,7 +360,7 @@ export default function EditarPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 inline mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-white text-sm leading-relaxed"></textarea></div>
             </div>
 
-            {/* 4. DATOS LEGALES */}
+            {/* 4. DATOS LEGALES (SIN DOCUMENTOS PDF) */}
             <div className="bg-white rounded-xl shadow-sm border p-8 border-gray-100">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
@@ -309,28 +396,10 @@ export default function EditarPropiedadPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 flex items-center gap-2 text-[10px] uppercase"><FaPercent className="text-blue-500" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white font-bold text-lg"/>
-                    </div>
-                </div>
-
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-inner">
-                    <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz', 'planos', 'certificadoParametros', 'certificadoZonificacion', 'otros'].map(doc => {
-                            if (modalidadActual !== 'Venta' && ['testimonio', 'hr', 'pu'].includes(doc)) return null;
-                            if (modalidadActual === 'Venta' && ['cri', 'reciboAguaLuz'].includes(doc)) return null;
-                            
-                            const labels: any = {
-                                hr: 'HR (Hoja Resumen)', pu: 'PU (Predio Urbano)', impuestoPredial: 'Impuesto Predial', 
-                                arbitrios: 'Arbitrios Municipales', copiaLiteral: 'Copia Literal', reciboAguaLuz: 'Recibos Luz/Agua',
-                                certificadoParametros: 'Cert. Parámetros', certificadoZonificacion: 'Cert. Zonificación'
-                            };
-
-                            return <CustomDocCheckbox key={doc} label={labels[doc] || doc.charAt(0).toUpperCase() + doc.slice(1)} name={doc} register={register} watch={watch} />
-                        })}
                     </div>
                 </div>
             </div>
@@ -358,11 +427,55 @@ export default function EditarPropiedadPage() {
                 </div>
             </div>
 
-            {/* 7. MULTIMEDIA */}
+            {/* 7. MULTIMEDIA (FOTOS Y VIDEOS) */}
             <div className="bg-white rounded-xl shadow-sm border p-8 border-gray-100">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaVideo className="text-red-500"/> 7. MULTIMEDIA (LINKS)</h3>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight border-b border-gray-100 pb-8">
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Cambiar Foto Portada</label>
+                        <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
+                        
+                        {/* Muestra foto antigua o nueva */}
+                        {existingMainPhoto && !previewMain && (
+                            <div className="relative mt-4">
+                                <img src={existingMainPhoto.startsWith('http') ? existingMainPhoto : `${BACKEND_URL}${existingMainPhoto}`} alt="Portada Antigua" className="h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>
+                                <button type="button" onClick={() => setExistingMainPhoto(null)} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all"><FaTimes/></button>
+                            </div>
+                        )}
+                        {previewMain && (
+                            <div className="relative mt-4">
+                                <img src={previewMain} alt="Portada Nueva" className="h-48 w-full object-cover rounded-2xl border-4 border-emerald-400 shadow-xl"/>
+                                <button type="button" onClick={() => {setFotoPrincipalFile(null); setPreviewMain(null);}} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all"><FaTimes/></button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Agregar Fotos Galería</label>
+                        <input type="file" multiple accept="image/*" onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white shadow-sm h-10" />
+                        
+                        <div className="mt-4 flex flex-wrap gap-3">
+                            {/* Galeria Antigua */}
+                            {existingGallery.map((src, i) => (
+                                <div key={`old-${i}`} className="relative group">
+                                    <img src={src.startsWith('http') ? src : `${BACKEND_URL}${src}`} className="h-20 w-20 object-cover rounded-xl border border-white shadow flex-shrink-0"/>
+                                    <button type="button" onClick={() => removerFotoGaleriaAntigua(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><FaTimes className="text-[10px]"/></button>
+                                </div>
+                            ))}
+                            {/* Galeria Nueva */}
+                            {previewGallery.map((src, i) => (
+                                <div key={`new-${i}`} className="relative group">
+                                    <img src={src} className="h-20 w-20 object-cover rounded-xl border-2 border-emerald-400 shadow flex-shrink-0"/>
+                                    <button type="button" onClick={() => removerFotoGaleriaNueva(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><FaTimes className="text-[10px]"/></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">YouTube URL</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://..."/></div>
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase"><FaVideo className="inline mr-1 text-red-500"/> YouTube URL</label><input {...register('videoUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="https://..."/></div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase"><FaMapMarkerAlt className="inline mr-1 text-green-500"/> Maps URL (Iframe)</label><input {...register('mapaUrl')} className="input input-bordered w-full bg-white text-xs font-mono" placeholder="src..."/></div>
                 </div>
             </div>
