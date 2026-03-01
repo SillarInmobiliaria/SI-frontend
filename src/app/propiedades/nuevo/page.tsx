@@ -417,14 +417,14 @@ export default function NuevaPropiedadPage() {
                     <label className="label font-bold text-indigo-900 mb-4 border-b border-indigo-200 pb-2 text-[10px] uppercase tracking-widest">Detalles del Contrato</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="form-control">
-                            <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Es Exclusiva?</label>
+                            <label className="label font-bold text-gray-700 text-[10px] uppercase">EXCLUSIVA</label>
                             <div className="flex gap-4 mt-2">
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('exclusiva')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('exclusiva')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
                             </div>
                         </div>
                         <div className="form-control">
-                            <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Es Renovable?</label>
+                            <label className="label font-bold text-gray-700 text-[10px] uppercase">ENOVABLE</label>
                             <div className="flex gap-4 mt-2">
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
@@ -472,7 +472,6 @@ export default function NuevaPropiedadPage() {
                             </>
                         )}
 
-                        {/* --- NUEVOS DOCUMENTOS AÑADIDOS --- */}
                         <CustomDocCheckbox label="Planos" name="planos" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         <CustomDocCheckbox label="Certificado de Parámetros" name="certificadoParametros" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         <CustomDocCheckbox label="Certificado de Zonificación y Vías" name="certificadoZonificacion" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
