@@ -27,10 +27,8 @@ interface FormInputs {
   comision: string; testimonio: boolean; hr: boolean; pu: boolean;
   impuestoPredial: boolean; arbitrios: boolean; copiaLiteral: boolean;
   cri: boolean; reciboAguaLuz: boolean; observaciones: string;
-  // --- NUEVOS CAMPOS DE AUDITORÍA ---
   planos: boolean; certificadoParametros: boolean; 
   certificadoZonificacion: boolean; otros: boolean;
-  // ----------------------------------
   videoUrl: string; mapaUrl: string; asesor: string;
   tieneMantenimiento: string; mantenimiento: string;
   exclusiva: string; renovable: string;
@@ -117,6 +115,8 @@ export default function NuevaPropiedadPage() {
   const tipoInmueble = watch('tipo', 'Casa');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
 
+  const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno');
+
   useEffect(() => {
     fetchPropietarios();
     const fetchUsuarios = async () => {
@@ -194,7 +194,6 @@ export default function NuevaPropiedadPage() {
     try {
         const formData = new FormData();
         
-        // --- AQUÍ AÑADIMOS LOS 4 DOCUMENTOS NUEVOS A LA LISTA ---
         const docs = [
             'testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 
             'copiaLiteral', 'cri', 'reciboAguaLuz', 
@@ -290,8 +289,13 @@ export default function NuevaPropiedadPage() {
                         <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white">
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
+                            <option value="Duplex">Duplex</option>
                             <option value="Terreno">Terreno</option>
+                            <option value="Terreno Urbano">Terreno Urbano</option>
+                            <option value="Terreno Agricola">Terreno Agrícola</option>
+                            <option value="Terreno Industrial">Terreno Industrial</option>
                             <option value="Local">Local Comercial</option>
+                            <option value="Local Industrial">Local Industrial</option>
                             <option value="Oficina">Oficina</option>
                         </select>
                     </div>
@@ -359,7 +363,8 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 
-                {tipoInmueble !== 'Terreno' && (
+                {/* LÓGICA OCULTAR DORMITORIOS EN TERRENOS */}
+                {mostrarDistribucion && (
                     <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
                         <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
                         <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBath/> Baños</label><input type="number" {...register('banos')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
@@ -424,7 +429,7 @@ export default function NuevaPropiedadPage() {
                             </div>
                         </div>
                         <div className="form-control">
-                            <label className="label font-bold text-gray-700 text-[10px] uppercase">ENOVABLE</label>
+                            <label className="label font-bold text-gray-700 text-[10px] uppercase">RENOVABLE</label>
                             <div className="flex gap-4 mt-2">
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('renovable')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
