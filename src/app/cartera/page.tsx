@@ -484,15 +484,16 @@ export default function CarteraPage() {
                                         onChange={e => setForm({...form, fechaNacimiento: e.target.value})} 
                                     />
                                 </div>
+                                
                                 <div className="form-control">
                                     <label className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                                         <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
                                     </label>
                                     <input 
                                         type="date" 
-                                        className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed" 
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 cursor-pointer" 
                                         value={form.fechaRegistro} 
-                                        disabled
+                                        max={today}
                                         onChange={e => setForm({...form, fechaRegistro: e.target.value})} 
                                     />
                                 </div>
