@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link'; // Importamos Link para navegar
+import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,13 @@ import {
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
+
+const distritosArequipa = [
+    "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
+    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
+    "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
+    "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
+];
 
 export default function PropiedadesPage() {
   const { propiedades, fetchPropiedades, loading } = useInmobiliariaStore();
@@ -31,10 +38,9 @@ export default function PropiedadesPage() {
            (filtroCategoria === 'Todas' || p.modalidad === filtroCategoria);
   });
 
-  // --- ACCIONES (CON stopPropagation PARA NO ACTIVAR EL LINK) ---
   const handleSuspender = async (e: React.MouseEvent, id: string, estadoActual: boolean) => {
-      e.preventDefault(); // Evita navegar al detalle
-      e.stopPropagation(); // Evita propagar el click al Link padre
+      e.preventDefault();
+      e.stopPropagation();
       if(!confirm(`¿${estadoActual ? 'Suspender' : 'Activar'} esta propiedad?`)) return;
       try { await toggleEstadoPropiedad(id, !estadoActual); fetchPropiedades(); } 
       catch (e) { alert('Error al cambiar estado'); }
@@ -48,7 +54,6 @@ export default function PropiedadesPage() {
       catch (e) { alert('Error al eliminar'); }
   };
 
-  // ACCIÓN PARA EDITAR
   const handleEditar = (e: React.MouseEvent, id: string) => {
       e.preventDefault();
       e.stopPropagation();
@@ -59,13 +64,11 @@ export default function PropiedadesPage() {
     <div className="min-h-screen bg-gray-50 pb-12 font-sans text-gray-800">
       <Navbar />
       
-      {/* HEADER Y BARRA DE FILTROS */}
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
         <div className="container mx-auto px-6 py-4">
             
             <div className="flex flex-col xl:flex-row gap-6 justify-between items-center">
                 
-                {/* Título */}
                 <div className="flex items-center gap-4 w-full xl:w-auto mb-2 xl:mb-0">
                     <div className="bg-indigo-100 p-3 rounded-xl text-indigo-700 hidden sm:block">
                         <FaHome className="text-2xl"/>
@@ -78,13 +81,11 @@ export default function PropiedadesPage() {
                     </div>
                 </div>
                 
-                {/* BARRA DE FILTROS ESTILIZADA */}
                 <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto items-center">
                     
                     <div className="flex items-center bg-gray-50 p-1 rounded-xl border border-gray-200 w-full md:w-auto shadow-sm">
                         <div className="px-4 text-gray-400 border-r border-gray-200 py-2"><FaFilter/></div>
                         
-                        {/* Select Categoría */}
                         <select 
                             className="select select-sm select-ghost w-full md:w-36 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroCategoria} 
@@ -99,7 +100,6 @@ export default function PropiedadesPage() {
                         
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
 
-                        {/* Select Tipo */}
                         <select 
                             className="select select-sm select-ghost w-full md:w-44 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroTipo} 
@@ -109,7 +109,6 @@ export default function PropiedadesPage() {
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Duplex">Duplex</option>
-                            {/* MANTENEMOS TERRENO POR COMPATIBILIDAD */}
                             <option value="Terreno">Terreno</option>
                             <option value="Terreno Urbano">Terreno Urbano</option>
                             <option value="Terreno Agricola">Terreno Agrícola</option>
@@ -122,23 +121,19 @@ export default function PropiedadesPage() {
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
 
-                        {/* Select Ubicación */}
+                        {/* --- AQUÍ SE AGREGARON TODOS LOS DISTRITOS AUTOMÁTICAMENTE --- */}
                         <select 
                             className="select select-sm select-ghost w-full md:w-48 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroUbicacion} 
                             onChange={e=>setFiltroUbicacion(e.target.value)}
                         >
                             <option value="Todas">Ubicación</option>
-                            <option value="Arequipa">Arequipa</option>
-                            <option value="Yanahuara">Yanahuara</option>
-                            <option value="Cayma">Cayma</option>
-                            <option value="Cerro Colorado">Cerro Colorado</option>
-                            <option value="Socabaya">Socabaya</option>
-                            <option value="Jose Luis Bustamante">J.L.B y Rivero</option>
+                            {distritosArequipa.map(distrito => (
+                                <option key={distrito} value={distrito}>{distrito}</option>
+                            ))}
                         </select>
                     </div>
 
-                    {/* Botón Publicar */}
                     <Link 
                         href="/propiedades/nuevo" 
                         className="btn btn-primary bg-indigo-600 hover:bg-indigo-700 border-none shadow-lg shadow-indigo-200 px-6 w-full md:w-auto flex items-center gap-2 text-white h-12"
@@ -150,7 +145,6 @@ export default function PropiedadesPage() {
         </div>
       </div>
 
-      {/* GRID DE PROPIEDADES */}
       <div className="container mx-auto p-6 max-w-7xl">
         
         {loading ? (
@@ -161,7 +155,6 @@ export default function PropiedadesPage() {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {propiedadesFiltradas.map((prop) => {
-                    // --- LÓGICA TERRENO ---
                     const esTerreno = prop.tipo?.toLowerCase().includes('terreno');
 
                     return (
@@ -171,10 +164,8 @@ export default function PropiedadesPage() {
                             className="group relative block bg-white rounded-3xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 overflow-hidden hover:-translate-y-1"
                         >
                             
-                            {/* BOTONES ADMIN FLOTANTES */}
                             {isAdmin && (
                                 <div className="absolute top-3 right-3 z-20 flex gap-2">
-                                    {/* BOTÓN EDITAR AGREGADO */}
                                     <button 
                                         onClick={(e) => handleEditar(e, prop.id)}
                                         className="btn btn-circle btn-sm bg-white text-blue-600 border-none shadow-lg hover:bg-blue-50"
@@ -200,7 +191,6 @@ export default function PropiedadesPage() {
                                 </div>
                             )}
 
-                            {/* IMAGEN HERO */}
                             <div className="h-64 overflow-hidden bg-gray-200 relative flex items-center justify-center">
                                 {prop.fotoPrincipal ? (
                                     <img 
@@ -216,7 +206,6 @@ export default function PropiedadesPage() {
                                     </div>
                                 )}
                                 
-                                {/* ETIQUETA MODALIDAD */}
                                 <div className="absolute bottom-3 left-3 flex gap-2">
                                     <div className={`badge badge-lg border-none text-white shadow-md font-bold px-4 py-3 ${
                                         prop.modalidad === 'Venta' ? 'bg-gradient-to-r from-orange-500 to-red-500' : 
@@ -235,7 +224,6 @@ export default function PropiedadesPage() {
                                 )}
                             </div>
 
-                            {/* CONTENIDO TARJETA */}
                             <div className="p-6">
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="font-bold text-xl uppercase leading-tight text-gray-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
@@ -247,7 +235,6 @@ export default function PropiedadesPage() {
                                     <FaMapMarkerAlt className="text-red-400"/> {prop.direccion}
                                 </p>
                                 
-                                {/* CARACTERÍSTICAS GRID */}
                                 {!esTerreno && (
                                     <div className="grid grid-cols-3 gap-2 py-4 border-t border-gray-100 mb-4 text-gray-600 text-sm bg-gray-50/50 rounded-xl px-2">
                                         <div className="flex flex-col items-center justify-center p-1">
