@@ -42,7 +42,7 @@ const distritosArequipa = [
     "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
-    "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
+    "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
@@ -231,7 +231,6 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        // LÓGICA DE IGV Y MANTENIMIENTOS
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
 
         if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
@@ -369,7 +368,6 @@ export default function NuevaPropiedadPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* VIGILANCIA: Siempre Visible */}
                     <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
                         <div className="form-control">
                             <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
@@ -389,7 +387,6 @@ export default function NuevaPropiedadPage() {
                         </div>
                     </div>
 
-                    {/* MANTENIMIENTO: Solo Alquiler */}
                     {modalidadActual === 'Alquiler' && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
@@ -438,7 +435,6 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
-                {/* SE ARREGLÓ EL HUECO: Si es alquiler col-span-1, si no, col-span-3 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className={`form-control ${modalidadActual === 'Alquiler' ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
@@ -509,7 +505,6 @@ export default function NuevaPropiedadPage() {
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">{modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}</span>
                         </div>
                     </div>
-                    {/* SE LLENÓ EL HUECO CON IGV */}
                     <div className="form-control">
                         <label className="label font-bold text-gray-700 text-[10px] uppercase">¿INCLUYE IGV (18%)?</label>
                         <div className="flex gap-4 mt-2">
