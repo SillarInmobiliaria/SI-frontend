@@ -103,7 +103,6 @@ export default function CierrePage() {
               const listaSegura = Array.isArray(listaClientes) ? listaClientes : [];
               
               const filtrados = listaSegura.filter((c: any) => {
-                  // AHORA SÍ MIRA LA COLUMNA CORRECTA: nombreCompleto
                   const nombreReal = c.nombreCompleto || c.nombre || '';
                   return nombreReal.toLowerCase().includes(soloLetras.toLowerCase().trim());
               });
@@ -310,7 +309,6 @@ export default function CierrePage() {
                         {mostrarSugCliente && sugerenciasCliente.length > 0 && (
                             <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-[72px] max-h-48 overflow-y-auto">
                                 {sugerenciasCliente.map((cliente: any, idx: number) => {
-                                    // --- LEEMOS LAS COLUMNAS CORRECTAS DE LA BASE DE DATOS ---
                                     const nombreMostrar = cliente.nombreCompleto || cliente.nombre || 'Cliente sin nombre';
                                     const docMostrar = cliente.documento || cliente.dni || '';
                                     return (
@@ -395,13 +393,16 @@ export default function CierrePage() {
                             <FaFileContract/> Condiciones del Contrato
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            
                             <div className="form-control">
-                                <label className="label font-bold text-slate-600 text-xs">Tipo de Firma</label>
+                                <label className="label font-bold text-slate-600 text-xs">Especificar</label>
                                 <select name="tipoFirmaAlquiler" className="select select-bordered select-sm" value={form.tipoFirmaAlquiler} onChange={handleChange}>
                                     <option value="LEGALIZACION">Legalización de Firmas</option>
                                     <option value="ESCRITURA_PUBLICA">Escritura Pública</option>
+                                    <option value="NINGUNO">Ninguno</option>
                                 </select>
                             </div>
+
                             <div className="form-control">
                                 <label className="label font-bold text-slate-600 text-xs">Notaría</label>
                                 <input type="text" name="notaria" className="input input-bordered input-sm" placeholder="Ej: Rodriguez" value={form.notaria} onChange={handleChange} />
