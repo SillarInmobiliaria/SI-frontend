@@ -94,6 +94,7 @@ export default function PropiedadesPage() {
                             <option value="Venta">Venta</option>
                             <option value="Alquiler">Alquiler</option>
                             <option value="Anticresis">Anticresis</option>
+                            <option value="Pre Venta">Pre Venta</option>
                         </select>
                         
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
@@ -108,6 +109,7 @@ export default function PropiedadesPage() {
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Duplex">Duplex</option>
+                            {/* MANTENEMOS TERRENO POR COMPATIBILIDAD */}
                             <option value="Terreno">Terreno</option>
                             <option value="Terreno Urbano">Terreno Urbano</option>
                             <option value="Terreno Agricola">Terreno Agrícola</option>
@@ -115,6 +117,7 @@ export default function PropiedadesPage() {
                             <option value="Local">Local Comercial</option>
                             <option value="Local Industrial">Local Industrial</option>
                             <option value="Oficina">Oficina</option>
+                            <option value="Proyecto">Proyecto</option>
                         </select>
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
@@ -218,6 +221,7 @@ export default function PropiedadesPage() {
                                     <div className={`badge badge-lg border-none text-white shadow-md font-bold px-4 py-3 ${
                                         prop.modalidad === 'Venta' ? 'bg-gradient-to-r from-orange-500 to-red-500' : 
                                         prop.modalidad === 'Alquiler' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
+                                        prop.modalidad === 'Pre Venta' ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
                                         'bg-gradient-to-r from-purple-500 to-pink-500'
                                     }`}>
                                         {prop.modalidad}
