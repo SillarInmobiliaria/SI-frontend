@@ -155,7 +155,6 @@ export default function PropiedadDetallePage() {
   const images = [propiedad.fotoPrincipal, ...(propiedad.galeria || [])].filter(Boolean);
   const getFullImageUrl = (path: string) => path?.startsWith('http') ? path : `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
   
-  // --- LÓGICA DE FLECHAS DEL CARRUSEL ---
   const handlePrevImage = () => {
       setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
@@ -210,38 +209,22 @@ export default function PropiedadDetallePage() {
                         <div className="space-y-8 animate-fade-in">
                             {images.length > 0 && (
                                 <div className="space-y-4">
-                                    
-                                    {/* --- VISOR DE IMAGEN PRINCIPAL CON FLECHAS --- */}
                                     <div className="group h-[450px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200 flex items-center justify-center">
                                         <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-cover" alt="Gallery" crossOrigin="anonymous"/>
-                                        
-                                        {/* Botón Anterior */}
                                         {images.length > 1 && (
-                                            <button 
-                                                onClick={handlePrevImage} 
-                                                className="absolute left-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95"
-                                            >
+                                            <button onClick={handlePrevImage} className="absolute left-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95">
                                                 <FaChevronLeft className="text-xl"/>
                                             </button>
                                         )}
-
-                                        {/* Botón Siguiente */}
                                         {images.length > 1 && (
-                                            <button 
-                                                onClick={handleNextImage} 
-                                                className="absolute right-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95"
-                                            >
+                                            <button onClick={handleNextImage} className="absolute right-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95">
                                                 <FaChevronRight className="text-xl"/>
                                             </button>
                                         )}
-                                        
-                                        {/* Contador de fotos*/}
                                         <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 text-xs font-bold rounded-lg backdrop-blur-md">
                                             {currentImageIndex + 1} / {images.length}
                                         </div>
                                     </div>
-
-                                    {/* MINIATURAS */}
                                     <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth">
                                         {images.map((img:string, idx:number) => (
                                             <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} crossOrigin="anonymous" className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all flex-shrink-0 ${currentImageIndex===idx ? 'border-indigo-600 scale-95 opacity-100' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}/>
@@ -356,10 +339,22 @@ export default function PropiedadDetallePage() {
                                                     </td>
                                                     <td className="font-bold text-gray-700 text-sm">{doc.label}</td>
                                                     <td>
+                                                        {/* --- ACTUALIZAR PDFS YA SUBIDOS --- */}
                                                         {documentosUrls[doc.key] ? (
-                                                            <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-outline btn-primary"><FaEye/></a> 
+                                                            <div className="flex items-center gap-2">
+                                                                <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-primary text-white" title="Ver Documento">
+                                                                    <FaEye/>
+                                                                </a>
+                                                                <label className="btn btn-xs btn-outline btn-primary cursor-pointer" title="Reemplazar PDF">
+                                                                    <FaFileUpload/>
+                                                                    <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} />
+                                                                </label>
+                                                            </div>
                                                         ) : (
-                                                            <label className="btn btn-xs btn-ghost text-indigo-600"><FaFileUpload/><input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} /></label>
+                                                            <label className="btn btn-xs btn-ghost text-indigo-600 cursor-pointer">
+                                                                <FaFileUpload className="mr-1"/> Subir PDF
+                                                                <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleSubirPdfAuditoria(doc.key, e.target.files[0])} />
+                                                            </label>
                                                         )}
                                                     </td>
                                                     <td>
