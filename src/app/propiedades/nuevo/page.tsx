@@ -31,11 +31,9 @@ interface FormInputs {
   planos: boolean; certificadoParametros: boolean; 
   certificadoZonificacion: boolean; otros: boolean;
   videoUrl: string; mapaUrl: string; asesor: string;
-  // --- NUEVOS CAMPOS ---
   tieneMantenimiento: string; mantenimiento: string; monedaMantenimiento: string;
   tieneVigilancia: string; vigilancia: string; monedaVigilancia: string;
-  // ---------------------
-  exclusiva: string; renovable: string;
+  exclusiva: string; renovable: string; incluyeIgv: string;
   fotoPrincipal: any; galeria: any;
   link1: string; link2: string; link3: string; link4: string; link5: string;
 }
@@ -104,7 +102,8 @@ export default function NuevaPropiedadPage() {
         tieneMantenimiento: 'no',
         tieneVigilancia: 'no',
         exclusiva: 'no',
-        renovable: 'no'
+        renovable: 'no',
+        incluyeIgv: 'no'
     }
   });
 
@@ -223,7 +222,7 @@ export default function NuevaPropiedadPage() {
             'planos', 'certificadoParametros', 'certificadoZonificacion', 'otros'
         ];
         
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'tieneVigilancia', 'observaciones', ...docs];
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'tieneVigilancia', 'incluyeIgv', 'observaciones', ...docs];
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
@@ -232,7 +231,9 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        // LÓGICA DE MANTENIMIENTO
+        // LÓGICA DE IGV Y MANTENIMIENTOS
+        formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
+
         if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
             formData.set('mantenimiento', '0');
         } else {
@@ -240,7 +241,6 @@ export default function NuevaPropiedadPage() {
             formData.set('monedaMantenimiento', data.monedaMantenimiento);
         }
 
-        // LÓGICA DE VIGILANCIA
         if (data.tieneVigilancia === 'no') {
             formData.set('vigilancia', '0');
         } else {
@@ -249,7 +249,6 @@ export default function NuevaPropiedadPage() {
         }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
-
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
@@ -323,13 +322,13 @@ export default function NuevaPropiedadPage() {
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Duplex">Duplex</option>
-                            <option value="Terreno">Terreno</option>
                             <option value="Terreno Urbano">Terreno Urbano</option>
                             <option value="Terreno Agricola">Terreno Agrícola</option>
                             <option value="Terreno Industrial">Terreno Industrial</option>
                             <option value="Local">Local Comercial</option>
                             <option value="Local Industrial">Local Industrial</option>
                             <option value="Oficina">Oficina</option>
+                            <option value="Proyecto">Proyecto</option>
                         </select>
                     </div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
@@ -337,6 +336,7 @@ export default function NuevaPropiedadPage() {
                             <option value="Venta">Venta</option>
                             <option value="Alquiler">Alquiler</option>
                             <option value="Anticresis">Anticresis</option>
+                            <option value="Pre Venta">Pre Venta</option>
                         </select>
                     </div>
                     <div className="form-control relative">
@@ -368,7 +368,6 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
-                {/* BLOQUE DE PAGOS ADICIONALES (VIGILANCIA Y MANTENIMIENTO) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* VIGILANCIA: Siempre Visible */}
                     <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
@@ -419,7 +418,6 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaBed className="text-orange-500"/> 3. DISTRIBUCIÓN</h3>
                 
-                {/* LÓGICA OCULTAR DORMITORIOS EN TERRENOS */}
                 {mostrarDistribucion && (
                     <div className="grid grid-cols-3 gap-6 mb-8 text-center bg-orange-50 p-4 rounded-xl border border-orange-100 shadow-sm font-bold">
                         <div className="form-control"><label className="label justify-center font-bold text-gray-600 text-[10px] uppercase"><FaBed/> Dormitorios</label><input type="number" {...register('habitaciones')} className="input input-bordered w-full text-center bg-white text-gray-800"/></div>
@@ -440,8 +438,9 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
+                {/* SE ARREGLÓ EL HUECO: Si es alquiler col-span-1, si no, col-span-3 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control">
+                    <div className={`form-control ${modalidadActual === 'Alquiler' ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
                             Partida Registral (Principal)
                         </label>
@@ -510,12 +509,20 @@ export default function NuevaPropiedadPage() {
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase">{modalidadActual === 'Alquiler' ? 'mes(es)' : '%'}</span>
                         </div>
                     </div>
+                    {/* SE LLENÓ EL HUECO CON IGV */}
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-700 text-[10px] uppercase">¿INCLUYE IGV (18%)?</label>
+                        <div className="flex gap-4 mt-2">
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('incluyeIgv')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('incluyeIgv')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
                     <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
-                        {modalidadActual === 'Venta' && (
+                        {(modalidadActual === 'Venta' || modalidadActual === 'Pre Venta') && (
                             <>
                                 <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                                 <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
