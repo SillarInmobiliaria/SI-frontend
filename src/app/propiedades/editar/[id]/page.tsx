@@ -13,7 +13,7 @@ const BACKEND_URL = 'https://sillar-backend.onrender.com';
 import { 
   FaHome, FaBed, FaBath, FaCar, FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch, FaMapMarkerAlt, 
-  FaMagic, FaListUl, FaPercent, FaTimes
+  FaMagic, FaListUl, FaPercent, FaTimes, FaShieldAlt, FaTools
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -24,7 +24,13 @@ interface FormInputs {
   partidaCochera: string; partidaDeposito: string; fechaCaptacion: string;
   inicioContrato: string; finContrato: string; tipoContrato: string;
   comision: string; videoUrl: string; mapaUrl: string; asesor: string;
-  tieneMantenimiento: string; mantenimiento: string;
+  
+  // --- CAMPOS NUEVOS SINCRONIZADOS ---
+  tieneMantenimiento: string; mantenimiento: string; monedaMantenimiento: string;
+  tieneVigilancia: string; vigilancia: string; monedaVigilancia: string;
+  incluyeIgv: string;
+  // -----------------------------------
+  
   exclusiva: string; renovable: string;
   link1: string; link2: string; link3: string; link4: string; link5: string;
 }
@@ -33,7 +39,7 @@ const distritosArequipa = [
     "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
-    "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
+    "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
 export default function EditarPropiedadPage() {
@@ -46,18 +52,15 @@ export default function EditarPropiedadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   
-  // Estados para Propietarios
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
   const [propietarioSelectId, setPropietarioSelectId] = useState('');
   
-  // Estados para Asesores y Ubicaciones
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
 
-  // Estados de Imágenes (Antiguas y Nuevas)
   const [existingMainPhoto, setExistingMainPhoto] = useState<string | null>(null);
   const [existingGallery, setExistingGallery] = useState<string[]>([]);
   
@@ -69,6 +72,7 @@ export default function EditarPropiedadPage() {
   const modalidadActual = watch('modalidad');
   const tipoInmueble = watch('tipo', '');
   const tieneMantenimiento = watch('tieneMantenimiento');
+  const tieneVigilancia = watch('tieneVigilancia');
   const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno');
 
   useEffect(() => {
@@ -80,36 +84,41 @@ export default function EditarPropiedadPage() {
             const dataU = await resU.json();
             setAsesoresDB(dataU);
 
-            // Cargar datos de la propiedad
             const { data: p } = await api.get(`/propiedades/${id}`);
             
-            // Llenar campos de texto y números
             const campos = ['tipo', 'modalidad', 'ubicacion', 'direccion', 'precio', 'moneda', 'area', 'areaConstruida', 'habitaciones', 'banos', 'cocheras', 'descripcion', 'detalles', 'partidaRegistral', 'partidaCochera', 'partidaDeposito', 'comision', 'videoUrl', 'mapaUrl', 'asesor', 'link1', 'link2', 'link3', 'link4', 'link5'];
             campos.forEach(key => {
                 if (p[key] !== null && p[key] !== undefined) setValue(key as any, p[key]);
             });
 
-            // Formatear Fechas
             if(p.inicioContrato) setValue('inicioContrato', p.inicioContrato.split('T')[0]);
             if(p.finContrato) setValue('finContrato', p.finContrato.split('T')[0]);
             if(p.fechaCaptacion) setValue('fechaCaptacion', p.fechaCaptacion.split('T')[0]);
 
-            // Formatear Radio Buttons
             setValue('exclusiva', p.exclusiva ? 'si' : 'no');
             setValue('renovable', p.renovable ? 'si' : 'no');
+            setValue('incluyeIgv', p.incluyeIgv ? 'si' : 'no');
             
+            // CARGAR MANTENIMIENTO Y VIGILANCIA
             if (Number(p.mantenimiento) > 0) {
                 setValue('tieneMantenimiento', 'si');
                 setValue('mantenimiento', p.mantenimiento);
             } else {
                 setValue('tieneMantenimiento', 'no');
             }
+            setValue('monedaMantenimiento', p.monedaMantenimiento || 'PEN');
 
-            // Setear estados adicionales
+            if (Number(p.vigilancia) > 0) {
+                setValue('tieneVigilancia', 'si');
+                setValue('vigilancia', p.vigilancia);
+            } else {
+                setValue('tieneVigilancia', 'no');
+            }
+            setValue('monedaVigilancia', p.monedaVigilancia || 'PEN');
+
             setBusquedaUbicacion(p.ubicacion);
             setBusquedaAsesor(p.asesor || '');
             
-            // Llenar Propietarios y Fotos existentes
             if(p.Propietarios || p.propietarios) setPropietariosSeleccionados(p.Propietarios || p.propietarios);
             if(p.fotoPrincipal) setExistingMainPhoto(p.fotoPrincipal);
             if(p.galeria) setExistingGallery(typeof p.galeria === 'string' ? JSON.parse(p.galeria) : p.galeria);
@@ -140,7 +149,7 @@ export default function EditarPropiedadPage() {
           const compressed = await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1600, useWebWorker: true });
           setFotoPrincipalFile(compressed as File);
           setPreviewMain(URL.createObjectURL(compressed as File));
-          setExistingMainPhoto(null); // Ocultar la antigua si suben una nueva
+          setExistingMainPhoto(null);
       }
   };
 
@@ -180,7 +189,6 @@ export default function EditarPropiedadPage() {
     try {
         const formData = new FormData();
         
-        // 1. Agregar todos los textos
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
             if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
@@ -188,23 +196,33 @@ export default function EditarPropiedadPage() {
             }
         });
 
-        // 2. Lógica de campos especiales
-        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') formData.set('mantenimiento', '0');
+        // SOBRESCRIBIR LÓGICAS ESPECIALES
+        formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
         formData.set('exclusiva', data.exclusiva === 'si' ? 'true' : 'false');
         formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
 
-        // 3. Propietarios vinculados
+        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
+            formData.set('mantenimiento', '0');
+        } else {
+            formData.set('mantenimiento', String(data.mantenimiento));
+            formData.set('monedaMantenimiento', data.monedaMantenimiento);
+        }
+
+        if (data.tieneVigilancia === 'no') {
+            formData.set('vigilancia', '0');
+        } else {
+            formData.set('vigilancia', String(data.vigilancia));
+            formData.set('monedaVigilancia', data.monedaVigilancia);
+        }
+
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
 
-        // 4. Imágenes antiguas que se mantienen (para que el backend no las borre)
         if (existingMainPhoto) formData.append('existingMainPhoto', existingMainPhoto);
         formData.append('existingGallery', JSON.stringify(existingGallery));
 
-        // 5. Imágenes NUEVAS (Archivos)
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
 
-        // Enviar con Fetch directamente para que Multer procese el FormData
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_BASE_URL}/propiedades/${id}`, {
             method: 'PUT',
@@ -284,6 +302,7 @@ export default function EditarPropiedadPage() {
                             <option value="Local">Local Comercial</option>
                             <option value="Local Industrial">Local Industrial</option>
                             <option value="Oficina">Oficina</option>
+                            <option value="Proyecto">Proyecto</option>
                         </select>
                     </div>
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD</label>
@@ -291,6 +310,7 @@ export default function EditarPropiedadPage() {
                             <option value="Venta">Venta</option>
                             <option value="Alquiler">Alquiler</option>
                             <option value="Anticresis">Anticresis</option>
+                            <option value="Pre Venta">Pre Venta</option>
                         </select>
                     </div>
                     <div className="form-control relative">
@@ -308,7 +328,7 @@ export default function EditarPropiedadPage() {
                 
                 <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-[10px] uppercase">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Precio</label>
                         <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                             <select {...register('moneda')} className="bg-gray-100 px-3 font-bold border-r border-gray-300 text-xs outline-none"><option value="USD">USD</option><option value="PEN">PEN</option></select>
@@ -319,25 +339,49 @@ export default function EditarPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Área Const. (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white"/></div>
                 </div>
 
-                {modalidadActual === 'Alquiler' && (
-                    <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
-                        <div className="flex flex-col md:flex-row md:items-center gap-6">
-                            <div className="form-control">
-                                <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Tiene Mantenimiento?</label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* VIGILANCIA: Siempre Visible */}
+                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                        <div className="form-control">
+                            <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
+                            <div className="flex gap-4 mb-3">
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
                             </div>
-                            {tieneMantenimiento === 'si' && (
-                                <div className="form-control flex-1">
-                                    <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento (S/)</label>
-                                    <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full bg-white font-bold"/>
+                            {tieneVigilancia === 'si' && (
+                                <div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200">
+                                    <select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs">
+                                        <option value="PEN">S/</option>
+                                        <option value="USD">$</option>
+                                    </select>
+                                    <input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
                                 </div>
                             )}
                         </div>
                     </div>
-                )}
+
+                    {/* MANTENIMIENTO: Solo Alquiler */}
+                    {modalidadActual === 'Alquiler' && (
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                            <div className="form-control">
+                                <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
+                                <div className="flex gap-4 mb-3">
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                </div>
+                                {tieneMantenimiento === 'si' && (
+                                    <div className="flex shadow-sm rounded-lg overflow-hidden border border-blue-200">
+                                        <select {...register('monedaMantenimiento')} className="bg-white px-3 font-bold text-blue-700 outline-none border-r border-blue-200 text-xs">
+                                            <option value="PEN">S/</option>
+                                            <option value="USD">$</option>
+                                        </select>
+                                        <input type="number" step="0.01" {...register('mantenimiento')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* 3. DISTRIBUCIÓN */}
@@ -360,12 +404,15 @@ export default function EditarPropiedadPage() {
                 <div className="form-control"><label className="label font-bold text-gray-700 text-xs uppercase"><FaListUl className="text-blue-500 inline mr-2"/> Distribución Detallada</label><textarea {...register('detalles')} className="textarea textarea-bordered h-40 bg-white text-sm leading-relaxed"></textarea></div>
             </div>
 
-            {/* 4. DATOS LEGALES (SIN DOCUMENTOS PDF) */}
+            {/* 4. DATOS LEGALES */}
             <div className="bg-white rounded-xl shadow-sm border p-8 border-gray-100">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label><input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono text-sm"/></div>
+                    <div className={`form-control ${modalidadActual === 'Alquiler' ? 'md:col-span-1' : 'md:col-span-3'}`}>
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label>
+                        <input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono text-sm"/>
+                    </div>
                     {modalidadActual === 'Alquiler' && (
                         <>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera</label><input {...register('partidaCochera')} className="input input-bordered w-full bg-white font-mono text-sm"/></div>
@@ -400,6 +447,13 @@ export default function EditarPropiedadPage() {
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 flex items-center gap-2 text-[10px] uppercase"><FaPercent className="text-blue-500" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <input type="number" step="0.1" {...register('comision')} className="input input-bordered w-full bg-white font-bold text-lg"/>
+                    </div>
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-700 text-[10px] uppercase">¿INCLUYE IGV (18%)?</label>
+                        <div className="flex gap-4 mt-2">
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('incluyeIgv')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('incluyeIgv')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
+                        </div>
                     </div>
                 </div>
             </div>
