@@ -69,7 +69,6 @@ export default function CierrePage() {
   const [mostrarSugPropiedad, setMostrarSugPropiedad] = useState(false);
   const [mostrarSugBanco, setMostrarSugBanco] = useState(false);
 
-  // --- ESTADOS PARA CLIENTES ---
   const [listaClientes, setListaClientes] = useState<any[]>([]);
   const [sugerenciasCliente, setSugerenciasCliente] = useState<any[]>([]);
   const [mostrarSugCliente, setMostrarSugCliente] = useState(false);
@@ -82,11 +81,9 @@ export default function CierrePage() {
 
   const cargarDatos = async () => {
       try {
-          // AÑADIDO: ": any" PARA EVITAR EL ERROR DE TYPESCRIPT
           const props: any = await getPropiedades();
           setListaPropiedades(Array.isArray(props) ? props : (props.data || []));
 
-          // AÑADIDO: ": any" PARA EVITAR EL ERROR DE TYPESCRIPT
           const clientesDb: any = await getCartera(); 
           setListaClientes(Array.isArray(clientesDb) ? clientesDb : (clientesDb.data || []));
 
@@ -98,16 +95,19 @@ export default function CierrePage() {
   const handleChange = (e: any) => {
       const { name, value, type, checked } = e.target;
 
-      // --- LOGICA DE AUTOCOMPLETADO DE CLIENTE ---
       if (name === 'clienteNombre') {
           const soloLetras = value.replace(/[0-9]/g, ''); 
           setForm({ ...form, [name]: soloLetras });
           
           if (soloLetras.trim().length > 0) {
               const listaSegura = Array.isArray(listaClientes) ? listaClientes : [];
-              const filtrados = listaSegura.filter((c: any) => 
-                  c.nombre && c.nombre.toLowerCase().includes(soloLetras.toLowerCase().trim())
-              );
+              
+              const filtrados = listaSegura.filter((c: any) => {
+                  // AHORA SÍ MIRA LA COLUMNA CORRECTA: nombreCompleto
+                  const nombreReal = c.nombreCompleto || c.nombre || '';
+                  return nombreReal.toLowerCase().includes(soloLetras.toLowerCase().trim());
+              });
+              
               setSugerenciasCliente(filtrados);
               setMostrarSugCliente(true);
           } else {
@@ -167,11 +167,11 @@ export default function CierrePage() {
       }
   };
 
-  // --- SELECCIONAR CLIENTE Y AUTORELLENAR DIRECCIÓN ---
   const seleccionarCliente = (cliente: any) => {
+      const nombreReal = cliente.nombreCompleto || cliente.nombre || '';
       setForm({ 
           ...form, 
-          clienteNombre: cliente.nombre,
+          clienteNombre: nombreReal,
           direccionClienteContrato: cliente.direccion || form.direccionClienteContrato 
       });
       setMostrarSugCliente(false);
@@ -254,7 +254,6 @@ export default function CierrePage() {
       
       <main className="flex-1 p-8 container mx-auto">
         
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div className="flex items-center gap-4">
                 <div className="bg-emerald-600 p-3 rounded-xl text-white shadow-lg">
@@ -273,7 +272,6 @@ export default function CierrePage() {
             </Link>
         </div>
 
-        {/* SELECTOR */}
         <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 mb-6 w-full max-w-md mx-auto">
             <button 
                 onClick={() => { setTipoOperacion('ALQUILER'); setForm(INITIAL_FORM); }}
@@ -289,7 +287,6 @@ export default function CierrePage() {
             </button>
         </div>
 
-        {/* FORMULARIO */}
         <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in max-w-5xl mx-auto" autoComplete="off">
             
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -298,7 +295,6 @@ export default function CierrePage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
-                    {/* INPUT CLIENTE CON AUTOCOMPLETADO DB */}
                     <div className="form-control relative">
                         <label className="label font-bold text-slate-600">Cliente (Inquilino/Comprador)</label>
                         <input 
@@ -313,21 +309,25 @@ export default function CierrePage() {
                         />
                         {mostrarSugCliente && sugerenciasCliente.length > 0 && (
                             <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-[72px] max-h-48 overflow-y-auto">
-                                {sugerenciasCliente.map((cliente: any) => (
-                                    <li 
-                                        key={cliente.id} 
-                                        onClick={() => seleccionarCliente(cliente)}
-                                        className="px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-none flex flex-col"
-                                    >
-                                        <span className="font-bold text-sm text-slate-700 truncate">{cliente.nombre}</span>
-                                        {cliente.dni && <span className="text-xs text-slate-400">DNI: {cliente.dni}</span>}
-                                    </li>
-                                ))}
+                                {sugerenciasCliente.map((cliente: any, idx: number) => {
+                                    // --- LEEMOS LAS COLUMNAS CORRECTAS DE LA BASE DE DATOS ---
+                                    const nombreMostrar = cliente.nombreCompleto || cliente.nombre || 'Cliente sin nombre';
+                                    const docMostrar = cliente.documento || cliente.dni || '';
+                                    return (
+                                        <li 
+                                            key={cliente.id || idx} 
+                                            onClick={() => seleccionarCliente(cliente)}
+                                            className="px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-none flex flex-col"
+                                        >
+                                            <span className="font-bold text-sm text-slate-700 truncate">{nombreMostrar}</span>
+                                            {docMostrar && <span className="text-xs text-slate-400">Doc: {docMostrar}</span>}
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>
                     
-                    {/* INPUT PROPIEDAD */}
                     <div className="form-control relative">
                         <label className="label font-bold text-slate-600">Propiedad (Dirección)</label>
                         <div className="relative">
@@ -388,7 +388,6 @@ export default function CierrePage() {
                 </div>
             </div>
 
-            {/* 2. CAMPOS ALQUILER */}
             {tipoOperacion === 'ALQUILER' && (
                 <>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100">
@@ -492,7 +491,6 @@ export default function CierrePage() {
                 </>
             )}
 
-            {/* 3. CAMPOS VENTA */}
             {tipoOperacion === 'VENTA' && (
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
                     <h3 className="text-sm font-black text-emerald-600 uppercase tracking-wider mb-4 flex items-center gap-2">
