@@ -285,7 +285,8 @@ export default function PropiedadDetallePage() {
                                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
                                     <FaHandshake className="text-blue-600"/> Detalles del Contrato
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Exclusiva</p>
                                         <div className={`badge ${propiedad.exclusiva ? 'badge-success text-white' : 'badge-ghost text-gray-500'} font-bold`}>
@@ -298,6 +299,15 @@ export default function PropiedadDetallePage() {
                                             {propiedad.renovable ? 'SÍ' : 'NO'}
                                         </div>
                                     </div>
+                                    
+                                    {/* --- BLOQUE IGV --- */}
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">IGV</p>
+                                        <div className={`badge ${propiedad.incluyeIgv ? 'badge-secondary text-white' : 'badge-ghost text-gray-500'} font-bold`}>
+                                            {propiedad.incluyeIgv ? 'SÍ' : 'NO'}
+                                        </div>
+                                    </div>
+
                                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Inicio</p>
                                         <p className="font-black text-gray-800 text-sm">
@@ -311,9 +321,8 @@ export default function PropiedadDetallePage() {
                                         </p>
                                     </div>
                                     
-                                    {/* --- BLOQUES DE PAGOS ADICIONALES --- */}
                                     {Number(propiedad.vigilancia) > 0 && (
-                                        <div className="col-span-2 md:col-span-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                        <div className="col-span-2 md:col-span-5 bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-2">
                                             <span className="text-xs text-emerald-700 font-bold uppercase tracking-widest flex items-center gap-2">
                                                 <FaShieldAlt className="text-emerald-500 text-lg"/> Pago Vigilancia
                                             </span>
@@ -324,7 +333,7 @@ export default function PropiedadDetallePage() {
                                     )}
 
                                     {propiedad.modalidad === 'Alquiler' && Number(propiedad.mantenimiento) > 0 && (
-                                        <div className="col-span-2 md:col-span-4 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                        <div className="col-span-2 md:col-span-5 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
                                             <span className="text-xs text-blue-700 font-bold uppercase tracking-widest flex items-center gap-2">
                                                 <FaTools className="text-blue-500 text-lg"/> Mantenimiento Edificio
                                             </span>
