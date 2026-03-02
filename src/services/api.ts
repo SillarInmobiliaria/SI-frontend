@@ -281,4 +281,9 @@ export const deleteClienteCartera = async (id: number) => {
     return response.data;
 };
 
+export const updateClienteCartera = async (id: number | string, data: any) => {
+    const response = await api.put(`/cartera/${id}`, data);
+    return response.data;
+};
+
 export default api;

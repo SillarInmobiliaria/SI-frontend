@@ -5,9 +5,9 @@ import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
     FaUserTie, FaBirthdayCake, FaPlus, FaSearch, FaTrash, 
     FaPhone, FaBriefcase, FaCalendarAlt, FaMapMarkerAlt, 
-    FaIdCard, FaWhatsapp, FaExclamationTriangle 
+    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit 
 } from 'react-icons/fa';
-import { getCartera, createClienteCartera, deleteClienteCartera, buscarInteresadoPorNombre } from '../../services/api';
+import { getCartera, createClienteCartera, updateClienteCartera, deleteClienteCartera, buscarInteresadoPorNombre } from '../../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function CarteraPage() {
@@ -15,15 +15,16 @@ export default function CarteraPage() {
     const [busqueda, setBusqueda] = useState('');
     const [showModal, setShowModal] = useState(false);
     
-    // Estados para el Autocompletado
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Fecha actual para validaciones
+    // --- ESTADO PARA SABER SI ESTAMOS EDITANDO ---
+    const [editandoId, setEditandoId] = useState<number | string | null>(null);
+
     const today = new Date().toISOString().split('T')[0];
 
-    const [form, setForm] = useState({
+    const INITIAL_FORM = {
         nombreCompleto: '',
         documento: '',
         telefono: '',
@@ -34,7 +35,9 @@ export default function CarteraPage() {
         profesion: '',
         fechaRegistro: today,
         tipo: 'INQUILINO'
-    });
+    };
+
+    const [form, setForm] = useState(INITIAL_FORM);
 
     useEffect(() => {
         cargarDatos();
@@ -52,20 +55,16 @@ export default function CarteraPage() {
 
     // --- LOGICA DE DUPLICADOS ---
     const verificarDuplicado = (nombre: string, dni: string) => {
-        // Normalizamos textos (minusculas y sin espacios extra)
         const nombreLimpio = nombre.trim().toLowerCase();
         const dniLimpio = dni ? dni.trim() : '';
 
         return clientes.find(c => {
             const cNombre = c.nombreCompleto.toLowerCase().trim();
             const cDni = c.documento ? c.documento.trim() : '';
-            
-            // Coincide Nombre O Coincide DNI (si tiene)
             return cNombre === nombreLimpio || (dniLimpio && cDni === dniLimpio);
         });
     };
 
-    // --- AUTOCOMPLETADO INTELIGENTE ---
     const handleNombreChange = async (e: any) => {
         const val = e.target.value;
         setForm({ ...form, nombreCompleto: val });
@@ -73,13 +72,11 @@ export default function CarteraPage() {
         if (val.length > 2) {
             try {
                 const resultados = await buscarInteresadoPorNombre(val);
-                
-                // FILTRO MÁGICO: Excluir los que YA están en cartera
                 const resultadosFiltrados = resultados.filter((r: any) => {
                     const yaExiste = clientes.some(c => 
                         c.nombreCompleto.toLowerCase().trim() === r.nombre.toLowerCase().trim()
                     );
-                    return !yaExiste; // Solo mostramos los que NO existen
+                    return !yaExiste;
                 });
 
                 setSugerencias(resultadosFiltrados);
@@ -103,7 +100,6 @@ export default function CarteraPage() {
         setMostrarSugerencias(false);
     };
 
-    // --- VALIDACIÓN ESTRICTA PARA TELÉFONOS  ---
     const handleInputNumerico = (e: any, campo: string) => {
         const val = e.target.value.replace(/\D/g, ''); 
         if (val.length <= 9) {
@@ -111,18 +107,41 @@ export default function CarteraPage() {
         }
     };
 
+    // --- ABRIR MODAL PARA NUEVO ---
+    const handleNuevoClick = () => {
+        setEditandoId(null);
+        setForm(INITIAL_FORM);
+        setShowModal(true);
+    };
+
+    // --- ABRIR MODAL PARA EDITAR ---
+    const handleEditarClick = (cliente: any) => {
+        setEditandoId(cliente.id);
+        setForm({
+            nombreCompleto: cliente.nombreCompleto || '',
+            documento: cliente.documento || '',
+            telefono: cliente.telefono || '',
+            telefono2: cliente.telefono2 || '',
+            email: cliente.email || '',
+            direccion: cliente.direccion || '',
+            fechaNacimiento: cliente.fechaNacimiento || '',
+            profesion: cliente.profesion || '',
+            fechaRegistro: cliente.fechaRegistro || today,
+            tipo: cliente.tipo || 'INQUILINO'
+        });
+        setShowModal(true);
+    };
+
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         
-        // 1. Validación de Teléfono
         if (form.telefono.length !== 9) {
             toast.error("⚠️ El teléfono principal debe tener 9 dígitos exactos.");
             return;
         }
 
-        // 2. VALIDACIÓN DE DUPLICADOS (El Guardián Final) 🛡️
         const duplicado = verificarDuplicado(form.nombreCompleto, form.documento);
-        if (duplicado) {
+        if (duplicado && duplicado.id !== editandoId) {
             toast.custom((t) => (
                 <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-4 border-amber-500`}>
                     <div className="flex-1 w-0 p-4">
@@ -143,21 +162,24 @@ export default function CarteraPage() {
                     </div>
                 </div>
             ), { duration: 5000 });
-            return; // DETENEMOS TODO AQUÍ
+            return; 
         }
 
         setIsSubmitting(true);
-        const loadingToast = toast.loading("Guardando cliente...");
+        const loadingToast = toast.loading(editandoId ? "Actualizando cliente..." : "Guardando cliente...");
 
         try {
-            await createClienteCartera(form);
-            toast.success("Cliente guardado en cartera", { id: loadingToast });
+            if (editandoId) {
+                await updateClienteCartera(editandoId, form);
+                toast.success("Cliente actualizado", { id: loadingToast });
+            } else {
+                await createClienteCartera(form);
+                toast.success("Cliente guardado en cartera", { id: loadingToast });
+            }
+            
             setShowModal(false);
-            setForm({ 
-                nombreCompleto: '', documento: '', telefono: '', telefono2: '', 
-                email: '', direccion: '', fechaNacimiento: '', profesion: '', 
-                fechaRegistro: today, tipo: 'INQUILINO' 
-            });
+            setForm(INITIAL_FORM);
+            setEditandoId(null);
             cargarDatos();
         } catch (error) {
             console.error(error);
@@ -190,7 +212,6 @@ export default function CarteraPage() {
             <Navbar />
             <Toaster position="top-right" reverseOrder={false} />
 
-            {/* FONDO ANIMADO */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-emerald-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob"></div>
                 <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-teal-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob animation-delay-2000"></div>
@@ -202,7 +223,6 @@ export default function CarteraPage() {
                 
                 <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
                     
-                    {/* HEADER */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white/70 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/50 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
                         
@@ -217,7 +237,7 @@ export default function CarteraPage() {
                         </div>
 
                         <button 
-                            onClick={() => setShowModal(true)} 
+                            onClick={handleNuevoClick} 
                             className="relative z-10 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-emerald-200/50 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2 group/btn"
                         >
                             <FaPlus className="group-hover/btn:rotate-90 transition-transform duration-300"/> 
@@ -225,7 +245,6 @@ export default function CarteraPage() {
                         </button>
                     </div>
 
-                    {/* BARRA DE BÚSQUEDA */}
                     <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-lg mb-8 border border-white/60">
                         <div className="relative group">
                             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors text-lg"/>
@@ -239,7 +258,6 @@ export default function CarteraPage() {
                         </div>
                     </div>
 
-                    {/* TABLA */}
                     <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="table w-full">
@@ -326,7 +344,15 @@ export default function CarteraPage() {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div className="flex justify-center">
+                                                    {/* --- SE AÑADIÓ EL BOTÓN DE EDITAR AQUÍ --- */}
+                                                    <div className="flex justify-center gap-2">
+                                                        <button 
+                                                            onClick={() => handleEditarClick(c)} 
+                                                            className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-blue-200 hover:scale-110"
+                                                            title="Editar Cliente"
+                                                        >
+                                                            <FaEdit/>
+                                                        </button>
                                                         <button 
                                                             onClick={() => handleDelete(c.id)} 
                                                             className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-red-200 hover:scale-110"
@@ -346,28 +372,29 @@ export default function CarteraPage() {
                 </main>
             </div>
 
-            {/* MODAL */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-100 animate-scale-in">
                         
-                        {/* Header Modal */}
                         <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center">
                             <div>
-                                <h3 className="text-2xl font-black text-slate-800">Nuevo Cliente</h3>
-                                <p className="text-slate-500 text-sm">Ingresa los datos para agregar a la cartera</p>
+                                <h3 className="text-2xl font-black text-slate-800">
+                                    {editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}
+                                </h3>
+                                <p className="text-slate-500 text-sm">
+                                    {editandoId ? 'Actualiza los datos del cliente seleccionado' : 'Ingresa los datos para agregar a la cartera'}
+                                </p>
                             </div>
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600">
-                                <FaUserTie className="text-2xl"/>
+                                {editandoId ? <FaEdit className="text-2xl"/> : <FaUserTie className="text-2xl"/>}
                             </div>
                         </div>
                         
                         <form onSubmit={handleSubmit} autoComplete="off" className="p-8 space-y-6">
                             
-                            {/* CAMPO DE BÚSQUEDA / NOMBRE */}
                             <div className="form-control relative">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    Nombre Completo <span className="text-slate-400 font-normal">(Buscar Interesado)</span>
+                                    Nombre Completo {!editandoId && <span className="text-slate-400 font-normal">(Buscar Interesado)</span>}
                                 </label>
                                 <div className="relative">
                                     <input 
@@ -379,8 +406,7 @@ export default function CarteraPage() {
                                         onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)}
                                         required 
                                     />
-                                    {/* LISTA DE SUGERENCIAS FILTRADA */}
-                                    {mostrarSugerencias && sugerencias.length > 0 && (
+                                    {mostrarSugerencias && sugerencias.length > 0 && !editandoId && (
                                         <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto overflow-x-hidden">
                                             {sugerencias.map((s: any) => (
                                                 <li 
@@ -440,7 +466,6 @@ export default function CarteraPage() {
                                 </div>
                             </div>
 
-                            {/* SECCIÓN TELÉFONOS DESTACADA */}
                             <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
                                     <label className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2">
@@ -499,7 +524,6 @@ export default function CarteraPage() {
                                 </div>
                             </div>
                             
-                            {/* FOOTER MODAL */}
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                                 <button 
                                     type="button" 
@@ -513,7 +537,7 @@ export default function CarteraPage() {
                                     disabled={isSubmitting}
                                     className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold shadow-lg shadow-emerald-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-70 disabled:scale-100"
                                 >
-                                    {isSubmitting ? 'Guardando...' : 'Guardar Cliente'}
+                                    {isSubmitting ? 'Guardando...' : (editandoId ? 'Actualizar Cliente' : 'Guardar Cliente')}
                                 </button>
                             </div>
                         </form>
