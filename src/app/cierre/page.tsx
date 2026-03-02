@@ -73,6 +73,8 @@ export default function CierrePage() {
   const [sugerenciasCliente, setSugerenciasCliente] = useState<any[]>([]);
   const [mostrarSugCliente, setMostrarSugCliente] = useState(false);
 
+  const [precioOriginal, setPrecioOriginal] = useState<string | null>(null);
+
   const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
@@ -152,6 +154,7 @@ export default function CierrePage() {
               setMostrarSugPropiedad(true);
           } else {
               setMostrarSugPropiedad(false);
+              setPrecioOriginal(null);
           }
       }
 
@@ -181,12 +184,23 @@ export default function CierrePage() {
       if (prop.partidaCochera) partidasCombinadas += ` | Cochera: ${prop.partidaCochera}`;
       if (prop.partidaDeposito) partidasCombinadas += ` | Depósito: ${prop.partidaDeposito}`;
 
-      setForm({
-          ...form,
+      const dueño = prop.Propietarios?.[0] || prop.propietarios?.[0];
+
+      setForm(prev => ({
+          ...prev,
           propiedadDireccion: `${prop.direccion} (${prop.ubicacion})`, 
           propiedadId: prop.id,
-          partidaRegistral: partidasCombinadas
-      });
+          partidaRegistral: partidasCombinadas,
+          // Autorellenamos los datos bancarios
+          titularCuenta: dueño?.nombre || prev.titularCuenta,
+          banco: dueño?.banco || prev.banco,
+          numeroCuenta: dueño?.numeroCuenta || prev.numeroCuenta,
+          cci: dueño?.cci || prev.cci
+      }));
+      
+      // Guardamos el precio original para mostrarlo visualmente
+      setPrecioOriginal(`${prop.moneda === 'USD' ? '$' : 'S/'} ${Number(prop.precio).toLocaleString()}`);
+      
       setMostrarSugPropiedad(false);
   };
 
@@ -238,6 +252,7 @@ export default function CierrePage() {
           await createCierre(payload);
           alert('✅ Operación registrada exitosamente');
           setForm(INITIAL_FORM); 
+          setPrecioOriginal(null);
 
       } catch (error) {
           console.error(error);
@@ -273,13 +288,13 @@ export default function CierrePage() {
 
         <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 mb-6 w-full max-w-md mx-auto">
             <button 
-                onClick={() => { setTipoOperacion('ALQUILER'); setForm(INITIAL_FORM); }}
+                onClick={() => { setTipoOperacion('ALQUILER'); setForm(INITIAL_FORM); setPrecioOriginal(null); }}
                 className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${tipoOperacion === 'ALQUILER' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
             >
                 <FaFileContract/> ALQUILER
             </button>
             <button 
-                onClick={() => { setTipoOperacion('VENTA'); setForm(INITIAL_FORM); }}
+                onClick={() => { setTipoOperacion('VENTA'); setForm(INITIAL_FORM); setPrecioOriginal(null); }}
                 className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${tipoOperacion === 'VENTA' ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
             >
                 <FaKey/> VENTA
@@ -393,7 +408,6 @@ export default function CierrePage() {
                             <FaFileContract/> Condiciones del Contrato
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            
                             <div className="form-control">
                                 <label className="label font-bold text-slate-600 text-xs">Especificar</label>
                                 <select name="tipoFirmaAlquiler" className="select select-bordered select-sm" value={form.tipoFirmaAlquiler} onChange={handleChange}>
@@ -402,7 +416,6 @@ export default function CierrePage() {
                                     <option value="NINGUNO">Ninguno</option>
                                 </select>
                             </div>
-
                             <div className="form-control">
                                 <label className="label font-bold text-slate-600 text-xs">Notaría</label>
                                 <input type="text" name="notaria" className="input input-bordered input-sm" placeholder="Ej: Rodriguez" value={form.notaria} onChange={handleChange} />
@@ -445,7 +458,15 @@ export default function CierrePage() {
                                 <h4 className="text-xs font-bold text-slate-400 border-b pb-1">RENTA Y GARANTÍA</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div><label className="label text-xs">Moneda</label><select name="moneda" className="select select-bordered select-xs w-full" value={form.moneda} onChange={handleChange}><option value="PEN">Soles (S/)</option><option value="USD">Dólares ($)</option></select></div>
-                                    <div><label className="label text-xs">Monto Renta</label><input type="number" name="montoRenta" className="input input-bordered input-xs w-full font-bold" value={form.montoRenta} onChange={handleChange} /></div>
+                                    
+                                    {/* --- INPUT RENTA CON PRECIO VISUAL --- */}
+                                    <div>
+                                        <label className="label text-xs flex justify-between items-end">
+                                            <span>Monto Renta</span>
+                                            {precioOriginal && <span className="text-[9px] text-indigo-500 font-bold bg-indigo-50 px-1 py-0.5 rounded">Catálogo: {precioOriginal}</span>}
+                                        </label>
+                                        <input type="number" name="montoRenta" className="input input-bordered input-xs w-full font-bold" value={form.montoRenta} onChange={handleChange} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div><label className="label text-xs">Garantía</label><input type="number" name="garantia" className="input input-bordered input-xs w-full" value={form.garantia} onChange={handleChange} /></div>
@@ -505,7 +526,16 @@ export default function CierrePage() {
                         ))}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="form-control"><label className="label text-xs font-bold">Precio Venta</label><input type="number" name="montoVenta" className="input input-bordered input-sm font-bold text-emerald-700" value={form.montoVenta} onChange={handleChange} /></div>
+                        
+                        {/* --- INPUT VENTA CON PRECIO VISUAL --- */}
+                        <div className="form-control">
+                            <label className="label text-xs font-bold flex justify-between items-end">
+                                <span>Precio Venta</span>
+                                {precioOriginal && <span className="text-[9px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">Catálogo: {precioOriginal}</span>}
+                            </label>
+                            <input type="number" name="montoVenta" className="input input-bordered input-sm font-bold text-emerald-700" value={form.montoVenta} onChange={handleChange} />
+                        </div>
+                        
                         <div className="form-control"><label className="label text-xs font-bold">N° Escritura</label><input type="text" name="numeroEscritura" className="input input-bordered input-sm" value={form.numeroEscritura} onChange={handleChange} /></div>
                         <div className="form-control"><label className="label text-xs font-bold">Fecha Entrega</label><input type="date" name="fechaEntrega" max="2099-12-31" className="input input-bordered input-sm" value={form.fechaEntrega} onChange={handleChange} /></div>
                         
