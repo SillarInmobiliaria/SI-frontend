@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import { FaHandshake, FaFileContract, FaKey, FaMoneyCheckAlt, FaBuilding, FaSave, FaSearch, FaHistory, FaCheckCircle, FaBalanceScale, FaExclamationCircle } from 'react-icons/fa';
-import api, { createCierre, getPropiedades } from '../../services/api'; // <-- IMPORTAMOS LA INSTANCIA 'api'
+import api, { createCierre, getPropiedades } from '../../services/api'; 
 import Link from 'next/link';
 
 const BANCOS_PERU = [
@@ -69,7 +69,6 @@ export default function CierrePage() {
   const [mostrarSugPropiedad, setMostrarSugPropiedad] = useState(false);
   const [mostrarSugBanco, setMostrarSugBanco] = useState(false);
 
-  // --- ESTADOS PARA CLIENTES DE LA BASE DE DATOS ---
   const [listaClientes, setListaClientes] = useState<any[]>([]);
   const [sugerenciasCliente, setSugerenciasCliente] = useState<any[]>([]);
   const [mostrarSugCliente, setMostrarSugCliente] = useState(false);
@@ -85,8 +84,7 @@ export default function CierrePage() {
           const props = await getPropiedades();
           setListaPropiedades(props);
 
-          // --- FETCH A TU BASE DE DATOS DE CLIENTES REALES ---
-          const { data: clientesDb } = await api.get('/clientes'); 
+          const { data: clientesDb } = await api.get('/cartera'); 
           setListaClientes(clientesDb);
 
       } catch (e) {
@@ -97,14 +95,14 @@ export default function CierrePage() {
   const handleChange = (e: any) => {
       const { name, value, type, checked } = e.target;
 
-      // --- LOGICA DE AUTOCOMPLETADO DE CLIENTE EXACTO ---
+      // --- LOGICA DE AUTOCOMPLETADO DE CLIENTE ---
       if (name === 'clienteNombre') {
           const soloLetras = value.replace(/[0-9]/g, ''); 
           setForm({ ...form, [name]: soloLetras });
           
           if (soloLetras.length > 0) {
               const filtrados = listaClientes.filter((c: any) => 
-                  c.nombre.toLowerCase().includes(soloLetras.toLowerCase())
+                  c.nombre && c.nombre.toLowerCase().includes(soloLetras.toLowerCase())
               );
               setSugerenciasCliente(filtrados);
               setMostrarSugCliente(true);
