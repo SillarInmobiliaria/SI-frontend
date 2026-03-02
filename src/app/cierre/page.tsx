@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import { FaHandshake, FaFileContract, FaKey, FaMoneyCheckAlt, FaBuilding, FaSave, FaSearch, FaHistory, FaCheckCircle, FaBalanceScale, FaExclamationCircle } from 'react-icons/fa';
-import { createCierre, getPropiedades, getCierres } from '../../services/api'; 
+import api, { createCierre, getPropiedades } from '../../services/api'; // <-- IMPORTAMOS LA INSTANCIA 'api'
 import Link from 'next/link';
 
 const BANCOS_PERU = [
@@ -69,6 +69,11 @@ export default function CierrePage() {
   const [mostrarSugPropiedad, setMostrarSugPropiedad] = useState(false);
   const [mostrarSugBanco, setMostrarSugBanco] = useState(false);
 
+  // --- ESTADOS PARA CLIENTES DE LA BASE DE DATOS ---
+  const [listaClientes, setListaClientes] = useState<any[]>([]);
+  const [sugerenciasCliente, setSugerenciasCliente] = useState<any[]>([]);
+  const [mostrarSugCliente, setMostrarSugCliente] = useState(false);
+
   const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
@@ -78,8 +83,12 @@ export default function CierrePage() {
   const cargarDatos = async () => {
       try {
           const props = await getPropiedades();
-          console.log("Propiedades cargadas:", props); 
           setListaPropiedades(props);
+
+          // --- FETCH A TU BASE DE DATOS DE CLIENTES REALES ---
+          const { data: clientesDb } = await api.get('/clientes'); 
+          setListaClientes(clientesDb);
+
       } catch (e) {
           console.error("Error cargando datos", e);
       }
@@ -88,7 +97,24 @@ export default function CierrePage() {
   const handleChange = (e: any) => {
       const { name, value, type, checked } = e.target;
 
-      if (name === 'clienteNombre' || name === 'titularCuenta') {
+      // --- LOGICA DE AUTOCOMPLETADO DE CLIENTE EXACTO ---
+      if (name === 'clienteNombre') {
+          const soloLetras = value.replace(/[0-9]/g, ''); 
+          setForm({ ...form, [name]: soloLetras });
+          
+          if (soloLetras.length > 0) {
+              const filtrados = listaClientes.filter((c: any) => 
+                  c.nombre.toLowerCase().includes(soloLetras.toLowerCase())
+              );
+              setSugerenciasCliente(filtrados);
+              setMostrarSugCliente(true);
+          } else {
+              setMostrarSugCliente(false);
+          }
+          return;
+      }
+
+      if (name === 'titularCuenta') {
           const soloLetras = value.replace(/[0-9]/g, ''); 
           setForm({ ...form, [name]: soloLetras });
           return;
@@ -101,21 +127,16 @@ export default function CierrePage() {
 
       setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
 
-      // --- FILTRO CORREGIDO CON TUS COLUMNAS EXACTAS ---
       if (name === 'propiedadDireccion') {
           if (value.length > 0) {
               const lowerVal = value.toLowerCase();
               const terminos = lowerVal.split(" "); 
 
               const filtradas = listaPropiedades.filter((p: any) => {
-                  // 1. Buscamos en: direccion, ubicacion, tipo (Nombres exactos de tu DB)
                   const textoCompleto = `${p.direccion || ''} ${p.ubicacion || ''} ${p.tipo || ''}`.toLowerCase();
-                  
                   const coincideTexto = terminos.every((t: string) => textoCompleto.includes(t));
                   
-                  // 2. Filtro por 'modalidad' (Nombre exacto de tu DB: "Venta" o "Alquiler")
                   const modalidad = (p.modalidad || '').toUpperCase();
-                  
                   let coincideTipo = false;
                   if (tipoOperacion === 'ALQUILER') {
                       coincideTipo = modalidad.includes('ALQUILER') || modalidad.includes('RENTA');
@@ -144,12 +165,23 @@ export default function CierrePage() {
       }
   };
 
+  // --- SELECCIONAR CLIENTE ---
+  const seleccionarCliente = (cliente: any) => {
+      setForm({ ...form, clienteNombre: cliente.nombre });
+      setMostrarSugCliente(false);
+  };
+
   const seleccionarPropiedad = (prop: any) => {
+      // --- LOGICA DE AUTOCOMPLETADO DE PARTIDAS MULTIPLES ---
+      let partidasCombinadas = prop.partidaRegistral || '';
+      if (prop.partidaCochera) partidasCombinadas += ` | Cochera: ${prop.partidaCochera}`;
+      if (prop.partidaDeposito) partidasCombinadas += ` | Depósito: ${prop.partidaDeposito}`;
+
       setForm({
           ...form,
-          // Usamos 'direccion' y 'ubicacion' que son tus columnas reales
           propiedadDireccion: `${prop.direccion} (${prop.ubicacion})`, 
-          propiedadId: prop.id
+          propiedadId: prop.id,
+          partidaRegistral: partidasCombinadas
       });
       setMostrarSugPropiedad(false);
   };
@@ -260,9 +292,34 @@ export default function CierrePage() {
                     <FaBuilding/> Identificación y Propiedad
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="form-control">
+                    
+                    {/* INPUT CLIENTE CON AUTOCOMPLETADO DB */}
+                    <div className="form-control relative">
                         <label className="label font-bold text-slate-600">Cliente (Inquilino/Comprador)</label>
-                        <input type="text" name="clienteNombre" className="input input-bordered" placeholder="Nombre completo (Solo letras)" value={form.clienteNombre} onChange={handleChange} required />
+                        <input 
+                            type="text" 
+                            name="clienteNombre" 
+                            className="input input-bordered w-full" 
+                            placeholder="Nombre completo (Solo letras)" 
+                            value={form.clienteNombre} 
+                            onChange={handleChange} 
+                            onBlur={() => setTimeout(() => setMostrarSugCliente(false), 200)}
+                            required 
+                        />
+                        {mostrarSugCliente && sugerenciasCliente.length > 0 && (
+                            <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-[72px] max-h-48 overflow-y-auto">
+                                {sugerenciasCliente.map((cliente: any) => (
+                                    <li 
+                                        key={cliente.id} 
+                                        onClick={() => seleccionarCliente(cliente)}
+                                        className="px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-none flex flex-col"
+                                    >
+                                        <span className="font-bold text-sm text-slate-700 truncate">{cliente.nombre}</span>
+                                        {cliente.dni && <span className="text-xs text-slate-400">DNI: {cliente.dni}</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                     
                     {/* INPUT PROPIEDAD */}
@@ -291,7 +348,6 @@ export default function CierrePage() {
                                         className="px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-none"
                                     >
                                         <div className="flex justify-between items-center">
-                                            {/* Usamos las columnas REALES de tu base de datos */}
                                             <p className="font-bold text-sm text-slate-700 truncate">{prop.direccion}</p>
                                             <span className={`badge badge-sm badge-ghost text-[10px] ${prop.modalidad?.toUpperCase().includes('ALQUILER') ? 'text-indigo-600' : 'text-emerald-600'}`}>
                                                 {prop.modalidad}
@@ -317,7 +373,7 @@ export default function CierrePage() {
                     </div>
                     <div className="form-control">
                         <label className="label font-bold text-slate-600">Partida Registral N°</label>
-                        <input type="text" name="partidaRegistral" className="input input-bordered font-mono" placeholder="Ej: 11223344" value={form.partidaRegistral} onChange={handleChange} />
+                        <input type="text" name="partidaRegistral" className="input input-bordered font-mono text-sm" placeholder="Ej: 11223344" value={form.partidaRegistral} onChange={handleChange} />
                     </div>
                     
                     <div className="form-control md:col-span-2">
