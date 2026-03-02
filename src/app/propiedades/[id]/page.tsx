@@ -11,7 +11,7 @@ import {
   FaYoutube, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
   FaAlignLeft, FaFileUpload, FaEye, FaExternalLinkAlt,
   FaInstagram, FaTiktok, FaGlobe, FaHandshake, FaMoneyBillWave,
-  FaChevronLeft, FaChevronRight
+  FaChevronLeft, FaChevronRight, FaShieldAlt, FaTools
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -116,7 +116,7 @@ export default function PropiedadDetallePage() {
     try {
         const { data } = await api.post(`${BACKEND_URL}/api/propiedades/${id}/upload-pdf`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         setDocumentosUrls({ ...documentosUrls, [key]: data.url });
-        alert('✅ PDF subido a la nube correctamente.');
+        alert('✅ PDF subido y actualizado en la nube correctamente.');
     } catch (e) { alert('❌ Error al subir PDF.'); }
   };
 
@@ -311,13 +311,25 @@ export default function PropiedadDetallePage() {
                                         </p>
                                     </div>
                                     
+                                    {/* --- BLOQUES DE PAGOS ADICIONALES --- */}
+                                    {Number(propiedad.vigilancia) > 0 && (
+                                        <div className="col-span-2 md:col-span-4 bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                            <span className="text-xs text-emerald-700 font-bold uppercase tracking-widest flex items-center gap-2">
+                                                <FaShieldAlt className="text-emerald-500 text-lg"/> Pago Vigilancia
+                                            </span>
+                                            <span className="font-black text-emerald-900 text-xl">
+                                                {propiedad.monedaVigilancia === 'USD' ? '$' : 'S/'} {Number(propiedad.vigilancia).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     {propiedad.modalidad === 'Alquiler' && Number(propiedad.mantenimiento) > 0 && (
                                         <div className="col-span-2 md:col-span-4 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
                                             <span className="text-xs text-blue-700 font-bold uppercase tracking-widest flex items-center gap-2">
-                                                <FaMoneyBillWave className="text-blue-500 text-lg"/> Costo de Mantenimiento
+                                                <FaTools className="text-blue-500 text-lg"/> Mantenimiento Edificio
                                             </span>
-                                            <span className="font-black text-blue-900 text-2xl">
-                                                S/ {Number(propiedad.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                                            <span className="font-black text-blue-900 text-xl">
+                                                {propiedad.monedaMantenimiento === 'USD' ? '$' : 'S/'} {Number(propiedad.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     )}
@@ -339,7 +351,6 @@ export default function PropiedadDetallePage() {
                                                     </td>
                                                     <td className="font-bold text-gray-700 text-sm">{doc.label}</td>
                                                     <td>
-                                                        {/* --- ACTUALIZAR PDFS YA SUBIDOS --- */}
                                                         {documentosUrls[doc.key] ? (
                                                             <div className="flex items-center gap-2">
                                                                 <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-primary text-white" title="Ver Documento">
