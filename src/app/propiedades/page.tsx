@@ -16,7 +16,7 @@ const distritosArequipa = [
     "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
-    "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
+    "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
 export default function PropiedadesPage() {
@@ -121,7 +121,6 @@ export default function PropiedadesPage() {
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
 
-                        {/* --- AQUÍ SE AGREGARON TODOS LOS DISTRITOS AUTOMÁTICAMENTE --- */}
                         <select 
                             className="select select-sm select-ghost w-full md:w-48 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroUbicacion} 
