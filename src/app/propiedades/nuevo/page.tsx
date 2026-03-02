@@ -43,7 +43,8 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFiles, notasDocs, setNotasDocs }: any) => {
+// --- COMPONENTE ACTUALIZADO PARA BORRAR EL PDF ---
+const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFile = pdfFiles[name]; 
     
@@ -60,13 +61,28 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, pdfFile
         </label>
         {isChecked && (
             <div className="animate-in fade-in slide-in-from-top-1 flex flex-col gap-2">
-                <label className={`flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
-                    {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
-                    <span className={`text-[10px] font-bold uppercase truncate max-w-[150px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
-                        {selectedFile ? selectedFile.name : 'Subir PDF'}
-                    </span>
-                    <input type="file" accept=".pdf" className="hidden" onChange={(e) => onFileChange(name, e.target.files?.[0])} />
-                </label>
+                <div className={`flex items-center justify-between px-4 py-2 border border-dashed rounded-lg transition-colors ${selectedFile ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
+                    <label className="flex items-center gap-2 cursor-pointer w-full">
+                        {selectedFile ? <FaCheckCircle className="text-emerald-500 text-xs"/> : <FaFileUpload className="text-blue-500 text-xs"/>}
+                        <span className={`text-[10px] font-bold uppercase truncate max-w-[120px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
+                            {selectedFile ? selectedFile.name : 'Subir PDF'}
+                        </span>
+                        {/* El input se deshabilita si ya hay un archivo para evitar confusiones */}
+                        <input type="file" accept=".pdf" className="hidden" disabled={!!selectedFile} onChange={(e) => onFileChange(name, e.target.files?.[0])} />
+                    </label>
+                    
+                    {/* BOTÓN PARA ELIMINAR EL PDF SELECCIONADO */}
+                    {selectedFile && (
+                        <button 
+                            type="button" 
+                            onClick={() => onFileRemove(name)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-full transition-all"
+                            title="Quitar PDF"
+                        >
+                            <FaTimes className="text-xs" />
+                        </button>
+                    )}
+                </div>
                 <textarea 
                     className="textarea textarea-bordered w-full text-xs p-2 h-14 leading-tight resize-none" 
                     placeholder="Notas / Comentarios..."
@@ -178,6 +194,15 @@ export default function NuevaPropiedadPage() {
 
   const handlePdfFile = (name: string, file?: File) => {
     if (file) setPdfFiles(prev => ({ ...prev, [name]: file }));
+  };
+
+  // --- NUEVA FUNCIÓN PARA ELIMINAR EL PDF SELECCIONADO ---
+  const handleRemovePdf = (name: string) => {
+      setPdfFiles(prev => {
+          const newFiles = { ...prev };
+          delete newFiles[name];
+          return newFiles;
+      });
   };
 
   const removerFotoGaleria = (idx: number) => {
@@ -461,26 +486,26 @@ export default function NuevaPropiedadPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-bold">
                         {modalidadActual === 'Venta' && (
                             <>
-                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="Testimonio" name="testimonio" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="HR (Hoja Resumen)" name="hr" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="PU (Predio Urbano)" name="pu" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                             </>
                         )}
-                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                        <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Impuesto Predial" name="impuestoPredial" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Arbitrios Municipales" name="arbitrios" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Copia Literal" name="copiaLiteral" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                         
                         {(modalidadActual === 'Alquiler' || modalidadActual === 'Anticresis') && (
                             <>
-                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                                <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="CRI" name="cri" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                                <CustomDocCheckbox label="Recibos Luz/Agua" name="reciboAguaLuz" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
                             </>
                         )}
 
-                        <CustomDocCheckbox label="Planos" name="planos" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                        <CustomDocCheckbox label="Certificado de Parámetros" name="certificadoParametros" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                        <CustomDocCheckbox label="Certificado de Zonificación y Vías" name="certificadoZonificacion" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
-                        <CustomDocCheckbox label="Otros" name="otros" register={register} watch={watch} onFileChange={handlePdfFile} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Planos" name="planos" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Certificado de Parámetros" name="certificadoParametros" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Certificado de Zonificación y Vías" name="certificadoZonificacion" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
+                        <CustomDocCheckbox label="Otros" name="otros" register={register} watch={watch} onFileChange={handlePdfFile} onFileRemove={handleRemovePdf} pdfFiles={pdfFiles} notasDocs={notasDocs} setNotasDocs={setNotasDocs} />
 
                     </div>
                 </div>
