@@ -14,7 +14,8 @@ import {
   FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
-  FaCheckCircle, FaCheck, FaPercent, FaTimes, FaFileUpload 
+  FaCheckCircle, FaCheck, FaPercent, FaTimes, FaFileUpload,
+  FaShieldAlt, FaTools
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -30,7 +31,10 @@ interface FormInputs {
   planos: boolean; certificadoParametros: boolean; 
   certificadoZonificacion: boolean; otros: boolean;
   videoUrl: string; mapaUrl: string; asesor: string;
-  tieneMantenimiento: string; mantenimiento: string;
+  // --- NUEVOS CAMPOS ---
+  tieneMantenimiento: string; mantenimiento: string; monedaMantenimiento: string;
+  tieneVigilancia: string; vigilancia: string; monedaVigilancia: string;
+  // ---------------------
   exclusiva: string; renovable: string;
   fotoPrincipal: any; galeria: any;
   link1: string; link2: string; link3: string; link4: string; link5: string;
@@ -43,7 +47,6 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-// --- COMPONENTE ACTUALIZADO PARA BORRAR EL PDF ---
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFile = pdfFiles[name]; 
@@ -67,18 +70,10 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
                         <span className={`text-[10px] font-bold uppercase truncate max-w-[120px] ${selectedFile ? 'text-emerald-700' : 'text-blue-600'}`}>
                             {selectedFile ? selectedFile.name : 'Subir PDF'}
                         </span>
-                        {/* El input se deshabilita si ya hay un archivo para evitar confusiones */}
                         <input type="file" accept=".pdf" className="hidden" disabled={!!selectedFile} onChange={(e) => onFileChange(name, e.target.files?.[0])} />
                     </label>
-                    
-                    {/* BOTÓN PARA ELIMINAR EL PDF SELECCIONADO */}
                     {selectedFile && (
-                        <button 
-                            type="button" 
-                            onClick={() => onFileRemove(name)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-full transition-all"
-                            title="Quitar PDF"
-                        >
+                        <button type="button" onClick={() => onFileRemove(name)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-full transition-all" title="Quitar PDF">
                             <FaTimes className="text-xs" />
                         </button>
                     )}
@@ -102,9 +97,12 @@ export default function NuevaPropiedadPage() {
   const { register, handleSubmit, watch, setValue } = useForm<FormInputs>({
     defaultValues: { 
         moneda: 'USD', 
+        monedaMantenimiento: 'PEN',
+        monedaVigilancia: 'PEN',
         modalidad: 'Venta', 
         tipo: 'Casa', 
         tieneMantenimiento: 'no',
+        tieneVigilancia: 'no',
         exclusiva: 'no',
         renovable: 'no'
     }
@@ -130,6 +128,7 @@ export default function NuevaPropiedadPage() {
   const modalidadActual = watch('modalidad', 'Venta');
   const tipoInmueble = watch('tipo', 'Casa');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
+  const tieneVigilancia = watch('tieneVigilancia', 'no');
 
   const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno');
 
@@ -196,7 +195,6 @@ export default function NuevaPropiedadPage() {
     if (file) setPdfFiles(prev => ({ ...prev, [name]: file }));
   };
 
-  // --- NUEVA FUNCIÓN PARA ELIMINAR EL PDF SELECCIONADO ---
   const handleRemovePdf = (name: string) => {
       setPdfFiles(prev => {
           const newFiles = { ...prev };
@@ -225,7 +223,7 @@ export default function NuevaPropiedadPage() {
             'planos', 'certificadoParametros', 'certificadoZonificacion', 'otros'
         ];
         
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'observaciones', ...docs];
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'tieneVigilancia', 'observaciones', ...docs];
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
@@ -234,10 +232,20 @@ export default function NuevaPropiedadPage() {
             }
         });
 
+        // LÓGICA DE MANTENIMIENTO
         if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
             formData.set('mantenimiento', '0');
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
+            formData.set('monedaMantenimiento', data.monedaMantenimiento);
+        }
+
+        // LÓGICA DE VIGILANCIA
+        if (data.tieneVigilancia === 'no') {
+            formData.set('vigilancia', '0');
+        } else {
+            formData.set('vigilancia', String(data.vigilancia));
+            formData.set('monedaVigilancia', data.monedaVigilancia);
         }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
@@ -349,7 +357,7 @@ export default function NuevaPropiedadPage() {
 
                 <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Precio *</label>
                         <div className="flex shadow-sm rounded-lg overflow-hidden border border-gray-300">
                             <select {...register('moneda')} className="bg-gray-100 px-3 font-bold text-indigo-700 outline-none border-r border-gray-300 text-xs"><option value="USD">USD ($)</option><option value="PEN">PEN (S/)</option></select>
@@ -360,28 +368,51 @@ export default function NuevaPropiedadPage() {
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">ÁREA CONSTRUIDA (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white" placeholder="0.00"/></div>
                 </div>
 
-                {modalidadActual === 'Alquiler' && (
-                    <div className="col-span-1 md:col-span-3 bg-blue-50 border border-blue-100 p-4 rounded-xl mt-6">
-                        <div className="flex flex-col md:flex-row md:items-center gap-6">
-                            <div className="form-control">
-                                <label className="label font-bold text-gray-700 text-[10px] uppercase">¿Tiene Mantenimiento?</label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
-                                </div>
+                {/* BLOQUE DE PAGOS ADICIONALES (VIGILANCIA Y MANTENIMIENTO) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* VIGILANCIA: Siempre Visible */}
+                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                        <div className="form-control">
+                            <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
+                            <div className="flex gap-4 mb-3">
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
                             </div>
-                            {tieneMantenimiento === 'si' && (
-                                <div className="form-control flex-1">
-                                    <label className="label font-bold text-gray-700 text-[10px] uppercase">Costo de Mantenimiento (SIEMPRE EN SOLES)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">S/</span>
-                                        <input type="number" step="0.01" {...register('mantenimiento')} className="input input-bordered w-full bg-white font-bold pl-9" placeholder="0.00"/>
-                                    </div>
+                            {tieneVigilancia === 'si' && (
+                                <div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200">
+                                    <select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs">
+                                        <option value="PEN">S/</option>
+                                        <option value="USD">$</option>
+                                    </select>
+                                    <input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
                                 </div>
                             )}
                         </div>
                     </div>
-                )}
+
+                    {/* MANTENIMIENTO: Solo Alquiler */}
+                    {modalidadActual === 'Alquiler' && (
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                            <div className="form-control">
+                                <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
+                                <div className="flex gap-4 mb-3">
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                </div>
+                                {tieneMantenimiento === 'si' && (
+                                    <div className="flex shadow-sm rounded-lg overflow-hidden border border-blue-200">
+                                        <select {...register('monedaMantenimiento')} className="bg-white px-3 font-bold text-blue-700 outline-none border-r border-blue-200 text-xs">
+                                            <option value="PEN">S/</option>
+                                            <option value="USD">$</option>
+                                        </select>
+                                        <input type="number" step="0.01" {...register('mantenimiento')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
             </div>
 
             {/* 3. DISTRIBUCIÓN */}
