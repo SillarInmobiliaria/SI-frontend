@@ -132,7 +132,7 @@ export default function CarteraPage() {
             telefono2: cliente.telefono2 || '',
             email: cliente.email || '',
             direccion: cliente.direccion || '',
-            fechaNacimiento: cliente.fechaNacimiento || '',
+            fechaNacimiento: cliente.fechaNacimiento || '', // <--- AQUÍ SE CARGA EL CUMPLEAÑOS PARA EDITAR
             profesion: cliente.profesion || '',
             fechaRegistro: cliente.fechaRegistro || today,
             tipo: cliente.tipo || 'INQUILINO'
@@ -174,7 +174,7 @@ export default function CarteraPage() {
                 toast.success("Cliente actualizado", { id: loadingToast });
             } else {
                 await createClienteCartera(payload);
-                toast.success("Cliente guardado", { id: loadingToast });
+                toast.success("Cliente guardado en cartera", { id: loadingToast });
             }
             
             setShowModal(false);
@@ -183,14 +183,14 @@ export default function CarteraPage() {
             cargarDatos();
         } catch (error) {
             console.error(error);
-            toast.error("Error al guardar", { id: loadingToast });
+            toast.error("Error al guardar. Asegúrate de haber actualizado el Backend.", { id: loadingToast });
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id: number) => {
-        if(!confirm('¿Estás seguro de eliminar este cliente?')) return;
+        if(!confirm('¿Estás seguro de eliminar este cliente de la cartera?')) return;
         const loadingToast = toast.loading("Eliminando...");
         try {
             await deleteClienteCartera(id);
@@ -214,7 +214,7 @@ export default function CarteraPage() {
             <Navbar />
             <Toaster position="top-right" reverseOrder={false} />
 
-            {/* RECUPERADO: FONDO ANIMADO ORIGINAL */}
+            {/* FONDO ANIMADO ORIGINAL (RESERVADO) */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-emerald-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob"></div>
                 <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-teal-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob animation-delay-2000"></div>
@@ -226,7 +226,7 @@ export default function CarteraPage() {
                 
                 <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
                     
-                    {/* RECUPERADO: HEADER CON ESTILO ORIGINAL */}
+                    {/* HEADER CON ESTILO ORIGINAL */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white/70 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/50 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
                         
@@ -258,7 +258,7 @@ export default function CarteraPage() {
                             <table className="table w-full">
                                 <thead className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-200">
                                     <tr>
-                                        <th className="py-5 pl-8 text-slate-500 uppercase text-xs font-bold tracking-wider">Cliente</th>
+                                        <th className="py-5 pl-8 text-slate-500 uppercase text-xs font-bold tracking-wider">Cliente / Representante</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider">Contacto</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider hidden md:table-cell">Dirección</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider hidden lg:table-cell">Detalles</th>
@@ -266,69 +266,91 @@ export default function CarteraPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {filtrados.map((c) => (
-                                        <tr key={c.id} className="hover:bg-white/60 transition-colors group">
-                                            <td className="pl-8 py-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-md ${c.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-500 to-purple-500' : 'bg-gradient-to-br from-emerald-500 to-teal-500'}`}>
-                                                        {c.tipoPersona === 'PJ' ? <FaBuilding /> : c.nombreCompleto.charAt(0).toUpperCase()}
+                                    {filtrados.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="text-center py-20">
+                                                <div className="flex flex-col items-center gap-4 opacity-50">
+                                                    <div className="bg-slate-100 p-4 rounded-full">
+                                                        <FaUserTie className="text-4xl text-slate-400"/>
                                                     </div>
-                                                    <div>
-                                                        <div className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                                                            {c.nombreCompleto}
-                                                            {c.tipoPersona === 'PJ' && <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>}
-                                                        </div>
-                                                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                                                            <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-1">
-                                                                <FaIdCard className="text-[10px]"/> {c.documento || 'S/D'}
-                                                            </span>
-                                                            {c.tipoPersona === 'PJ' && c.empresa && (
-                                                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 flex items-center gap-1">
-                                                                    <FaBuilding className="text-[10px]" /> {c.empresa}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="flex flex-col gap-1.5">
-                                                    <a href={`https://wa.me/51${c.telefono}`} target="_blank" className="flex items-center gap-2 text-emerald-600 font-bold hover:text-emerald-700 transition-colors">
-                                                        <FaWhatsapp /> <span className="font-mono">{c.telefono}</span>
-                                                    </a>
-                                                    {c.telefono2 && <span className="text-xs text-slate-400 ml-5 font-mono">{c.telefono2}</span>}
-                                                </div>
-                                            </td>
-                                            <td className="hidden md:table-cell">
-                                                <div className="flex items-start gap-2 max-w-[200px]">
-                                                    <FaMapMarkerAlt className="text-slate-400 mt-1 flex-shrink-0"/>
-                                                    <span className="text-slate-600 text-sm line-clamp-2">{c.direccion || 'Sin dirección'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="hidden lg:table-cell">
-                                                <div className="space-y-1">
-                                                    {c.fechaNacimiento && c.tipoPersona === 'PN' && (
-                                                        <div className="flex items-center gap-2 text-pink-600 text-sm font-medium">
-                                                            <FaBirthdayCake className="text-pink-400"/> <span>{c.fechaNacimiento}</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex items-center gap-2 text-slate-400 text-xs">
-                                                        <FaCalendarAlt/> <span>Reg: {c.fechaRegistro}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="flex justify-center gap-2">
-                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all shadow-sm">
-                                                        <FaEdit/>
-                                                    </button>
-                                                    <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm">
-                                                        <FaTrash/>
-                                                    </button>
+                                                    <p className="text-slate-500 font-medium text-lg">No se encontraron clientes</p>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        filtrados.map((c) => (
+                                            <tr key={c.id} className="hover:bg-white/60 transition-colors group">
+                                                <td className="pl-8 py-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-md ${c.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-indigo-200' : 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-200'}`}>
+                                                            {c.tipoPersona === 'PJ' ? <FaBuilding /> : c.nombreCompleto.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                                                {c.nombreCompleto}
+                                                                {c.tipoPersona === 'PJ' && <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                                <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-1">
+                                                                    <FaIdCard className="text-[10px]"/> {c.documento || 'S/D'}
+                                                                </span>
+                                                                {c.profesion && c.tipoPersona === 'PN' && (
+                                                                    <span className="text-xs text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100 flex items-center gap-1">
+                                                                        <FaBriefcase className="text-[10px]"/> {c.profesion}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {c.tipoPersona === 'PJ' && c.empresa && (
+                                                                <div className="flex items-center gap-1 mt-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 w-fit">
+                                                                    <FaBuilding className="text-[10px]" /> {c.empresa} (RUC: {c.ruc})
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <a href={`https://wa.me/51${c.telefono}`} target="_blank" className="flex items-center gap-2 text-emerald-600 font-bold hover:text-emerald-700 transition-colors">
+                                                            <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                                                                <FaWhatsapp className="text-sm"/>
+                                                            </div>
+                                                            <span className="font-mono text-base">{c.telefono}</span>
+                                                        </a>
+                                                        {c.telefono2 && (
+                                                            <div className="flex items-center gap-2 text-slate-400 text-sm ml-1">
+                                                                <FaPhone className="text-xs"/>
+                                                                <span className="font-mono">{c.telefono2}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="hidden md:table-cell">
+                                                    <div className="flex items-start gap-2 max-w-[200px]">
+                                                        <FaMapMarkerAlt className="text-slate-400 mt-1 flex-shrink-0"/>
+                                                        <span className="text-slate-600 text-sm leading-snug line-clamp-2">{c.direccion || 'Sin dirección registrada'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="hidden lg:table-cell">
+                                                    <div className="space-y-1">
+                                                        {c.fechaNacimiento && c.tipoPersona === 'PN' && (
+                                                            <div className="flex items-center gap-2 text-pink-600 text-sm font-medium">
+                                                                <FaBirthdayCake className="text-pink-400"/> <span>{c.fechaNacimiento}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                                            <FaCalendarAlt/> Reg: {c.fechaRegistro}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="flex justify-center gap-2">
+                                                        <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-blue-200 hover:scale-110"><FaEdit/></button>
+                                                        <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-red-200 hover:scale-110"><FaTrash/></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -336,14 +358,14 @@ export default function CarteraPage() {
                 </main>
             </div>
 
-            {/* MODAL CON ESTILO ORIGINAL RECUPERADO */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-100 animate-scale-in max-h-[90vh] overflow-y-auto">
+                        
                         <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-800">{editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-                                <p className="text-slate-500 text-sm">Gestiona la información detallada del cliente</p>
+                                <p className="text-slate-500 text-sm">{editandoId ? 'Actualiza los datos del cliente' : 'Ingresa los datos para la cartera'}</p>
                             </div>
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600">
                                 {editandoId ? <FaEdit className="text-2xl"/> : <FaUserTie className="text-2xl"/>}
@@ -351,16 +373,18 @@ export default function CarteraPage() {
                         </div>
                         
                         <form onSubmit={handleSubmit} autoComplete="off" className="p-8 space-y-6">
+                            
+                            {/* SELECTOR TIPO DE PERSONA (ESTILO ORIGINAL) */}
                             <div className="form-control bg-slate-50 p-4 rounded-xl border border-slate-200">
                                 <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Persona *</label>
                                 <div className="flex gap-6">
-                                    <label className="flex items-center gap-2 cursor-pointer">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
                                         <input type="radio" name="tipoPersona" value="PN" checked={form.tipoPersona === 'PN'} onChange={handleChange} className="radio radio-emerald radio-sm" />
-                                        <span className="font-bold text-slate-600">Natural (PN)</span>
+                                        <span className="font-bold text-slate-600 group-hover:text-emerald-700 transition-colors">Natural (PN)</span>
                                     </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
                                         <input type="radio" name="tipoPersona" value="PJ" checked={form.tipoPersona === 'PJ'} onChange={handleChange} className="radio radio-emerald radio-sm" />
-                                        <span className="font-bold text-slate-600">Jurídica (PJ)</span>
+                                        <span className="font-bold text-slate-600 group-hover:text-emerald-700 transition-colors">Jurídica (PJ)</span>
                                     </label>
                                 </div>
                             </div>
@@ -368,26 +392,27 @@ export default function CarteraPage() {
                             {form.tipoPersona === 'PJ' && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 animate-fade-in">
                                     <div className="form-control">
-                                        <label className="block text-sm font-bold text-indigo-900 mb-2">Nombre Empresa *</label>
-                                        <input type="text" name="empresa" className="input input-bordered w-full font-bold" value={form.empresa} onChange={handleChange} required />
+                                        <label className="block text-sm font-bold text-indigo-900 mb-2">Empresa *</label>
+                                        <input type="text" name="empresa" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-bold text-slate-700" placeholder="Nombre S.A.C." value={form.empresa} onChange={handleChange} required />
                                     </div>
                                     <div className="form-control">
-                                        <label className="block text-sm font-bold text-indigo-900 mb-2">Número RUC *</label>
-                                        <input type="text" className="input input-bordered w-full font-mono" maxLength={11} value={form.ruc} onChange={e => handleInputNumerico(e, 'ruc')} required />
+                                        <label className="block text-sm font-bold text-indigo-900 mb-2">RUC *</label>
+                                        <input type="text" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-slate-700" placeholder="20000000000" maxLength={11} value={form.ruc} onChange={e => handleInputNumerico(e, 'ruc')} required />
                                     </div>
                                 </div>
                             )}
 
                             <div className="form-control relative">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    {form.tipoPersona === 'PJ' ? 'Representante Legal *' : 'Nombre Completo *'}
+                                    {form.tipoPersona === 'PJ' ? 'Representante Legal *' : 'Nombre Completo *'} 
                                 </label>
-                                <input type="text" className="input input-bordered w-full font-bold" value={form.nombreCompleto} onChange={handleNombreChange} required />
+                                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700" value={form.nombreCompleto} onChange={handleNombreChange} required />
                                 {mostrarSugerencias && sugerencias.length > 0 && !editandoId && (
-                                    <ul className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto">
+                                    <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto">
                                         {sugerencias.map((s: any) => (
-                                            <li key={s.id} onClick={() => seleccionarSugerencia(s)} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b last:border-none flex justify-between font-bold text-slate-700">
-                                                <span>{s.nombre}</span> <span className="text-xs text-slate-400">{s.telefono}</span>
+                                            <li key={s.id} onClick={() => seleccionarSugerencia(s)} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b last:border-none flex justify-between items-center transition-colors group">
+                                                <span className="font-bold text-slate-700 group-hover:text-emerald-700">{s.nombre}</span>
+                                                <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono group-hover:bg-emerald-100 group-hover:text-emerald-600">{s.telefono}</span>
                                             </li>
                                         ))}
                                     </ul>
@@ -396,28 +421,37 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">DNI / CE</label>
-                                    <input type="text" className="input input-bordered w-full font-mono" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'DNI del Rep.' : 'DNI / RUC'}</label>
+                                    <div className="relative">
+                                        <FaIdCard className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-slate-700" placeholder="12345678" value={form.documento} onChange={e => setForm({...form, documento: e.target.value})} />
+                                    </div>
                                 </div>
                                 <div className="form-control">
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Profesión</label>
-                                    <input type="text" className="input input-bordered w-full" value={form.profesion} onChange={e => setForm({...form, profesion: e.target.value})} />
+                                    <div className="relative">
+                                        <FaBriefcase className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Ej. Ingeniero" value={form.profesion} onChange={e => setForm({...form, profesion: e.target.value})} />
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Dirección</label>
-                                <input type="text" className="input input-bordered w-full" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dir. Fiscal' : 'Dirección'}</label>
+                                <div className="relative">
+                                    <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Av. Ejemplo 123" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
+                            <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="text-sm font-bold text-emerald-800 mb-2">Teléfono Principal *</label>
-                                    <input type="text" required className="input input-bordered w-full font-mono font-bold" maxLength={9} value={form.telefono} onChange={(e) => handleInputNumerico(e, 'telefono')} />
+                                    <label className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2"><FaWhatsapp className="text-emerald-600"/> Teléfono 1 *</label>
+                                    <input type="text" required className="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg tracking-wide text-slate-800" placeholder="999888777" maxLength={9} value={form.telefono} onChange={(e) => handleInputNumerico(e, 'telefono')} />
                                 </div>
                                 <div className="form-control">
-                                    <label className="text-sm font-bold text-slate-600 mb-2">Teléfono 2</label>
-                                    <input type="text" className="input input-bordered w-full font-mono" maxLength={9} value={form.telefono2} onChange={(e) => handleInputNumerico(e, 'telefono2')} />
+                                    <label className="text-sm font-bold text-slate-600 mb-2 flex items-center gap-2"><FaPhone className="text-slate-400"/> Teléfono 2</label>
+                                    <input type="text" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg tracking-wide text-slate-800" placeholder="987654321" maxLength={9} value={form.telefono2} onChange={(e) => handleInputNumerico(e, 'telefono2')} />
                                 </div>
                             </div>
 
@@ -426,27 +460,21 @@ export default function CarteraPage() {
                                     <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
                                         <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento
                                     </label>
-                                    {/* CORREGIDO: SE PUEDE EDITAR SIEMPRE QUE SEA PN */}
-                                    <input 
-                                        type="date" 
-                                        className="input input-bordered w-full" 
-                                        max={today} 
-                                        value={form.fechaNacimiento} 
-                                        onChange={e => setForm({...form, fechaNacimiento: e.target.value})}
-                                        disabled={form.tipoPersona === 'PJ'} 
-                                    />
+                                    {/* CORREGIDO: TOTALMENTE EDITABLE PARA PN */}
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} disabled={form.tipoPersona === 'PJ'} />
                                 </div>
+                                
                                 <div className="form-control">
                                     <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
                                         <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
                                     </label>
-                                    <input type="date" className="input input-bordered w-full" value={form.fechaRegistro} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
                                 </div>
                             </div>
                             
-                            <div className="flex justify-end gap-3 pt-4 border-t">
-                                <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost">Cancelar</button>
-                                <button type="submit" disabled={isSubmitting} className="btn bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold px-8 rounded-xl shadow-lg shadow-emerald-200">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancelar</button>
+                                <button type="submit" disabled={isSubmitting} className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold shadow-lg shadow-emerald-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-70 disabled:scale-100">
                                     {isSubmitting ? 'Guardando...' : (editandoId ? 'Actualizar Cliente' : 'Guardar Cliente')}
                                 </button>
                             </div>
