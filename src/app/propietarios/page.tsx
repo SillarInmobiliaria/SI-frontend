@@ -8,7 +8,7 @@ import { createPropietario, toggleEstadoPropietario, eliminarPropietario, update
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt, FaEdit
+  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing // Agregados iconos nuevos
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -61,6 +61,9 @@ export default function PropietariosPage() {
       setValue('cuenta', prop.cuenta);
       setValue('cci', prop.cci);
       setValue('detalles', prop.detalles);
+      
+      setValue('ocupacion', prop.ocupacion || '');
+      setValue('estadoCivil', prop.estadoCivil || '');
       
       // Si tiene fecha de nacimiento, la formateamos para el input type="date"
       if (prop.fechaNacimiento) {
@@ -307,6 +310,20 @@ export default function PropietariosPage() {
                               <label className="label font-bold text-gray-700 text-sm">Fecha de Nacimiento</label>
                               <input {...register('fechaNacimiento')} type="date" className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
+                            <div className="form-control">
+                              <label className="label font-bold text-gray-700 text-sm">Ocupación</label>
+                              <input {...register('ocupacion')} placeholder="Ej. Arquitecto, Abogado..." className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
+                            </div>
+                            <div className="form-control md:col-span-2">
+                              <label className="label font-bold text-gray-700 text-sm">Estado Civil</label>
+                              <select {...register('estadoCivil')} className="select select-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors">
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Soltero(a)">Soltero(a)</option>
+                                <option value="Casado(a)">Casado(a)</option>
+                                <option value="Divorciado(a)">Divorciado(a)</option>
+                                <option value="Viudo(a)">Viudo(a)</option>
+                              </select>
+                            </div>
 
                             <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2">
                               <h4 className="text-sm font-bold text-purple-700 uppercase flex items-center gap-2">
@@ -414,6 +431,20 @@ export default function PropietariosPage() {
                                           <p className="text-xs text-purple-700 font-bold uppercase mb-1.5">DNI</p>
                                           <p className="font-mono font-bold text-gray-900 text-lg">{selectedProp.dni}</p>
                                         </div>
+                                        
+                                        <div className="bg-gradient-to-r from-orange-50 to-orange-100/50 p-4 rounded-xl border-l-4 border-orange-500 shadow-sm">
+                                          <p className="text-xs text-orange-700 font-bold uppercase mb-1.5 flex items-center gap-1.5">
+                                            <FaBriefcase/> Ocupación
+                                          </p>
+                                          <p className="text-gray-800 font-medium">{selectedProp.ocupacion || 'No registrada'}</p>
+                                        </div>
+                                        <div className="bg-gradient-to-r from-cyan-50 to-cyan-100/50 p-4 rounded-xl border-l-4 border-cyan-500 shadow-sm">
+                                          <p className="text-xs text-cyan-700 font-bold uppercase mb-1.5 flex items-center gap-1.5">
+                                            <FaRing/> Estado Civil
+                                          </p>
+                                          <p className="text-gray-800 font-medium">{selectedProp.estadoCivil || 'No registrado'}</p>
+                                        </div>
+
                                         <div className="bg-gradient-to-r from-pink-50 to-pink-100/50 p-4 rounded-xl border-l-4 border-pink-500 shadow-sm">
                                           <p className="text-xs text-pink-700 font-bold uppercase mb-1.5 flex items-center gap-1.5">
                                             <FaBirthdayCake/> Fecha de Nacimiento
