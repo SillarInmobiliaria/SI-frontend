@@ -11,7 +11,7 @@ import {
   FaYoutube, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
   FaAlignLeft, FaFileUpload, FaEye, FaExternalLinkAlt,
   FaInstagram, FaTiktok, FaGlobe, FaHandshake, FaMoneyBillWave,
-  FaChevronLeft, FaChevronRight, FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding
+  FaChevronLeft, FaChevronRight, FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaTrash
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -109,20 +109,40 @@ export default function PropiedadDetallePage() {
       setEstadosDocs({ ...estadosDocs, [key]: nuevo });
   };
 
-  // AQUÍ SE CORRIGIÓ EL ERROR 500: Soporta múltiples archivos y usa el key "files"
   const handleSubirPdfAuditoria = async (key: string, filesToUpload: FileList) => {
     const formData = new FormData();
     Array.from(filesToUpload).forEach(file => {
-        formData.append('files', file); // Plural para que coincida con el Backend
+        formData.append('files', file);
     });
     formData.append('documentKey', key);
     try {
         const { data } = await api.post(`${BACKEND_URL}/api/propiedades/${id}/upload-pdf`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-        
-        // Actualizamos todo el objeto con el array que devuelve el backend
         setDocumentosUrls(data.documentosUrls);
         alert('✅ PDF(s) agregado(s) correctamente.');
     } catch (e) { alert('❌ Error al subir PDF.'); }
+  };
+
+  // NUEVA FUNCIÓN: Permite eliminar un PDF específico
+  const handleEliminarPdf = async (key: string, idx: number) => {
+      if(!confirm('¿Seguro que deseas eliminar este documento?')) return;
+      try {
+          let actuales = documentosUrls[key];
+          if (!Array.isArray(actuales)) actuales = [actuales];
+          
+          const nuevos = [...actuales];
+          nuevos.splice(idx, 1);
+          
+          const nuevosDocumentosUrls = { ...documentosUrls, [key]: nuevos };
+          setDocumentosUrls(nuevosDocumentosUrls);
+          
+          // Guardamos en la Base de Datos
+          await api.put(`/propiedades/${id}`, { 
+              documentosUrls: nuevosDocumentosUrls,
+              documentosurls: nuevosDocumentosUrls
+          });
+      } catch (e) {
+          alert('❌ Error al eliminar PDF.');
+      }
   };
 
   const guardarCambios = async () => {
@@ -188,73 +208,72 @@ export default function PropiedadDetallePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-end p-10 lg:p-16">
               <div className="container mx-auto max-w-7xl">
                   <div className="flex gap-3 mb-6">
-                      <span className={`badge badge-lg border-none text-white font-bold py-5 px-8 ${propiedad.modalidad === 'Venta' ? 'bg-orange-600' : 'bg-blue-600'}`}>{propiedad.modalidad}</span>
-                      <span className="badge badge-lg bg-white/20 backdrop-blur-md border-none text-white py-5 px-8 font-bold">{propiedad.tipo}</span>
+                      <span className={`badge badge-lg border-none text-white font-black py-5 px-8 ${propiedad.modalidad === 'Venta' ? 'bg-orange-600' : 'bg-blue-600'}`}>{propiedad.modalidad}</span>
+                      <span className="badge badge-lg bg-white/20 backdrop-blur-md border-none text-white py-5 px-8 font-black">{propiedad.tipo}</span>
                   </div>
                   <h1 className="text-4xl lg:text-6xl font-black text-white uppercase tracking-tight mb-4">{propiedad.ubicacion}</h1>
-                  <p className="text-white/80 text-2xl flex items-center gap-3 font-medium font-black"><FaMapMarkerAlt className="text-orange-400"/> {propiedad.direccion}</p>
+                  <p className="text-white/80 text-2xl flex items-center gap-3 font-black"><FaMapMarkerAlt className="text-orange-400"/> {propiedad.direccion}</p>
               </div>
           </div>
       </div>
 
       <main className="container mx-auto p-6 max-w-7xl -mt-20 relative z-10 font-black">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 font-black">
-            <div className="lg:col-span-2 space-y-6 font-black">
-                <div className="bg-white rounded-2xl shadow-lg p-2 flex gap-2 overflow-x-auto no-scrollbar font-black">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white rounded-2xl shadow-lg p-2 flex gap-2 overflow-x-auto no-scrollbar">
                     {['informacion', 'ubicacion', 'video', 'legal'].map((tab) => (
                         (tab !== 'legal' || isAdmin) && (tab !== 'video' || propiedad.videoUrl) && (
-                            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-black transition-all text-sm uppercase justify-center ${activeTab===tab ? 'bg-indigo-50 text-indigo-700' : 'text-gray-400 hover:bg-gray-50 font-black'}`}>
+                            <button key={tab} onClick={() => setActiveTab(tab)} className={`flex items-center gap-2 flex-1 py-3 px-6 rounded-xl font-black transition-all text-sm uppercase justify-center ${activeTab===tab ? 'bg-indigo-50 text-indigo-700' : 'text-gray-400 hover:bg-gray-50'}`}>
                                 {tab === 'informacion' ? <FaInfoCircle/> : tab === 'ubicacion' ? <FaMap/> : tab === 'video' ? <FaPlayCircle/> : <FaFileContract/>} {tab}
                             </button>
                         )
                     ))}
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 lg:p-8 min-h-[400px] font-black">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 lg:p-8 min-h-[400px]">
                     {activeTab === 'informacion' && (
-                        <div className="space-y-8 animate-fade-in font-black">
+                        <div className="space-y-8 animate-fade-in">
                             {images.length > 0 && (
-                                <div className="space-y-4 font-black">
-                                    <div className="group h-[450px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200 flex items-center justify-center font-black">
+                                <div className="space-y-4">
+                                    <div className="group h-[450px] rounded-2xl overflow-hidden relative bg-gray-100 border border-gray-200 flex items-center justify-center">
                                         <img src={getFullImageUrl(images[currentImageIndex])} className="w-full h-full object-cover" alt="Gallery" crossOrigin="anonymous"/>
                                         {images.length > 1 && (
-                                            <button onClick={handlePrevImage} className="absolute left-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95 font-black">
-                                                <FaChevronLeft className="text-xl font-black"/>
+                                            <button onClick={handlePrevImage} className="absolute left-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95">
+                                                <FaChevronLeft className="text-xl"/>
                                             </button>
                                         )}
                                         {images.length > 1 && (
-                                            <button onClick={handleNextImage} className="absolute right-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95 font-black">
-                                                <FaChevronRight className="text-xl font-black"/>
+                                            <button onClick={handleNextImage} className="absolute right-4 bg-white/80 hover:bg-white text-indigo-900 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all active:scale-95">
+                                                <FaChevronRight className="text-xl"/>
                                             </button>
                                         )}
                                         <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 text-xs font-black rounded-lg backdrop-blur-md">
                                             {currentImageIndex + 1} / {images.length}
                                         </div>
                                     </div>
-                                    <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth font-black">
+                                    <div className="flex gap-3 overflow-x-auto pb-2 scroll-smooth">
                                         {images.map((img:string, idx:number) => (
-                                            <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} crossOrigin="anonymous" className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all flex-shrink-0 font-black ${currentImageIndex===idx ? 'border-indigo-600 scale-95 opacity-100' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100 font-black'}`}/>
+                                            <img key={idx} src={getFullImageUrl(img)} onClick={() => setCurrentImageIndex(idx)} crossOrigin="anonymous" className={`w-20 h-20 object-cover rounded-xl cursor-pointer border-2 transition-all flex-shrink-0 ${currentImageIndex===idx ? 'border-indigo-600 scale-95 opacity-100' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}/>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* --- BLOQUE DE PROYECTO (DINÁMICO) --- */}
                             {esProyecto && (
-                                <div className="space-y-6 animate-fade-in font-black">
-                                    <div className="bg-indigo-50 rounded-3xl p-8 border border-indigo-100 shadow-sm font-black">
-                                        <h3 className="text-lg font-black text-indigo-900 mb-6 flex items-center gap-2 uppercase tracking-widest font-black"><FaBuilding className="text-indigo-600"/> Detalles del Proyecto</h3>
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-indigo-50 rounded-3xl p-8 border border-indigo-100 shadow-sm">
+                                        <h3 className="text-lg font-black text-indigo-900 mb-6 flex items-center gap-2 uppercase tracking-widest"><FaBuilding className="text-indigo-600"/> Detalles del Proyecto</h3>
                                         
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 font-black text-sm">
-                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4 font-black">
-                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 font-black"><FaCalendarAlt size={20}/></div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-sm">
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaCalendarAlt size={20}/></div>
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 font-black uppercase">Inicio de Obra</p>
                                                     <p className="font-black text-indigo-900">{propiedad.fechaInicioProyecto || 'Por definir'}</p>
                                                 </div>
                                             </div>
-                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4 font-black">
-                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 font-black"><FaTools size={20}/></div>
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaTools size={20}/></div>
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 font-black uppercase">Ejecución</p>
                                                     <p className="font-black text-indigo-900">{propiedad.tiempoEjecucion || 'No especificado'}</p>
@@ -262,14 +281,14 @@ export default function PropiedadDetallePage() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 font-black">
-                                            <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2 font-black">Tipologías Disponibles</p>
+                                        <div className="space-y-3">
+                                            <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2">Tipologías Disponibles</p>
                                             {propiedad.tipologias && (typeof propiedad.tipologias === 'string' ? JSON.parse(propiedad.tipologias) : propiedad.tipologias).map((t: any, i: number) => (
-                                                <div key={i} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm font-black">
+                                                <div key={i} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm">
                                                     <span className="font-black text-indigo-900 text-sm">{t.nombre}</span>
-                                                    <div className="flex gap-6 items-center font-black">
+                                                    <div className="flex gap-6 items-center">
                                                         <span className="text-xs text-gray-400 font-black">{t.areaConstruida} m²</span>
-                                                        <span className="font-black text-indigo-600 font-black text-lg">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(t.precio).toLocaleString()}</span>
+                                                        <span className="font-black text-indigo-600 text-lg">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(t.precio).toLocaleString()}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -278,96 +297,95 @@ export default function PropiedadDetallePage() {
                                 </div>
                             )}
 
-                            {/* DATOS NORMALES (Si no es proyecto sale esto) */}
                             {!esProyecto && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100 text-center font-black">
-                                    <div><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2 font-black"/><p className="font-black text-xl font-black">{propiedad.area} m²</p><p className="text-xs font-black text-gray-400 uppercase font-black">Total</p></div>
-                                    <div><FaBed className="mx-auto text-3xl text-indigo-500 mb-2 font-black"/><p className="font-black text-xl font-black">{propiedad.habitaciones || 0}</p><p className="text-xs font-black text-gray-400 uppercase font-black">Hab.</p></div>
-                                    <div><FaBath className="mx-auto text-3xl text-sky-500 mb-2 font-black"/><p className="font-black text-xl font-black">{propiedad.banos || 0}</p><p className="text-xs font-black text-gray-400 uppercase font-black">Baños</p></div>
-                                    <div><FaCar className="mx-auto text-3xl text-orange-500 mb-2 font-black"/><p className="font-black text-xl font-black">{propiedad.cocheras || 0}</p><p className="text-xs font-black text-gray-400 uppercase font-black">Coch.</p></div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-6 border-t border-b border-gray-100 text-center">
+                                    <div><FaRulerCombined className="mx-auto text-3xl text-emerald-500 mb-2"/><p className="font-black text-xl">{propiedad.area} m²</p><p className="text-xs font-black text-gray-400 uppercase">Total</p></div>
+                                    <div><FaBed className="mx-auto text-3xl text-indigo-500 mb-2"/><p className="font-black text-xl">{propiedad.habitaciones || 0}</p><p className="text-xs font-black text-gray-400 uppercase">Hab.</p></div>
+                                    <div><FaBath className="mx-auto text-3xl text-sky-500 mb-2"/><p className="font-black text-xl">{propiedad.banos || 0}</p><p className="text-xs font-black text-gray-400 uppercase">Baños</p></div>
+                                    <div><FaCar className="mx-auto text-3xl text-orange-500 mb-2"/><p className="font-black text-xl">{propiedad.cocheras || 0}</p><p className="text-xs font-black text-gray-400 uppercase">Coch.</p></div>
                                 </div>
                             )}
 
                             {propiedad.descripcion && (
-                                <div className="font-black"><h3 className="text-lg font-black text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter font-black"><FaTag className="text-indigo-500 font-black"/> Descripción</h3><p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg font-black">{propiedad.descripcion}</p></div>
+                                <div><h3 className="text-lg font-black text-gray-800 mb-3 flex items-center gap-2 uppercase tracking-tighter"><FaTag className="text-indigo-500"/> Descripción</h3><p className="text-gray-600 leading-relaxed whitespace-pre-line text-lg font-black">{propiedad.descripcion}</p></div>
                             )}
                             {(propiedad.detalles || propiedad.observaciones) && (
-                                <div className="mt-8 pt-6 border-t border-gray-100 font-black"><h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter font-black"><FaAlignLeft className="text-purple-600 font-black"/> Distribución</h3><div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm font-black"><p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg font-black">{propiedad.detalles || propiedad.observaciones}</p></div></div>
+                                <div className="mt-8 pt-6 border-t border-gray-100"><h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaAlignLeft className="text-purple-600"/> Distribución</h3><div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm"><p className="text-gray-700 leading-relaxed whitespace-pre-line text-lg font-black">{propiedad.detalles || propiedad.observaciones}</p></div></div>
                             )}
                         </div>
                     )}
                     {activeTab === 'ubicacion' && (
-                        <div className="animate-fade-in flex flex-col items-center justify-center min-h-[400px] font-black">
-                            <h3 className="text-2xl font-black text-gray-800 mb-2 font-black">{propiedad.ubicacion}</h3><p className="text-gray-500 text-lg mb-6 font-black">{propiedad.direccion}</p>
-                            {propiedad.mapaUrl ? <div className="w-full h-[450px] rounded-2xl overflow-hidden shadow-xl border border-gray-200 font-black"><iframe src={getCleanMapUrl(propiedad.mapaUrl)} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy" className="font-black"></iframe></div> : <div className="bg-gray-100 w-full h-64 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300 font-black"><FaMapMarkerAlt className="text-gray-300 text-5xl mb-2 font-black"/><span className="text-gray-400 font-black uppercase font-black">Sin Mapa</span></div>}
+                        <div className="animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+                            <h3 className="text-2xl font-black text-gray-800 mb-2">{propiedad.ubicacion}</h3><p className="text-gray-500 text-lg mb-6 font-black">{propiedad.direccion}</p>
+                            {propiedad.mapaUrl ? <div className="w-full h-[450px] rounded-2xl overflow-hidden shadow-xl border border-gray-200"><iframe src={getCleanMapUrl(propiedad.mapaUrl)} width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy"></iframe></div> : <div className="bg-gray-100 w-full h-64 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-gray-300"><FaMapMarkerAlt className="text-gray-300 text-5xl mb-2"/><span className="text-gray-400 font-black uppercase">Sin Mapa</span></div>}
                         </div>
                     )}
                     {activeTab === 'video' && propiedad.videoUrl && (
-                        <div className="animate-fade-in space-y-4 font-black"><h3 className="text-lg font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter font-black"><FaYoutube className="text-red-600 font-black"/> Recorrido</h3><div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-xl font-black"><iframe width="100%" height="100%" src={getYoutubeEmbedUrl(propiedad.videoUrl)} frameBorder="0" allowFullScreen className="font-black"></iframe></div></div>
+                        <div className="animate-fade-in space-y-4"><h3 className="text-lg font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaYoutube className="text-red-600"/> Recorrido</h3><div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-xl"><iframe width="100%" height="100%" src={getYoutubeEmbedUrl(propiedad.videoUrl)} frameBorder="0" allowFullScreen></iframe></div></div>
                     )}
                     {activeTab === 'legal' && isAdmin && (
-                        <div className="animate-fade-in space-y-8 font-black">
-                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100 font-black">
-                                <h3 className="text-lg font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter font-black"><FaUsers className="font-black"/> Propietarios</h3>
-                                {propietarios.length > 0 ? <div className="space-y-3 font-black">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center font-black"><div><p className="font-black text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500 font-black">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white font-black"><FaWhatsapp className="font-black"/></a></div>))}</div> : <p className="text-gray-500 italic font-black">Sin registros.</p>}
+                        <div className="animate-fade-in space-y-8">
+                            <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                                <h3 className="text-lg font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>
+                                {propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-black text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500 font-black">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic font-black">Sin registros.</p>}
                             </div>
 
-                            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm font-black">
-                                <h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter font-black">
-                                    <FaHandshake className="text-blue-600 font-black"/> Detalles del Contrato
+                            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                                <h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 uppercase tracking-tighter">
+                                    <FaHandshake className="text-blue-600"/> Detalles del Contrato
                                 </h3>
                                 
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 font-black">
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center font-black">
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 font-black">Exclusiva</p>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Exclusiva</p>
                                         <div className={`badge ${propiedad.exclusiva ? 'badge-success text-white' : 'badge-ghost text-gray-500'} font-black`}>
                                             {propiedad.exclusiva ? 'SÍ' : 'NO'}
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center font-black">
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 font-black">Renovable</p>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Renovable</p>
                                         <div className={`badge ${propiedad.renovable ? 'badge-info text-white' : 'badge-ghost text-gray-500'} font-black`}>
                                             {propiedad.renovable ? 'SÍ' : 'NO'}
                                         </div>
                                     </div>
                                     
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center font-black">
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 font-black">IGV</p>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">IGV</p>
                                         <div className={`badge ${propiedad.incluyeIgv ? 'badge-secondary text-white' : 'badge-ghost text-gray-500'} font-black`}>
                                             {propiedad.incluyeIgv ? 'SÍ' : 'NO'}
                                         </div>
                                     </div>
 
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center font-black">
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 font-black">Inicio</p>
-                                        <p className="font-black text-gray-800 text-sm font-black">
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Inicio</p>
+                                        <p className="font-black text-gray-800 text-sm">
                                             {propiedad.inicioContrato ? propiedad.inicioContrato.split('-').reverse().join('/') : '-'}
                                         </p>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center font-black">
-                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1 font-black">Fin</p>
-                                        <p className="font-black text-gray-800 text-sm font-black">
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center text-center">
+                                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Fin</p>
+                                        <p className="font-black text-gray-800 text-sm">
                                             {propiedad.finContrato ? propiedad.finContrato.split('-').reverse().join('/') : '-'}
                                         </p>
                                     </div>
                                     
                                     {Number(propiedad.vigilancia) > 0 && (
-                                        <div className="col-span-2 md:col-span-5 bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-2 font-black">
-                                            <span className="text-xs text-emerald-700 font-black uppercase tracking-widest flex items-center gap-2 font-black">
-                                                <FaShieldAlt className="text-emerald-500 text-lg font-black"/> Pago Vigilancia
+                                        <div className="col-span-2 md:col-span-5 bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                            <span className="text-xs text-emerald-700 font-black uppercase tracking-widest flex items-center gap-2">
+                                                <FaShieldAlt className="text-emerald-500 text-lg"/> Pago Vigilancia
                                             </span>
-                                            <span className="font-black text-emerald-900 text-xl font-black">
+                                            <span className="font-black text-emerald-900 text-xl">
                                                 {propiedad.monedaVigilancia === 'USD' ? '$' : 'S/'} {Number(propiedad.vigilancia).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     )}
 
                                     {propiedad.modalidad === 'Alquiler' && Number(propiedad.mantenimiento) > 0 && (
-                                        <div className="col-span-2 md:col-span-5 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2 font-black">
-                                            <span className="text-xs text-blue-700 font-black uppercase tracking-widest flex items-center gap-2 font-black">
-                                                <FaTools className="text-blue-500 text-lg font-black"/> Mantenimiento Edificio
+                                        <div className="col-span-2 md:col-span-5 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
+                                            <span className="text-xs text-blue-700 font-black uppercase tracking-widest flex items-center gap-2">
+                                                <FaTools className="text-blue-500 text-lg"/> Mantenimiento Edificio
                                             </span>
-                                            <span className="font-black text-blue-900 text-xl font-black">
+                                            <span className="font-black text-blue-900 text-xl">
                                                 {propiedad.monedaMantenimiento === 'USD' ? '$' : 'S/'} {Number(propiedad.mantenimiento).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
@@ -375,48 +393,53 @@ export default function PropiedadDetallePage() {
                                 </div>
                             </div>
 
-                            <div className="font-black">
-                                <div className="flex justify-between items-center mb-4 font-black"><h3 className="text-lg font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter font-black"><FaFileContract className="text-emerald-600 font-black"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-black text-xs font-black">{guardandoObs ? '...' : <><FaSave className="font-black"/> Guardar</>}</button></div>
-                                <div className="overflow-x-auto font-black">
-                                    <table className="table w-full font-black">
-                                        <thead className="font-black">
-                                            <tr className="text-gray-400 uppercase text-[10px] font-black"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr>
+                            <div>
+                                <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-black text-gray-800 flex items-center gap-2 uppercase tracking-tighter"><FaFileContract className="text-emerald-600"/> Auditoría</h3><button onClick={guardarCambios} disabled={guardandoObs} className="btn btn-success text-white btn-sm shadow-lg font-black text-xs">{guardandoObs ? '...' : <><FaSave/> Guardar</>}</button></div>
+                                <div className="overflow-x-auto">
+                                    <table className="table w-full">
+                                        <thead>
+                                            <tr className="text-gray-400 uppercase text-[10px]"><th>Estado</th><th>Doc</th><th>Adjunto</th><th>Notas</th></tr>
                                         </thead>
-                                        <tbody className="font-black">
+                                        <tbody>
                                             {documentosList.map((doc) => (
-                                                <tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50 font-black">
-                                                    <td className="text-center cursor-pointer font-black" onClick={() => toggleEstado(doc.key)}>
+                                                <tr key={doc.key} className="hover:bg-gray-50 border-b border-gray-50">
+                                                    <td className="text-center cursor-pointer" onClick={() => toggleEstado(doc.key)}>
                                                         {getIconoSemaforo(estadosDocs[doc.key])}
                                                     </td>
-                                                    <td className="font-black text-gray-700 text-sm font-black">{doc.label}</td>
-                                                    <td className="font-black">
-                                                        <div className="flex flex-col gap-2 items-start font-black">
-                                                            {/* SE MOSTRARÁN TODOS LOS PDFs EN FORMA DE LISTA */}
+                                                    <td className="font-black text-gray-700 text-sm">{doc.label}</td>
+                                                    <td>
+                                                        <div className="flex flex-col gap-2 items-start">
+                                                            {/* PDFs EN LISTA CON BOTÓN DE ELIMINAR */}
                                                             {Array.isArray(documentosUrls[doc.key]) && documentosUrls[doc.key].map((url: string, idx: number) => (
-                                                                <div key={idx} className="flex items-center gap-2 font-black">
-                                                                    <a href={url.startsWith('http') ? url : `${BACKEND_URL}${url}`} target="_blank" className="btn btn-xs btn-primary text-white font-black" title={`Ver Documento ${idx + 1}`}>
-                                                                        <FaEye className="font-black"/> PDF {idx + 1}
+                                                                <div key={idx} className="flex items-center gap-2">
+                                                                    <a href={url.startsWith('http') ? url : `${BACKEND_URL}${url}`} target="_blank" className="btn btn-xs btn-primary text-white" title={`Ver Documento ${idx + 1}`}>
+                                                                        <FaEye /> PDF {idx + 1}
                                                                     </a>
+                                                                    <button type="button" onClick={() => handleEliminarPdf(doc.key, idx)} className="btn btn-xs btn-error text-white" title="Eliminar PDF">
+                                                                        <FaTrash />
+                                                                    </button>
                                                                 </div>
                                                             ))}
                                                             
-                                                            {/* SI ERA UN STRING DE ANTES, TAMBIÉN SE MUESTRA */}
+                                                            {/* LEGACY: SI ERA UN SOLO STRING */}
                                                             {typeof documentosUrls[doc.key] === 'string' && (
-                                                                <div className="flex items-center gap-2 font-black">
-                                                                    <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-primary text-white font-black" title="Ver Documento">
-                                                                        <FaEye className="font-black"/> PDF
+                                                                <div className="flex items-center gap-2">
+                                                                    <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-primary text-white" title="Ver Documento">
+                                                                        <FaEye /> PDF
                                                                     </a>
+                                                                    <button type="button" onClick={() => handleEliminarPdf(doc.key, 0)} className="btn btn-xs btn-error text-white" title="Eliminar PDF">
+                                                                        <FaTrash />
+                                                                    </button>
                                                                 </div>
                                                             )}
 
-                                                            {/* BOTÓN PARA AGREGAR MÁS, SIEMPRE DISPONIBLE */}
-                                                            <label className="btn btn-xs btn-outline btn-primary cursor-pointer font-black mt-1" title="Agregar PDF">
-                                                                <FaFileUpload className="mr-1 font-black"/> {(documentosUrls[doc.key] && documentosUrls[doc.key].length > 0) ? '+ AGREGAR MÁS' : 'SUBIR PDF'}
-                                                                <input type="file" accept=".pdf" multiple className="hidden font-black" onChange={(e) => e.target.files && handleSubirPdfAuditoria(doc.key, e.target.files)} />
+                                                            <label className="btn btn-xs btn-outline btn-primary cursor-pointer mt-1" title="Agregar PDF">
+                                                                <FaFileUpload className="mr-1"/> {(documentosUrls[doc.key] && documentosUrls[doc.key].length > 0) ? '+ AGREGAR MÁS' : 'SUBIR PDF'}
+                                                                <input type="file" accept=".pdf" multiple className="hidden" onChange={(e) => e.target.files && handleSubirPdfAuditoria(doc.key, e.target.files)} />
                                                             </label>
                                                         </div>
                                                     </td>
-                                                    <td className="font-black">
+                                                    <td>
                                                         <textarea className="textarea textarea-bordered w-full h-10 text-xs font-black" value={observaciones[doc.key] || ''} onChange={(e) => setObservaciones({...observaciones, [doc.key]: e.target.value})}></textarea>
                                                     </td>
                                                 </tr>
@@ -430,53 +453,53 @@ export default function PropiedadDetallePage() {
                 </div>
             </div>
 
-            <div className="lg:col-span-1 space-y-6 font-black">
-                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24 font-black">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic font-black">Precio Inmueble</p>
+            <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 sticky top-24">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 italic">Precio Inmueble</p>
                     {!esProyecto ? (
-                        <div className="flex items-baseline gap-1 text-indigo-950 mb-6 font-black"><span className="text-5xl font-black tracking-tighter font-black">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span></div>
+                        <div className="flex items-baseline gap-1 text-indigo-950 mb-6"><span className="text-5xl font-black tracking-tighter">{propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(propiedad.precio).toLocaleString()}</span></div>
                     ) : (
-                        <div className="flex items-baseline gap-1 text-indigo-900 mb-6 font-black"><span className="text-4xl font-black tracking-tighter uppercase font-black">PROYECTO</span></div>
+                        <div className="flex items-baseline gap-1 text-indigo-900 mb-6"><span className="text-4xl font-black tracking-tighter uppercase">PROYECTO</span></div>
                     )}
                     
                     {propietarios.length > 0 && (
-                        <div className="space-y-4 mb-6 font-black">
-                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100 font-black"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-black"><FaUserTie size={18} className="font-black" /></div><div className="flex flex-col font-black"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1 font-black">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px] font-black" title={propietarios[0].nombre}>{propietarios[0].nombre}</span></div></div>
-                            <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02] font-black"> <FaWhatsapp size={24} className="font-black"/> CONTACTAR </a>
+                        <div className="space-y-4 mb-6">
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]" title={propietarios[0].nombre}>{propietarios[0].nombre}</span></div></div>
+                            <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
                         </div>
                     )}
 
                     {linksDisponibles.length > 0 && (
-                        <div className="space-y-3 mb-6 pt-4 border-t border-gray-50 font-black">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 font-black">Recursos y Presentación</p>
+                        <div className="space-y-3 mb-6 pt-4 border-t border-gray-50">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recursos y Presentación</p>
                             {linksDisponibles.map((link, idx) => {
                                 const config = getLinkConfig(link);
                                 return (
-                                    <a key={idx} href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-between w-full p-3 rounded-xl border transition-all group shadow-sm hover:shadow-md font-black ${config.color}`}>
-                                        <div className="flex items-center gap-3 overflow-hidden font-black">
+                                    <a key={idx} href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noopener noreferrer" className={`flex items-center justify-between w-full p-3 rounded-xl border transition-all group shadow-sm hover:shadow-md ${config.color}`}>
+                                        <div className="flex items-center gap-3 overflow-hidden">
                                             {config.icon}
-                                            <span className="text-xs font-black uppercase tracking-tight truncate font-black">{config.label}</span>
+                                            <span className="text-xs font-black uppercase tracking-tight truncate">{config.label}</span>
                                         </div>
-                                        <FaExternalLinkAlt className="text-[10px] opacity-40 group-hover:opacity-100 font-black" />
+                                        <FaExternalLinkAlt className="text-[10px] opacity-40 group-hover:opacity-100" />
                                     </a>
                                 );
                             })}
                         </div>
                     )}
 
-                    <div className="divider my-6 font-black"></div>
-                    <div className="flex items-center gap-4 mb-4 font-black">
-                        <div className="avatar placeholder font-black"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-black font-black">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
-                        <div className="font-black"><p className="font-black text-gray-800 text-lg leading-tight uppercase tracking-tighter font-black">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest font-black">Agente Encargado</p></div>
+                    <div className="divider my-6"></div>
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-black">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
+                        <div><p className="font-black text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
 
                     {propietarios.length > 1 && (
-                        <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100 font-black">
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 font-black">Otros Propietarios</p>
-                            <div className="space-y-2 font-black">
+                        <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
+                            <div className="space-y-2">
                                 {propietarios.slice(1).map((p: any) => (
-                                    <p key={p.id} className="font-black text-gray-800 text-sm flex items-center gap-2 font-black">
-                                        <FaUserTie className="text-gray-400 font-black" />
+                                    <p key={p.id} className="font-black text-gray-800 text-sm flex items-center gap-2">
+                                        <FaUserTie className="text-gray-400" />
                                         {p.nombre}
                                     </p>
                                 ))}
@@ -484,9 +507,9 @@ export default function PropiedadDetallePage() {
                         </div>
                     )}
 
-                    <div className="mt-8 text-center border-t border-gray-50 pt-6 font-black">
-                        <p className="text-[10px] text-gray-400 font-black uppercase font-black">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
-                        <p className="text-[10px] text-gray-300 mt-1 font-black font-black">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
+                    <div className="mt-8 text-center border-t border-gray-50 pt-6">
+                        <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
+                        <p className="text-[10px] text-gray-300 mt-1 font-black">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
                     </div>
                 </div>
             </div>
