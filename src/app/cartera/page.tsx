@@ -5,7 +5,7 @@ import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
     FaUserTie, FaBirthdayCake, FaPlus, FaSearch, FaTrash, 
     FaPhone, FaBriefcase, FaCalendarAlt, FaMapMarkerAlt, 
-    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit, FaBuilding 
+    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit, FaBuilding, FaEye 
 } from 'react-icons/fa';
 import { getCartera, createClienteCartera, updateClienteCartera, deleteClienteCartera, buscarInteresadoPorNombre } from '../../services/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -14,6 +14,9 @@ export default function CarteraPage() {
     const [clientes, setClientes] = useState<any[]>([]);
     const [busqueda, setBusqueda] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showViewModal, setShowViewModal] = useState(false);
+    const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
+    
     const [sugerencias, setSugerencias] = useState<any[]>([]);
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,18 +42,13 @@ export default function CarteraPage() {
 
     const [form, setForm] = useState(INITIAL_FORM);
 
-    useEffect(() => {
-        cargarDatos();
-    }, []);
+    useEffect(() => { cargarDatos(); }, []);
 
     const cargarDatos = async () => {
         try {
             const data = await getCartera();
             setClientes(data);
-        } catch (error) {
-            console.error(error);
-            toast.error("Error al cargar la cartera");
-        }
+        } catch (error) { toast.error("Error al cargar la cartera"); }
     };
 
     const verificarDuplicado = (nombre: string, dni: string) => {
@@ -104,40 +102,23 @@ export default function CarteraPage() {
 
     const handleEditarClick = (cliente: any) => {
         setEditandoId(cliente.id);
-        setForm({
-            tipoPersona: cliente.tipoPersona || 'PN',
-            empresa: cliente.empresa || '',
-            ruc: cliente.ruc || '',
-            nombreCompleto: cliente.nombreCompleto || '',
-            documento: cliente.documento || '',
-            telefono: cliente.telefono || '',
-            telefono2: cliente.telefono2 || '',
-            email: cliente.email || '',
-            direccion: cliente.direccion || '',
-            fechaNacimiento: cliente.fechaNacimiento || '',
-            profesion: cliente.profesion || '',
-            fechaRegistro: cliente.fechaRegistro || today,
-            tipo: cliente.tipo || 'INQUILINO'
-        });
+        setForm({ ...cliente });
         setShowModal(true);
+    };
+
+    const handleVerDetalles = (cliente: any) => {
+        setClienteSeleccionado(cliente);
+        setShowViewModal(true);
     };
 
     const handleSubmit = async (e: any) => {
         e.preventDefault();
-        if (form.telefono.length !== 9) {
-            toast.error("⚠️ El teléfono debe tener 9 dígitos.");
-            return;
-        }
-        if (form.tipoPersona === 'PJ' && form.ruc.length !== 11) {
-            toast.error("⚠️ El RUC debe tener 11 dígitos.");
-            return;
-        }
+        if (form.telefono.length !== 9) { toast.error("⚠️ Teléfono debe tener 9 dígitos."); return; }
+        if (form.tipoPersona === 'PJ' && form.ruc.length !== 11) { toast.error("⚠️ RUC debe tener 11 dígitos."); return; }
+        if (form.documento && form.documento.length !== 8) { toast.error("⚠️ DNI debe tener 8 dígitos."); return; }
 
         const duplicado = verificarDuplicado(form.nombreCompleto, form.documento);
-        if (duplicado && duplicado.id !== editandoId) {
-            toast.error("Cliente duplicado.");
-            return; 
-        }
+        if (duplicado && duplicado.id !== editandoId) { toast.error("Cliente ya existe."); return; }
 
         setIsSubmitting(true);
         const loadingToast = toast.loading("Guardando...");
@@ -153,7 +134,7 @@ export default function CarteraPage() {
             }
             setShowModal(false);
             cargarDatos();
-        } catch (error) { toast.error("Error al guardar", { id: loadingToast }); }
+        } catch (error) { toast.error("Error. Actualiza el Backend.", { id: loadingToast }); }
         finally { setIsSubmitting(false); }
     };
 
@@ -179,7 +160,6 @@ export default function CarteraPage() {
             <Navbar />
             <Toaster position="top-right" reverseOrder={false} />
 
-            {/* FONDO ANIMADO ORIGINAL RECUPERADO */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-emerald-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob"></div>
                 <div className="absolute top-[20%] left-[-10%] w-[400px] h-[400px] bg-teal-200/40 rounded-full blur-3xl opacity-50 mix-blend-multiply filter animate-blob animation-delay-2000"></div>
@@ -189,8 +169,6 @@ export default function CarteraPage() {
             <div className="flex relative z-10">
                 <SidebarAtencion />
                 <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
-                    
-                    {/* HEADER ESTILO ORIGINAL */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white/70 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white/50 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"></div>
                         <div className="relative z-10">
@@ -200,7 +178,7 @@ export default function CarteraPage() {
                             </h1>
                             <p className="text-slate-500 font-medium ml-1">Gestión de clientes formales y contratos</p>
                         </div>
-                        <button onClick={handleNuevoClick} className="relative z-10 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-2 group/btn">
+                        <button onClick={handleNuevoClick} className="relative z-10 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:scale-105 active:scale-95 transition-all text-white font-bold rounded-xl shadow-lg flex items-center gap-2 group/btn">
                             <FaPlus className="group-hover/btn:rotate-90 transition-transform duration-300"/> <span>Nuevo Cliente</span>
                         </button>
                     </div>
@@ -208,14 +186,14 @@ export default function CarteraPage() {
                     <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-lg mb-8 border border-white/60">
                         <div className="relative group">
                             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors text-lg"/>
-                            <input type="text" placeholder="Buscar por nombre, DNI, empresa o RUC..." className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all duration-300 text-slate-700 placeholder-slate-400 font-medium" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+                            <input type="text" placeholder="Buscar por nombre, DNI, empresa o RUC..." className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all duration-300 text-slate-700 font-medium" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
                         </div>
                     </div>
 
                     <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="table w-full">
-                                <thead className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-200">
+                                <thead className="bg-slate-50/80 border-b border-slate-200">
                                     <tr>
                                         <th className="py-5 pl-8 text-slate-500 uppercase text-xs font-bold tracking-wider">Cliente / Representante</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider">Contacto</th>
@@ -261,7 +239,7 @@ export default function CarteraPage() {
                                             <td className="hidden md:table-cell">
                                                 <div className="flex items-start gap-2 max-w-[200px]">
                                                     <FaMapMarkerAlt className="text-slate-400 mt-1 flex-shrink-0"/>
-                                                    <span className="text-slate-600 text-sm leading-snug line-clamp-2">{c.direccion || 'Sin dirección registrada'}</span>
+                                                    <span className="text-slate-600 text-sm leading-snug line-clamp-2">{c.direccion || 'Sin dirección'}</span>
                                                 </div>
                                             </td>
                                             <td className="hidden lg:table-cell">
@@ -278,8 +256,10 @@ export default function CarteraPage() {
                                             </td>
                                             <td>
                                                 <div className="flex justify-center gap-2">
-                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-blue-200 hover:scale-110"><FaEdit/></button>
-                                                    <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-red-200 hover:scale-110"><FaTrash/></button>
+                                                    {/* BOTON DEL OJITO */}
+                                                    <button onClick={() => handleVerDetalles(c)} className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Ver Detalles"><FaEye/></button>
+                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Editar"><FaEdit/></button>
+                                                    <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Eliminar"><FaTrash/></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -291,13 +271,59 @@ export default function CarteraPage() {
                 </main>
             </div>
 
+            {/* MODAL DE VISTA DETALLADA (OJITO) */}
+            {showViewModal && clienteSeleccionado && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
+                        <div className={`p-8 text-white ${clienteSeleccionado.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-600 to-purple-600' : 'bg-gradient-to-br from-emerald-600 to-teal-600'}`}>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                                    {clienteSeleccionado.tipoPersona === 'PJ' ? <FaBuilding size={32}/> : <FaUserTie size={32}/>}
+                                </div>
+                                <button onClick={() => setShowViewModal(false)} className="text-white/60 hover:text-white text-2xl font-bold">✕</button>
+                            </div>
+                            <h3 className="text-2xl font-black">{clienteSeleccionado.nombreCompleto}</h3>
+                            <p className="text-white/80 font-medium">{clienteSeleccionado.tipoPersona === 'PJ' ? 'Representante Legal' : clienteSeleccionado.profesion || 'Cliente Particular'}</p>
+                        </div>
+                        <div className="p-8 space-y-4 bg-slate-50">
+                            {clienteSeleccionado.tipoPersona === 'PJ' && (
+                                <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm">
+                                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Empresa Registrada</p>
+                                    <p className="font-bold text-indigo-900 text-lg">{clienteSeleccionado.empresa}</p>
+                                    <p className="text-sm font-mono text-indigo-600">RUC: {clienteSeleccionado.ruc}</p>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Documento</p>
+                                    <p className="font-bold text-slate-700">{clienteSeleccionado.documento || 'S/D'}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cumpleaños</p>
+                                    <p className="font-bold text-pink-600 flex items-center gap-2"><FaBirthdayCake className="text-pink-300"/> {clienteSeleccionado.fechaNacimiento || 'No reg.'}</p>
+                                </div>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Dirección</p>
+                                <p className="font-bold text-slate-700 text-sm leading-relaxed">{clienteSeleccionado.direccion || 'Sin dirección registrada'}</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <a href={`https://wa.me/51${clienteSeleccionado.telefono}`} target="_blank" className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-100"><FaWhatsapp/> WhatsApp</a>
+                                <button onClick={() => setShowViewModal(false)} className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition-colors">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE REGISTRO / EDICION */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-100 animate-scale-in max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] overflow-y-auto">
                         <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-800">{editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-                                <p className="text-slate-500 text-sm">Ingresa los datos para la cartera</p>
+                                <p className="text-slate-500 text-sm">Información detallada para el sistema</p>
                             </div>
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600">
                                 {editandoId ? <FaEdit className="text-2xl"/> : <FaUserTie className="text-2xl"/>}
@@ -322,23 +348,23 @@ export default function CarteraPage() {
                             {form.tipoPersona === 'PJ' && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 animate-fade-in">
                                     <div className="form-control">
-                                        <label className="block text-sm font-bold text-indigo-900 mb-2">Empresa *</label>
-                                        <input type="text" name="empresa" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-bold text-slate-700" placeholder="Nombre Empresa S.A.C." value={form.empresa} onChange={handleChange} required />
+                                        <label className="block text-sm font-bold text-indigo-900 mb-2">Nombre Empresa *</label>
+                                        <input type="text" name="empresa" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-bold text-slate-700" placeholder="Nombre Empresa S.A.C." value={form.empresa} onChange={handleChange} required />
                                     </div>
                                     <div className="form-control">
                                         <label className="block text-sm font-bold text-indigo-900 mb-2">RUC *</label>
-                                        <input type="text" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-slate-700" placeholder="20000000000" maxLength={11} value={form.ruc} onChange={e => handleInputNumerico(e, 'ruc')} required />
+                                        <input type="text" className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-slate-700" placeholder="20000000000" maxLength={11} value={form.ruc} onChange={e => handleInputNumerico(e, 'ruc')} required />
                                     </div>
                                 </div>
                             )}
 
                             <div className="form-control relative">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    {form.tipoPersona === 'PJ' ? 'Representante Legal *' : 'Nombre Completo *'}
+                                    {form.tipoPersona === 'PJ' ? 'Representante Legal (Nombre Completo) *' : 'Nombre Completo *'}
                                 </label>
-                                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700" value={form.nombreCompleto} onChange={handleNombreChange} required />
+                                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700" value={form.nombreCompleto} onChange={handleNombreChange} required />
                                 {mostrarSugerencias && sugerencias.length > 0 && !editandoId && (
-                                    <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto overflow-x-hidden">
+                                    <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto">
                                         {sugerencias.map((s: any) => (
                                             <li key={s.id} onClick={() => seleccionarSugerencia(s)} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b last:border-none flex justify-between items-center group font-bold text-slate-700 transition-colors">
                                                 <span>{s.nombre}</span> <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono group-hover:bg-emerald-100">{s.telefono}</span>
@@ -350,49 +376,53 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'DNI Representante' : 'DNI / RUC'}</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'DNI del Rep. Legal' : 'DNI / RUC'}</label>
                                     <div className="relative">
                                         <FaIdCard className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-slate-700" placeholder="Max 8 dígitos" maxLength={8} value={form.documento} onChange={e => handleInputNumerico(e, 'documento')} />
+                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-slate-700" placeholder="8 dígitos" maxLength={8} value={form.documento} onChange={e => handleInputNumerico(e, 'documento')} />
                                     </div>
                                 </div>
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Profesión</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Profesión / Ocupación</label>
                                     <div className="relative">
                                         <FaBriefcase className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Ej. Arquitecto" value={form.profesion} onChange={e => setForm({...form, profesion: e.target.value})} />
+                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Ej. Ingeniero" value={form.profesion} onChange={e => setForm({...form, profesion: e.target.value})} />
                                     </div>
                                 </div>
                             </div>
 
                             <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dir. Fiscal de la Empresa' : 'Dirección'}</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dirección Fiscal de Empresa' : 'Dirección'}</label>
                                 <div className="relative">
                                     <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Dirección para contrato" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Av. Ejemplo 123" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
                                 </div>
                             </div>
 
                             <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2"><FaWhatsapp className="text-emerald-600"/> Teléfono 1 *</label>
-                                    <input type="text" required className="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg text-slate-800" placeholder="987654321" maxLength={9} value={form.telefono} onChange={(e) => handleInputNumerico(e, 'telefono')} />
+                                    <label className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2"><FaWhatsapp className="text-emerald-600"/> Teléfono Principal *</label>
+                                    <input type="text" required className="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg text-slate-800" placeholder="987654321" maxLength={9} value={form.telefono} onChange={(e) => handleInputNumerico(e, 'telefono')} />
                                 </div>
                                 <div className="form-control">
                                     <label className="text-sm font-bold text-slate-600 mb-2 flex items-center gap-2"><FaPhone className="text-slate-400"/> Teléfono 2</label>
-                                    <input type="text" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg text-slate-800" placeholder="987654321" maxLength={9} value={form.telefono2} onChange={(e) => handleInputNumerico(e, 'telefono2')} />
+                                    <input type="text" className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-lg text-slate-800" placeholder="987654321" maxLength={9} value={form.telefono2} onChange={(e) => handleInputNumerico(e, 'telefono2')} />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2"><FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento</label>
-                                    {/* CORRECCIÓN: SIEMPRE EDITABLE PARA PN O PJ (REPRESENTANTE) */}
-                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
+                                        <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento
+                                    </label>
+                                    {/* SIEMPRE EDITABLE: TANTO PARA PN COMO PARA PJ (DEL REPRESENTANTE) */}
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} />
                                 </div>
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2"><FaCalendarAlt className="text-teal-500"/> Fecha de Registro</label>
-                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
+                                        <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
+                                    </label>
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
                                 </div>
                             </div>
                             
