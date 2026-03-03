@@ -52,7 +52,7 @@ const distritosArequipa = [
 // --- COMPONENTE CHECKBOX MODIFICADO PARA MULTIPLES PDFS ---
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
-    const selectedFiles = pdfFiles[name] || []; // Ahora es un array
+    const selectedFiles = pdfFiles[name] || []; 
     
     return (
       <div className="flex flex-col gap-2 h-full">
@@ -82,11 +82,10 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
                         </div>
                     ))}
 
-                    {/* Botón para subir (Aparece siempre para permitir múltiples) */}
+                    {/* Botón para subir */}
                     <label className="flex items-center justify-center gap-2 cursor-pointer w-full py-1.5 mt-1 border border-blue-200 border-dashed rounded bg-blue-50/50 hover:bg-blue-100 transition-colors">
                         <FaPlus className="text-blue-600 text-xs"/> <FaFileUpload className="text-blue-500 text-xs"/>
                         <span className="text-[10px] font-bold uppercase text-blue-600">Agregar PDF</span>
-                        {/* El input acepta multiples, pero la funcion en page.tsx los maneja 1 a 1 para ir agregandolos al array */}
                         <input type="file" multiple accept=".pdf" className="hidden" onChange={(e) => {
                             if (e.target.files) {
                                 Array.from(e.target.files).forEach(file => onFileChange(name, file));
@@ -141,7 +140,6 @@ export default function NuevaPropiedadPage() {
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
   
-  // MODIFICADO: pdfFiles ahora es un objeto donde cada key es un Array de Archivos
   const [pdfFiles, setPdfFiles] = useState<Record<string, File[]>>({});
   const [notasDocs, setNotasDocs] = useState<Record<string, string>>({});
 
@@ -157,6 +155,9 @@ export default function NuevaPropiedadPage() {
 
   const esProyecto = tipoInmueble === 'Proyecto';
   const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno') && !esProyecto;
+
+  // NUEVA LÓGICA: Determina si se muestran campos de departamento
+  const esDepartamento = tipoInmueble === 'Departamento' || tipoInmueble === 'Duplex';
 
   useEffect(() => {
     fetchPropietarios();
@@ -209,7 +210,6 @@ export default function NuevaPropiedadPage() {
       }
   };
 
-  // MODIFICADO PARA SOPORTAR MÚLTIPLES ARCHIVOS
   const handlePdfFile = (name: string, file?: File) => { 
       if (file) {
           setPdfFiles(prev => {
@@ -219,7 +219,6 @@ export default function NuevaPropiedadPage() {
       }
   };
 
-  // MODIFICADO PARA REMOVER UN ARCHIVO ESPECÍFICO DEL ARRAY
   const handleRemovePdf = (name: string, indexToRemove: number) => { 
       setPdfFiles(prev => { 
           const currentFiles = prev[name] || [];
@@ -257,15 +256,27 @@ export default function NuevaPropiedadPage() {
         if (esProyecto) formData.append('tipologias', JSON.stringify(data.tipologias));
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
-        if (data.tieneMantenimiento === 'si') { formData.set('mantenimiento', String(data.mantenimiento)); formData.set('monedaMantenimiento', data.monedaMantenimiento); }
-        if (data.tieneVigilancia === 'si') { formData.set('vigilancia', String(data.vigilancia)); formData.set('monedaVigilancia', data.monedaVigilancia); }
+        
+        // MODIFICADO: Mantenimiento se envía si es Alquiler O si es Departamento
+        if (data.tieneMantenimiento === 'si') { 
+            formData.set('mantenimiento', String(data.mantenimiento)); 
+            formData.set('monedaMantenimiento', data.monedaMantenimiento); 
+        } else {
+            formData.set('mantenimiento', '0');
+        }
+
+        if (data.tieneVigilancia === 'si') { 
+            formData.set('vigilancia', String(data.vigilancia)); 
+            formData.set('monedaVigilancia', data.monedaVigilancia); 
+        } else {
+            formData.set('vigilancia', '0');
+        }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
         propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
         
-        // MODIFICADO: Añadir MÚLTIPLES archivos PDF al formData
         docs.forEach(doc => {
             formData.append(doc, data[doc as keyof FormInputs] ? 'true' : 'false');
             if (pdfFiles[doc] && pdfFiles[doc].length > 0) {
@@ -416,20 +427,22 @@ export default function NuevaPropiedadPage() {
                             <div className="form-control">
                                 <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">No</span></label>
                                 </div>
                                 {tieneVigilancia === 'si' && (<div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200"><select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs"><option value="PEN">S/</option><option value="USD">$</option></select><input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/></div>)}
                             </div>
                         </div>
                     )}
-                    {modalidadActual === 'Alquiler' && (
+                    
+                    {/* MODIFICADO: Mantenimiento aparece en Alquiler O en Departamentos */}
+                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
                                 <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold text-blue-800">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold text-blue-800">No</span></label>
                                 </div>
                                 {tieneMantenimiento === 'si' && (<div className="flex shadow-sm rounded-lg overflow-hidden border border-blue-200"><select {...register('monedaMantenimiento')} className="bg-white px-3 font-bold text-blue-700 outline-none border-r border-blue-200 text-xs"><option value="PEN">S/</option><option value="USD">$</option></select><input type="number" step="0.01" {...register('mantenimiento')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/></div>)}
                             </div>
@@ -463,7 +476,8 @@ export default function NuevaPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className={`form-control ${modalidadActual === 'Alquiler' ? 'md:col-span-1' : 'md:col-span-3'}`}>
+                    {/* MODIFICADO: Partida Registral Principal siempre ocupa todo a menos que sea Alquiler o Departamento */}
+                    <div className={`form-control ${(modalidadActual === 'Alquiler' || esDepartamento) ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
                             Partida Registral (Principal)
                         </label>
@@ -472,7 +486,9 @@ export default function NuevaPropiedadPage() {
                           className="input input-bordered w-full bg-white font-mono"
                         />
                     </div>
-                    {modalidadActual === 'Alquiler' && (
+
+                    {/* MODIFICADO: Partidas Secundarias aparecen en Alquiler O en Departamentos */}
+                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <>
                             <div className="form-control">
                                 <label className="label font-bold text-gray-600 text-[10px] uppercase">
