@@ -113,39 +113,42 @@ export default function CarteraPage() {
 
     const handleSubmit = async (e: any) => {
         e.preventDefault();
-        if (form.telefono.length !== 9) { toast.error("⚠️ Teléfono debe tener 9 dígitos."); return; }
-        if (form.tipoPersona === 'PJ' && form.ruc.length !== 11) { toast.error("⚠️ RUC debe tener 11 dígitos."); return; }
-        if (form.documento && form.documento.length !== 8) { toast.error("⚠️ DNI debe tener 8 dígitos."); return; }
+        if (form.telefono.length !== 9) { toast.error("⚠️ El teléfono debe tener 9 dígitos."); return; }
+        if (form.tipoPersona === 'PJ' && form.ruc.length !== 11) { toast.error("⚠️ El RUC debe tener 11 dígitos."); return; }
+        if (form.documento && form.documento.length !== 8) { toast.error("⚠️ El DNI debe tener 8 dígitos."); return; }
 
         const duplicado = verificarDuplicado(form.nombreCompleto, form.documento);
-        if (duplicado && duplicado.id !== editandoId) { toast.error("Cliente ya existe."); return; }
+        if (duplicado && duplicado.id !== editandoId) {
+            toast.error("Este cliente ya existe en la cartera.");
+            return; 
+        }
 
         setIsSubmitting(true);
-        const loadingToast = toast.loading("Guardando...");
+        const loadingToast = toast.loading(editandoId ? "Actualizando..." : "Guardando...");
         try {
             const payload = { ...form };
             if (payload.tipoPersona === 'PN') { payload.empresa = ''; payload.ruc = ''; }
             if (editandoId) {
                 await updateClienteCartera(editandoId, payload);
-                toast.success("Actualizado", { id: loadingToast });
+                toast.success("Actualizado correctamente", { id: loadingToast });
             } else {
                 await createClienteCartera(payload);
-                toast.success("Guardado", { id: loadingToast });
+                toast.success("Cliente guardado", { id: loadingToast });
             }
             setShowModal(false);
             cargarDatos();
-        } catch (error) { toast.error("Error. Actualiza el Backend.", { id: loadingToast }); }
+        } catch (error) { toast.error("Error al guardar.", { id: loadingToast }); }
         finally { setIsSubmitting(false); }
     };
 
     const handleDelete = async (id: number) => {
-        if(!confirm('¿Eliminar cliente?')) return;
+        if(!confirm('¿Estás seguro de eliminar este cliente?')) return;
         const loadingToast = toast.loading("Eliminando...");
         try {
             await deleteClienteCartera(id);
             toast.success("Eliminado", { id: loadingToast });
             cargarDatos();
-        } catch (error) { toast.error("Error", { id: loadingToast }); }
+        } catch (error) { toast.error("Error al eliminar", { id: loadingToast }); }
     };
 
     const filtrados = clientes.filter(c => {
@@ -257,7 +260,7 @@ export default function CarteraPage() {
                                             <td>
                                                 <div className="flex justify-center gap-2">
                                                     <button onClick={() => handleVerDetalles(c)} className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Ver Detalles"><FaEye/></button>
-                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-blue-200 hover:scale-110" title="Editar"><FaEdit/></button>
+                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Editar"><FaEdit/></button>
                                                     <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-red-200 hover:scale-110" title="Eliminar"><FaTrash/></button>
                                                 </div>
                                             </td>
@@ -270,7 +273,7 @@ export default function CarteraPage() {
                 </main>
             </div>
 
-            {/* MODAL DE VISTA DETALLADA (OJITO) - CON TODOS LOS DATOS */}
+            {/* MODAL DE VISTA DETALLADA (OJITO) */}
             {showViewModal && clienteSeleccionado && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
                     <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
@@ -299,7 +302,7 @@ export default function CarteraPage() {
                             )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaIdCard/> Documento</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaIdCard/> DNI / Documento</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.documento || 'S/D'}</p>
                                 </div>
                                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
@@ -322,10 +325,10 @@ export default function CarteraPage() {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaBriefcase/> Profesión / Ocupación</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.profesion || 'No especificado'}</p>
                                 </div>
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Dirección</p>
-                                <p className="font-bold text-slate-700 text-sm leading-relaxed">{clienteSeleccionado.direccion || 'Sin dirección registrada'}</p>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Dirección Registrada</p>
+                                    <p className="font-bold text-slate-700 text-sm leading-relaxed">{clienteSeleccionado.direccion || 'Sin dirección'}</p>
+                                </div>
                             </div>
                         </div>
                         <div className="p-8 bg-white border-t flex gap-4">
@@ -343,7 +346,7 @@ export default function CarteraPage() {
                         <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-800">{editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-                                <p className="text-slate-500 text-sm">{editandoId ? 'Actualiza los datos del cliente seleccionado' : 'Ingresa los datos para agregar a la cartera'}</p>
+                                <p className="text-slate-500 text-sm">Información detallada para el sistema</p>
                             </div>
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600">
                                 {editandoId ? <FaEdit className="text-2xl"/> : <FaUserTie className="text-2xl"/>}
@@ -396,12 +399,22 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'DNI del Rep. Legal' : 'DNI / RUC'}</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'DNI del Representante *' : 'DNI / CE *'}</label>
                                     <div className="relative">
                                         <FaIdCard className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-slate-700" placeholder="8 dígitos" maxLength={8} value={form.documento} onChange={e => handleInputNumerico(e, 'documento')} />
+                                        <input type="text" required className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-mono text-slate-700 font-bold" placeholder="8 dígitos" maxLength={8} value={form.documento} onChange={e => handleInputNumerico(e, 'documento')} />
                                     </div>
                                 </div>
+                                <div className="form-control">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Correo Electrónico</label>
+                                    <div className="relative">
+                                        <FaEnvelope className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                        <input type="email" name="email" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="ejemplo@correo.com" value={form.email} onChange={handleChange} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Profesión / Ocupación</label>
                                     <div className="relative">
@@ -409,13 +422,12 @@ export default function CarteraPage() {
                                         <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Ej. Ingeniero" value={form.profesion} onChange={e => setForm({...form, profesion: e.target.value})} />
                                     </div>
                                 </div>
-                            </div>
-
-                            <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Dirección {form.tipoPersona === 'PJ' ? 'Fiscal de Empresa' : ''}</label>
-                                <div className="relative">
-                                    <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Av. Ejemplo 123" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                <div className="form-control">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección'}</label>
+                                    <div className="relative">
+                                        <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                        <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Dirección para contrato" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                    </div>
                                 </div>
                             </div>
 
@@ -432,16 +444,11 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
-                                        <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento (Rep.)
-                                    </label>
-                                    {/* SIEMPRE EDITABLE PARA TODOS */}
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2"><FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento (Rep.)</label>
                                     <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 font-bold" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} />
                                 </div>
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
-                                        <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
-                                    </label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2"><FaCalendarAlt className="text-teal-500"/> Fecha de Registro</label>
                                     <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 font-bold" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
                                 </div>
                             </div>
