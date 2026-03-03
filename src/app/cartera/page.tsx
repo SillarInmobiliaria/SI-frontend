@@ -323,16 +323,18 @@ export default function CarteraPage() {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaEnvelope/> Correo Electrónico</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.email || 'Sin correo registrado'}</p>
                                 </div>
-                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
+                                
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaBriefcase/> Profesión / Ocupación</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.profesion || 'No especificado'}</p>
                                 </div>
-                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-1">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaFileContract/> Partida Registral</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.partidaRegistral || 'No especificado'}</p>
                                 </div>
+                                
                                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Dirección Registrada</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Dirección del cliente</p>
                                     <p className="font-bold text-slate-700 text-sm leading-relaxed">{clienteSeleccionado.direccion || 'Sin dirección'}</p>
                                 </div>
                             </div>
@@ -437,11 +439,11 @@ export default function CarteraPage() {
                                 </div>
                             </div>
                             
-                            <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección del cliente'}</label>
+                            <div className="form-control mt-2">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Dirección del cliente</label>
                                 <div className="relative">
                                     <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
-                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Dirección para contrato" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
+                                    <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Dirección del cliente" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
                                 </div>
                             </div>
 
