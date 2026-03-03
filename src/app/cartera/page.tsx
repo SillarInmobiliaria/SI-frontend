@@ -5,7 +5,7 @@ import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
     FaUserTie, FaBirthdayCake, FaPlus, FaSearch, FaTrash, 
     FaPhone, FaBriefcase, FaCalendarAlt, FaMapMarkerAlt, 
-    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit, FaBuilding, FaEye 
+    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit, FaBuilding, FaEye, FaEnvelope 
 } from 'react-icons/fa';
 import { getCartera, createClienteCartera, updateClienteCartera, deleteClienteCartera, buscarInteresadoPorNombre } from '../../services/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -239,7 +239,7 @@ export default function CarteraPage() {
                                             <td className="hidden md:table-cell">
                                                 <div className="flex items-start gap-2 max-w-[200px]">
                                                     <FaMapMarkerAlt className="text-slate-400 mt-1 flex-shrink-0"/>
-                                                    <span className="text-slate-600 text-sm leading-snug line-clamp-2">{c.direccion || 'Sin dirección'}</span>
+                                                    <span className="text-slate-600 text-sm leading-snug line-clamp-2">{c.direccion || 'Sin dirección registrada'}</span>
                                                 </div>
                                             </td>
                                             <td className="hidden lg:table-cell">
@@ -256,10 +256,9 @@ export default function CarteraPage() {
                                             </td>
                                             <td>
                                                 <div className="flex justify-center gap-2">
-                                                    {/* BOTON DEL OJITO */}
                                                     <button onClick={() => handleVerDetalles(c)} className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Ver Detalles"><FaEye/></button>
-                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Editar"><FaEdit/></button>
-                                                    <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-110" title="Eliminar"><FaTrash/></button>
+                                                    <button onClick={() => handleEditarClick(c)} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-blue-200 hover:scale-110" title="Editar"><FaEdit/></button>
+                                                    <button onClick={() => handleDelete(c.id)} className="w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all duration-200 shadow-sm hover:shadow-red-200 hover:scale-110" title="Eliminar"><FaTrash/></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -271,7 +270,7 @@ export default function CarteraPage() {
                 </main>
             </div>
 
-            {/* MODAL DE VISTA DETALLADA (OJITO) */}
+            {/* MODAL DE VISTA DETALLADA (OJITO) - CON TODOS LOS DATOS */}
             {showViewModal && clienteSeleccionado && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
                     <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
@@ -283,34 +282,55 @@ export default function CarteraPage() {
                                 <button onClick={() => setShowViewModal(false)} className="text-white/60 hover:text-white text-2xl font-bold">✕</button>
                             </div>
                             <h3 className="text-2xl font-black">{clienteSeleccionado.nombreCompleto}</h3>
-                            <p className="text-white/80 font-medium">{clienteSeleccionado.tipoPersona === 'PJ' ? 'Representante Legal' : clienteSeleccionado.profesion || 'Cliente Particular'}</p>
+                            <p className="text-white/80 font-medium">
+                                {clienteSeleccionado.tipoPersona === 'PJ' ? `Representante Legal de ${clienteSeleccionado.empresa}` : clienteSeleccionado.profesion || 'Cliente Particular'}
+                            </p>
                         </div>
-                        <div className="p-8 space-y-4 bg-slate-50">
+                        <div className="p-8 space-y-4 bg-slate-50 max-h-[60vh] overflow-y-auto">
                             {clienteSeleccionado.tipoPersona === 'PJ' && (
-                                <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm">
-                                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Empresa Registrada</p>
-                                    <p className="font-bold text-indigo-900 text-lg">{clienteSeleccionado.empresa}</p>
-                                    <p className="text-sm font-mono text-indigo-600">RUC: {clienteSeleccionado.ruc}</p>
+                                <div className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex items-center gap-4">
+                                    <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600"><FaBuilding/></div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Razón Social / RUC</p>
+                                        <p className="font-bold text-indigo-900">{clienteSeleccionado.empresa}</p>
+                                        <p className="text-xs font-mono text-indigo-600">{clienteSeleccionado.ruc}</p>
+                                    </div>
                                 </div>
                             )}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Documento</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaIdCard/> Documento</p>
                                     <p className="font-bold text-slate-700">{clienteSeleccionado.documento || 'S/D'}</p>
                                 </div>
                                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cumpleaños</p>
-                                    <p className="font-bold text-pink-600 flex items-center gap-2"><FaBirthdayCake className="text-pink-300"/> {clienteSeleccionado.fechaNacimiento || 'No reg.'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaBirthdayCake/> Cumpleaños</p>
+                                    <p className="font-bold text-pink-600">{clienteSeleccionado.fechaNacimiento || 'No reg.'}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaPhone/> Teléfono 1</p>
+                                    <p className="font-bold text-slate-700">{clienteSeleccionado.telefono}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaPhone/> Teléfono 2</p>
+                                    <p className="font-bold text-slate-700">{clienteSeleccionado.telefono2 || '---'}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaEnvelope/> Correo Electrónico</p>
+                                    <p className="font-bold text-slate-700">{clienteSeleccionado.email || 'Sin correo registrado'}</p>
+                                </div>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm col-span-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaBriefcase/> Profesión / Ocupación</p>
+                                    <p className="font-bold text-slate-700">{clienteSeleccionado.profesion || 'No especificado'}</p>
                                 </div>
                             </div>
                             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Dirección</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Dirección</p>
                                 <p className="font-bold text-slate-700 text-sm leading-relaxed">{clienteSeleccionado.direccion || 'Sin dirección registrada'}</p>
                             </div>
-                            <div className="flex gap-4">
-                                <a href={`https://wa.me/51${clienteSeleccionado.telefono}`} target="_blank" className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-100"><FaWhatsapp/> WhatsApp</a>
-                                <button onClick={() => setShowViewModal(false)} className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition-colors">Cerrar</button>
-                            </div>
+                        </div>
+                        <div className="p-8 bg-white border-t flex gap-4">
+                            <a href={`https://wa.me/51${clienteSeleccionado.telefono}`} target="_blank" className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-100"><FaWhatsapp/> WhatsApp</a>
+                            <button onClick={() => setShowViewModal(false)} className="flex-1 py-3 rounded-xl bg-slate-200 text-slate-600 font-bold hover:bg-slate-300 transition-colors">Cerrar</button>
                         </div>
                     </div>
                 </div>
@@ -323,14 +343,14 @@ export default function CarteraPage() {
                         <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-800">{editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-                                <p className="text-slate-500 text-sm">Información detallada para el sistema</p>
+                                <p className="text-slate-500 text-sm">{editandoId ? 'Actualiza los datos del cliente seleccionado' : 'Ingresa los datos para agregar a la cartera'}</p>
                             </div>
                             <div className="bg-emerald-100 p-3 rounded-2xl text-emerald-600">
                                 {editandoId ? <FaEdit className="text-2xl"/> : <FaUserTie className="text-2xl"/>}
                             </div>
                         </div>
                         
-                        <form onSubmit={handleSubmit} autoComplete="off" className="p-8 space-y-6">
+                        <form onSubmit={handleSubmit} autoComplete="off" className="p-8 space-y-6 text-slate-700">
                             <div className="form-control bg-slate-50 p-4 rounded-xl border border-slate-200">
                                 <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Persona *</label>
                                 <div className="flex gap-6">
@@ -392,7 +412,7 @@ export default function CarteraPage() {
                             </div>
 
                             <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">{form.tipoPersona === 'PJ' ? 'Dirección Fiscal de Empresa' : 'Dirección'}</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Dirección {form.tipoPersona === 'PJ' ? 'Fiscal de Empresa' : ''}</label>
                                 <div className="relative">
                                     <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
                                     <input type="text" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" placeholder="Av. Ejemplo 123" value={form.direccion} onChange={e => setForm({...form, direccion: e.target.value})} />
@@ -413,16 +433,16 @@ export default function CarteraPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
                                     <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
-                                        <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento
+                                        <FaBirthdayCake className="text-pink-400"/> Fecha de Nacimiento (Rep.)
                                     </label>
-                                    {/* SIEMPRE EDITABLE: TANTO PARA PN COMO PARA PJ (DEL REPRESENTANTE) */}
-                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} />
+                                    {/* SIEMPRE EDITABLE PARA TODOS */}
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 font-bold" max={today} value={form.fechaNacimiento} onChange={e => setForm({...form, fechaNacimiento: e.target.value})} />
                                 </div>
                                 <div className="form-control">
                                     <label className="block text-sm font-bold text-slate-700 mb-2 items-center gap-2">
                                         <FaCalendarAlt className="text-teal-500"/> Fecha de Registro
                                     </label>
-                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
+                                    <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-700 font-bold" value={form.fechaRegistro} max={today} onChange={e => setForm({...form, fechaRegistro: e.target.value})} />
                                 </div>
                             </div>
                             
