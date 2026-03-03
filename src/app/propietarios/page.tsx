@@ -8,7 +8,7 @@ import { createPropietario, toggleEstadoPropietario, eliminarPropietario, update
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing // Agregados iconos nuevos
+  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing, FaBuilding
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -21,10 +21,14 @@ export default function PropietariosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProp, setSelectedProp] = useState<any>(null);
   
-  // NUEVO ESTADO: Para saber si estamos creando o editando
   const [editingPropId, setEditingPropId] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, setValue } = useForm();
+  // SOLUCIÓN ERRORES TS: Agregamos <any> para que TypeScript no bloquee los campos
+  const { register, handleSubmit, reset, setValue, watch } = useForm<any>({
+      defaultValues: { tipoPersona: 'PN' }
+  });
+  
+  const tipoPersona = watch('tipoPersona');
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => { fetchPropietarios(); }, []);
@@ -39,18 +43,18 @@ export default function PropietariosPage() {
       try { await eliminarPropietario(id); fetchPropietarios(); } catch(e){ alert('Error'); }
   };
 
-  // Abrir modal para crear
   const openCrearModal = () => {
       setEditingPropId(null);
-      reset({ fechaNacimiento: today }); // Valores por defecto vacíos
+      reset({ fechaNacimiento: today, tipoPersona: 'PN' }); 
       setModalOpen(true);
   };
 
-  // Abrir modal para editar
   const openEditarModal = (prop: any) => {
       setEditingPropId(prop.id);
       
-      // Llenamos el formulario con los datos existentes
+      setValue('tipoPersona', prop.tipoPersona || 'PN');
+      setValue('empresa', prop.empresa || '');
+      setValue('ruc', prop.ruc || '');
       setValue('nombre', prop.nombre);
       setValue('dni', prop.dni);
       setValue('celular1', prop.celular1);
@@ -65,7 +69,6 @@ export default function PropietariosPage() {
       setValue('ocupacion', prop.ocupacion || '');
       setValue('estadoCivil', prop.estadoCivil || '');
       
-      // Si tiene fecha de nacimiento, la formateamos para el input type="date"
       if (prop.fechaNacimiento) {
           setValue('fechaNacimiento', prop.fechaNacimiento.split('T')[0]);
       } else {
@@ -75,10 +78,15 @@ export default function PropietariosPage() {
       setModalOpen(true);
   };
 
-  // FUNCIÓN MODIFICADA: Sirve para crear y para actualizar
   const onSubmit = async (data: any) => {
       setIsSubmitting(true);
       try { 
+          // Si es Persona Natural, limpiamos los datos de empresa
+          if (data.tipoPersona === 'PN') {
+              data.empresa = '';
+              data.ruc = '';
+          }
+
           if (editingPropId) {
               await updatePropietario(editingPropId, data);
               alert('✅ Propietario actualizado');
@@ -95,14 +103,19 @@ export default function PropietariosPage() {
   };
 
   const handleNumberInput = (e: any) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
-  const filtrados = propietarios.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.dni?.includes(busqueda));
+  
+  // SOLUCIÓN ERRORES TS: Forzamos (p: any) para que reconozca "empresa"
+  const filtrados = propietarios.filter((p: any) => 
+      p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+      p.dni?.includes(busqueda) || 
+      p.empresa?.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
-  // FUNCIÓN MODIFICADA: Evitar el error "Invalid Date"
   const formatDate = (dateString: string) => {
     if (!dateString || dateString === 'null' || dateString === '') return 'No registrada';
     try {
         const date = new Date(dateString.includes('T') ? dateString : dateString + 'T00:00:00');
-        if (isNaN(date.getTime())) return 'No registrada'; // Doble seguridad
+        if (isNaN(date.getTime())) return 'No registrada';
         return date.toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch {
         return 'No registrada';
@@ -114,20 +127,19 @@ export default function PropietariosPage() {
       <Navbar />
       <div className="container mx-auto p-6 max-w-7xl">
         
-        {/* HEADER MEJORADO */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-white/60">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
                 Gestión de Propietarios
               </h1>
-              <p className="text-gray-500 font-medium">Base de datos de vendedores</p>
+              <p className="text-gray-500 font-medium">Base de datos de vendedores y dueños</p>
             </div>
             <div className="flex gap-4 w-full md:w-auto">
                 <div className="relative w-full md:w-80 group">
                   <FaSearch className="absolute left-4 top-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors"/>
                   <input 
                     type="text" 
-                    placeholder="Buscar por nombre o DNI..." 
+                    placeholder="Buscar nombre, DNI, empresa, RUC..." 
                     className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition-all duration-200 text-gray-800 placeholder-gray-400" 
                     value={busqueda} 
                     onChange={e=>setBusqueda(e.target.value)}
@@ -142,13 +154,12 @@ export default function PropietariosPage() {
             </div>
         </div>
 
-        {/* TABLA MEJORADA */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="table w-full">
                     <thead className="bg-gradient-to-r from-gray-100 to-gray-50">
                         <tr className="border-b-2 border-gray-200">
-                          <th className="py-5 pl-8 text-gray-700 uppercase text-xs font-bold tracking-wider">Propietario</th>
+                          <th className="py-5 pl-8 text-gray-700 uppercase text-xs font-bold tracking-wider">Propietario / Empresa</th>
                           <th className="text-gray-700 uppercase text-xs font-bold tracking-wider">Contacto</th>
                           <th className="text-gray-700 uppercase text-xs font-bold tracking-wider">Estado</th>
                           <th className="text-center text-gray-700 uppercase text-xs font-bold tracking-wider">Acciones</th>
@@ -170,25 +181,28 @@ export default function PropietariosPage() {
                               No se encontraron propietarios
                             </td>
                           </tr>
-                        ) : filtrados.map((p) => (
+                        ) : filtrados.map((p: any) => (
                             <tr key={p.id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/30 transition-all duration-200">
                                 <td className="pl-8 py-5">
                                     <div className="flex items-center gap-3">
                                       <div className="avatar placeholder">
-                                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl w-12 h-12 shadow-md">
-                                          <span className="text-lg font-bold">{p.nombre.charAt(0).toUpperCase()}</span>
+                                        <div className={`text-white rounded-xl w-12 h-12 shadow-md flex items-center justify-center ${p.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
+                                          {p.tipoPersona === 'PJ' ? <FaBuilding size={20} /> : <span className="text-lg font-bold">{p.nombre.charAt(0).toUpperCase()}</span>}
                                         </div>
                                       </div>
                                       <div>
-                                        <div className="font-bold text-gray-900 text-base mb-1">{p.nombre}</div>
+                                        <div className="font-bold text-gray-900 text-base mb-1 flex items-center gap-2">
+                                            {p.nombre}
+                                            {p.tipoPersona === 'PJ' && <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>}
+                                        </div>
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-mono font-medium">
                                               <FaIdCard className="text-gray-500"/> {p.dni}
                                             </span>
-                                            {p.banco && (
-                                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-semibold">
-                                                <FaCreditCard/> {p.banco}
-                                              </span>
+                                            {p.tipoPersona === 'PJ' && p.empresa && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-xs font-semibold">
+                                                  <FaBuilding className="text-indigo-400"/> {p.empresa} (RUC: {p.ruc})
+                                                </span>
                                             )}
                                         </div>
                                       </div>
@@ -227,7 +241,6 @@ export default function PropietariosPage() {
                                           <FaEye/>
                                         </button>
                                         
-                                        {/* BOTÓN EDITAR */}
                                         <button 
                                           onClick={()=>openEditarModal(p)} 
                                           className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-110 transition-all duration-200 shadow-sm"
@@ -263,7 +276,7 @@ export default function PropietariosPage() {
             </div>
         </div>
 
-        {/* EDITAR */}
+        {/* MODAL EDITAR / CREAR */}
         {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                 <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -276,18 +289,48 @@ export default function PropietariosPage() {
                       </button>
                     </div>
                     <form onSubmit={handleSubmit(onSubmit)} className="p-8 bg-gradient-to-br from-gray-50 to-white">
+                        
+                        {/* SECCIÓN TIPO DE PERSONA */}
+                        <div className="form-control bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                            <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Persona *</label>
+                            <div className="flex gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input type="radio" value="PN" {...register('tipoPersona')} className="radio radio-primary radio-sm" />
+                                    <span className="font-bold text-slate-600 group-hover:text-primary transition-colors">Persona Natural</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input type="radio" value="PJ" {...register('tipoPersona')} className="radio radio-primary radio-sm" />
+                                    <span className="font-bold text-slate-600 group-hover:text-primary transition-colors">Persona Jurídica</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* DATOS DE EMPRESA (SÓLO SI ES PJ) */}
+                        {tipoPersona === 'PJ' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mb-6 animate-fade-in">
+                                <div className="form-control">
+                                    <label className="block text-sm font-bold text-indigo-900 mb-2 items-center gap-2"><FaBuilding/> Nombre de la Empresa *</label>
+                                    <input {...register('empresa', {required: tipoPersona === 'PJ'})} className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-bold text-slate-700" placeholder="Nombre Empresa S.A.C." />
+                                </div>
+                                <div className="form-control">
+                                    <label className="block text-sm font-bold text-indigo-900 mb-2 items-center gap-2"><FaIdCard/> RUC *</label>
+                                    <input {...register('ruc', {required: tipoPersona === 'PJ'})} className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-slate-700" placeholder="20000000000" maxLength={11} onInput={handleNumberInput} />
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <div className="md:col-span-2 pb-3 border-b-2 border-indigo-100 mb-2">
                               <h4 className="text-sm font-bold text-indigo-700 uppercase flex items-center gap-2">
-                                <FaUserTie/> Información Personal
+                                <FaUserTie/> Información {tipoPersona === 'PJ' ? 'del Representante' : 'Personal'}
                               </h4>
                             </div>
                             <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">Nombre Completo *</label>
+                              <label className="label font-bold text-gray-700 text-sm">{tipoPersona === 'PJ' ? 'Nombre del Representante *' : 'Nombre Completo *'}</label>
                               <input {...register('nombre', {required:true})} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
                             <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">DNI *</label>
+                              <label className="label font-bold text-gray-700 text-sm">{tipoPersona === 'PJ' ? 'DNI del Representante *' : 'DNI *'}</label>
                               <input {...register('dni', {required:true, maxLength:8})} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" onInput={handleNumberInput} maxLength={8}/>
                             </div>
                             <div className="form-control">
@@ -303,10 +346,6 @@ export default function PropietariosPage() {
                               <input {...register('email')} type="email" className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
                             <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">Dirección</label>
-                              <input {...register('direccion')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
-                            </div>
-                            <div className="form-control">
                               <label className="label font-bold text-gray-700 text-sm">Fecha de Nacimiento</label>
                               <input {...register('fechaNacimiento')} type="date" className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
@@ -314,7 +353,7 @@ export default function PropietariosPage() {
                               <label className="label font-bold text-gray-700 text-sm">Ocupación</label>
                               <input {...register('ocupacion')} placeholder="Ej. Arquitecto, Abogado..." className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
                             </div>
-                            <div className="form-control md:col-span-2">
+                            <div className="form-control">
                               <label className="label font-bold text-gray-700 text-sm">Estado Civil</label>
                               <select {...register('estadoCivil')} className="select select-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors">
                                 <option value="">-- Seleccionar --</option>
@@ -323,6 +362,13 @@ export default function PropietariosPage() {
                                 <option value="Divorciado(a)">Divorciado(a)</option>
                                 <option value="Viudo(a)">Viudo(a)</option>
                               </select>
+                            </div>
+
+                            <div className="form-control md:col-span-2 mt-2">
+                                <label className="label font-bold text-gray-700 text-sm">
+                                    {tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección'}
+                                </label>
+                                <input {...register('direccion')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" placeholder="Dirección registrada" />
                             </div>
 
                             <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2">
@@ -372,12 +418,11 @@ export default function PropietariosPage() {
             </div>
         )}
 
-        {/* MODAL DETALLE */}
+        {/* MODAL DETALLE (OJITO) */}
         {selectedProp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
                 <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-4 max-h-[95vh] overflow-y-auto">
                     
-                    {/* CABECERA */}
                     <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-8 text-white relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                         <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-12 -mb-12"></div>
@@ -385,8 +430,8 @@ export default function PropietariosPage() {
                         <div className="flex justify-between items-start relative z-10">
                             <div className="flex gap-5 items-center">
                                 <div className="avatar placeholder">
-                                    <div className="bg-white/20 backdrop-blur-sm text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10">
-                                        {selectedProp.nombre.charAt(0).toUpperCase()}
+                                    <div className={`text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10 ${selectedProp.tipoPersona === 'PJ' ? 'bg-indigo-500/80 backdrop-blur-sm' : 'bg-white/20 backdrop-blur-sm'}`}>
+                                        {selectedProp.tipoPersona === 'PJ' ? <FaBuilding size={32} /> : selectedProp.nombre.charAt(0).toUpperCase()}
                                     </div>
                                 </div>
                                 <div>
@@ -395,6 +440,11 @@ export default function PropietariosPage() {
                                         <div className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/20 backdrop-blur-sm border border-white/30 text-white font-mono rounded-lg text-sm shadow-lg">
                                             <FaIdCard/> {selectedProp.dni}
                                         </div>
+                                        {selectedProp.tipoPersona === 'PJ' && selectedProp.empresa && (
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-500/50 backdrop-blur-sm border border-indigo-300 text-white font-bold rounded-lg text-sm shadow-lg">
+                                                <FaBuilding/> {selectedProp.empresa} (RUC: {selectedProp.ruc})
+                                            </div>
+                                        )}
                                         {selectedProp.activo ? 
                                             <div className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-500 text-white rounded-lg font-bold text-sm shadow-lg">
                                               <FaCheck/> Activo
@@ -415,12 +465,10 @@ export default function PropietariosPage() {
                     <div className="p-8 bg-gradient-to-br from-gray-50 via-white to-gray-50">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             
-                            {/* COLUMNA IZQUIERDA */}
                             <div className="space-y-6">
-                                {/* INFO PERSONAL */}
                                 <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-100 hover:shadow-xl transition-shadow">
                                     <h3 className="text-sm font-bold text-gray-700 uppercase mb-5 pb-3 border-b-2 border-blue-100 flex items-center gap-2">
-                                      <FaUserTie className="text-blue-500 text-lg"/> Información Personal
+                                      <FaUserTie className="text-blue-500 text-lg"/> Información {selectedProp.tipoPersona === 'PJ' ? 'del Representante' : 'Personal'}
                                     </h3>
                                     <div className="space-y-4">
                                         <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
@@ -461,9 +509,7 @@ export default function PropietariosPage() {
                                 </div>
                             </div>
 
-                            {/* COLUMNA DERECHA */}
                             <div className="space-y-6">
-                                {/* CONTACTO */}
                                 <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-100 hover:shadow-xl transition-shadow">
                                     <h3 className="text-sm font-bold text-gray-700 uppercase mb-5 pb-3 border-b-2 border-green-100 flex items-center gap-2">
                                       <FaWhatsapp className="text-green-500 text-lg"/> Información de Contacto
@@ -487,14 +533,13 @@ export default function PropietariosPage() {
                                         </div>
                                         <div className="bg-gradient-to-r from-red-50 to-red-100/50 p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
                                           <p className="text-xs text-red-700 font-bold uppercase mb-1.5 flex items-center gap-1.5">
-                                            <FaMapMarkerAlt/> Dirección
+                                            <FaMapMarkerAlt/> {selectedProp.tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección'}
                                           </p>
                                           <p className="text-gray-700">{selectedProp.direccion || 'No registrada'}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* FINANCIERO */}
                                 <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 p-6 rounded-2xl shadow-xl text-white border-2 border-indigo-300">
                                     <h3 className="text-sm font-bold uppercase mb-5 pb-3 border-b-2 border-white/20 flex items-center gap-2">
                                       <FaCreditCard className="text-lg"/> Información Bancaria
