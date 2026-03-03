@@ -5,7 +5,7 @@ import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
     FaUserTie, FaBirthdayCake, FaPlus, FaSearch, FaTrash, 
     FaPhone, FaBriefcase, FaCalendarAlt, FaMapMarkerAlt, 
-    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit 
+    FaIdCard, FaWhatsapp, FaExclamationTriangle, FaEdit, FaBuilding 
 } from 'react-icons/fa';
 import { getCartera, createClienteCartera, updateClienteCartera, deleteClienteCartera, buscarInteresadoPorNombre } from '../../services/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -19,12 +19,14 @@ export default function CarteraPage() {
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- ESTADO PARA SABER SI ESTAMOS EDITANDO ---
     const [editandoId, setEditandoId] = useState<number | string | null>(null);
 
     const today = new Date().toISOString().split('T')[0];
 
     const INITIAL_FORM = {
+        tipoPersona: 'PN', // PN (Persona Natural) o PJ (Persona Juridica)
+        empresa: '',
+        ruc: '',
         nombreCompleto: '',
         documento: '',
         telefono: '',
@@ -53,7 +55,6 @@ export default function CarteraPage() {
         }
     };
 
-    // --- LOGICA DE DUPLICADOS ---
     const verificarDuplicado = (nombre: string, dni: string) => {
         const nombreLimpio = nombre.trim().toLowerCase();
         const dniLimpio = dni ? dni.trim() : '';
@@ -100,24 +101,32 @@ export default function CarteraPage() {
         setMostrarSugerencias(false);
     };
 
+    const handleChange = (e: any) => {
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
+    };
+
+    // Actualizado para permitir 11 dígitos si es RUC
     const handleInputNumerico = (e: any, campo: string) => {
         const val = e.target.value.replace(/\D/g, ''); 
-        if (val.length <= 9) {
+        const maxLength = campo === 'ruc' ? 11 : 9;
+        if (val.length <= maxLength) {
             setForm({ ...form, [campo]: val });
         }
     };
 
-    // --- ABRIR MODAL PARA NUEVO ---
     const handleNuevoClick = () => {
         setEditandoId(null);
         setForm(INITIAL_FORM);
         setShowModal(true);
     };
 
-    // --- ABRIR MODAL PARA EDITAR ---
     const handleEditarClick = (cliente: any) => {
         setEditandoId(cliente.id);
         setForm({
+            tipoPersona: cliente.tipoPersona || 'PN',
+            empresa: cliente.empresa || '',
+            ruc: cliente.ruc || '',
             nombreCompleto: cliente.nombreCompleto || '',
             documento: cliente.documento || '',
             telefono: cliente.telefono || '',
@@ -137,6 +146,11 @@ export default function CarteraPage() {
         
         if (form.telefono.length !== 9) {
             toast.error("⚠️ El teléfono principal debe tener 9 dígitos exactos.");
+            return;
+        }
+
+        if (form.tipoPersona === 'PJ' && form.ruc.length !== 11) {
+            toast.error("⚠️ El RUC debe tener 11 dígitos exactos.");
             return;
         }
 
@@ -169,11 +183,18 @@ export default function CarteraPage() {
         const loadingToast = toast.loading(editandoId ? "Actualizando cliente..." : "Guardando cliente...");
 
         try {
+            // Limpiar campos PJ si lo regresan a PN
+            const payload = { ...form };
+            if (payload.tipoPersona === 'PN') {
+                payload.empresa = '';
+                payload.ruc = '';
+            }
+
             if (editandoId) {
-                await updateClienteCartera(editandoId, form);
+                await updateClienteCartera(editandoId, payload);
                 toast.success("Cliente actualizado", { id: loadingToast });
             } else {
-                await createClienteCartera(form);
+                await createClienteCartera(payload);
                 toast.success("Cliente guardado en cartera", { id: loadingToast });
             }
             
@@ -202,10 +223,13 @@ export default function CarteraPage() {
         }
     };
 
-    const filtrados = clientes.filter(c => 
-        c.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (c.documento && c.documento.includes(busqueda))
-    );
+    const filtrados = clientes.filter(c => {
+        const busquedaLower = busqueda.toLowerCase();
+        return c.nombreCompleto.toLowerCase().includes(busquedaLower) ||
+               (c.documento && c.documento.includes(busqueda)) ||
+               (c.empresa && c.empresa.toLowerCase().includes(busquedaLower)) ||
+               (c.ruc && c.ruc.includes(busqueda));
+    });
 
     return (
         <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-800">
@@ -250,7 +274,7 @@ export default function CarteraPage() {
                             <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors text-lg"/>
                             <input 
                                 type="text" 
-                                placeholder="Buscar por nombre, DNI o teléfono..." 
+                                placeholder="Buscar por nombre, DNI, empresa o RUC..." 
                                 className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all duration-300 text-slate-700 placeholder-slate-400 font-medium"
                                 value={busqueda}
                                 onChange={(e) => setBusqueda(e.target.value)}
@@ -263,7 +287,7 @@ export default function CarteraPage() {
                             <table className="table w-full">
                                 <thead className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-200">
                                     <tr>
-                                        <th className="py-5 pl-8 text-slate-500 uppercase text-xs font-bold tracking-wider">Cliente</th>
+                                        <th className="py-5 pl-8 text-slate-500 uppercase text-xs font-bold tracking-wider">Cliente / Representante</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider">Contacto</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider hidden md:table-cell">Dirección</th>
                                         <th className="text-slate-500 uppercase text-xs font-bold tracking-wider hidden lg:table-cell">Detalles</th>
@@ -287,21 +311,29 @@ export default function CarteraPage() {
                                             <tr key={c.id} className="hover:bg-white/60 transition-colors group">
                                                 <td className="pl-8 py-4">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-emerald-200">
-                                                            {c.nombreCompleto.charAt(0).toUpperCase()}
+                                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-md ${c.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-indigo-200' : 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-200'}`}>
+                                                            {c.tipoPersona === 'PJ' ? <FaBuilding /> : c.nombreCompleto.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-slate-800 text-lg">{c.nombreCompleto}</div>
-                                                            <div className="flex items-center gap-2 mt-1">
+                                                            <div className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                                                {c.nombreCompleto}
+                                                                {c.tipoPersona === 'PJ' && <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-2 mt-1">
                                                                 <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-1">
                                                                     <FaIdCard className="text-[10px]"/> {c.documento || 'S/D'}
                                                                 </span>
-                                                                {c.profesion && (
+                                                                {c.profesion && c.tipoPersona === 'PN' && (
                                                                     <span className="text-xs text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100 flex items-center gap-1">
                                                                         <FaBriefcase className="text-[10px]"/> {c.profesion}
                                                                     </span>
                                                                 )}
                                                             </div>
+                                                            {c.tipoPersona === 'PJ' && c.empresa && (
+                                                                <div className="flex items-center gap-1 mt-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 w-fit">
+                                                                    <FaBuilding className="text-[10px]" /> {c.empresa} (RUC: {c.ruc})
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -331,7 +363,7 @@ export default function CarteraPage() {
                                                 </td>
                                                 <td className="hidden lg:table-cell">
                                                     <div className="space-y-1">
-                                                        {c.fechaNacimiento && (
+                                                        {c.fechaNacimiento && c.tipoPersona === 'PN' && (
                                                             <div className="flex items-center gap-2 text-pink-600 text-sm font-medium">
                                                                 <FaBirthdayCake className="text-pink-400"/>
                                                                 <span>{c.fechaNacimiento}</span>
@@ -344,7 +376,6 @@ export default function CarteraPage() {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    {/* --- SE AÑADIÓ EL BOTÓN DE EDITAR AQUÍ --- */}
                                                     <div className="flex justify-center gap-2">
                                                         <button 
                                                             onClick={() => handleEditarClick(c)} 
@@ -374,9 +405,9 @@ export default function CarteraPage() {
 
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-100 animate-scale-in">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden scale-100 animate-scale-in max-h-[90vh] overflow-y-auto">
                         
-                        <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+                        <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center sticky top-0 z-10">
                             <div>
                                 <h3 className="text-2xl font-black text-slate-800">
                                     {editandoId ? 'Editar Cliente' : 'Nuevo Cliente'}
@@ -392,15 +423,82 @@ export default function CarteraPage() {
                         
                         <form onSubmit={handleSubmit} autoComplete="off" className="p-8 space-y-6">
                             
+                            {/* --- SELECTOR TIPO DE PERSONA --- */}
+                            <div className="form-control bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <label className="block text-sm font-bold text-slate-700 mb-3">
+                                    Tipo de Persona *
+                                </label>
+                                <div className="flex gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <input 
+                                            type="radio" 
+                                            name="tipoPersona" 
+                                            value="PN" 
+                                            checked={form.tipoPersona === 'PN'} 
+                                            onChange={handleChange} 
+                                            className="radio radio-emerald radio-sm" 
+                                        />
+                                        <span className="font-bold text-slate-600 group-hover:text-emerald-700 transition-colors">Persona Natural (PN)</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <input 
+                                            type="radio" 
+                                            name="tipoPersona" 
+                                            value="PJ" 
+                                            checked={form.tipoPersona === 'PJ'} 
+                                            onChange={handleChange} 
+                                            className="radio radio-emerald radio-sm" 
+                                        />
+                                        <span className="font-bold text-slate-600 group-hover:text-emerald-700 transition-colors">Persona Jurídica (PJ)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* --- CAMPOS CONDICIONALES PARA PJ --- */}
+                            {form.tipoPersona === 'PJ' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 animate-fade-in">
+                                    <div className="form-control">
+                                        <label className="block text-sm font-bold text-indigo-900 mb-2">
+                                            Nombre de la Empresa *
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            name="empresa"
+                                            className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-bold text-slate-700" 
+                                            placeholder="Razón Social S.A.C."
+                                            value={form.empresa} 
+                                            onChange={handleChange} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="block text-sm font-bold text-indigo-900 mb-2">
+                                            Número de RUC *
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            className="w-full px-4 py-3 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-slate-700" 
+                                            placeholder="20000000000"
+                                            maxLength={11}
+                                            value={form.ruc} 
+                                            onChange={e => handleInputNumerico(e, 'ruc')} 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CAMPO DE BÚSQUEDA / NOMBRE */}
                             <div className="form-control relative">
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    Nombre Completo {!editandoId && <span className="text-slate-400 font-normal">(Buscar Interesado)</span>}
+                                    {form.tipoPersona === 'PJ' ? 'Nombre del Representante Legal *' : 'Nombre Completo *'} 
+                                    {!editandoId && <span className="text-slate-400 font-normal ml-1">(Buscar Interesado)</span>}
                                 </label>
                                 <div className="relative">
                                     <input 
                                         type="text" 
                                         className="w-full pl-4 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700 placeholder-slate-400"
-                                        placeholder="Escribe para buscar..."
+                                        placeholder={form.tipoPersona === 'PJ' ? "Ej. Juan Pérez" : "Escribe para buscar..."}
                                         value={form.nombreCompleto} 
                                         onChange={handleNombreChange}
                                         onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)}
@@ -425,7 +523,9 @@ export default function CarteraPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="form-control">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">DNI / RUC</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        {form.tipoPersona === 'PJ' ? 'DNI del Representante' : 'DNI / CE'}
+                                    </label>
                                     <div className="relative">
                                         <FaIdCard className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
                                         <input 
@@ -453,7 +553,9 @@ export default function CarteraPage() {
                             </div>
 
                             <div className="form-control">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Dirección del Cliente</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    {form.tipoPersona === 'PJ' ? 'Dirección Fiscal de la Empresa' : 'Dirección del Cliente'}
+                                </label>
                                 <div className="relative">
                                     <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
                                     <input 
@@ -507,6 +609,7 @@ export default function CarteraPage() {
                                         max={today}
                                         value={form.fechaNacimiento} 
                                         onChange={e => setForm({...form, fechaNacimiento: e.target.value})} 
+                                        disabled={form.tipoPersona === 'PJ'}
                                     />
                                 </div>
                                 
