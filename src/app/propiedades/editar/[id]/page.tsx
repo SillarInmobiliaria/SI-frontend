@@ -46,6 +46,14 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
+// --- LISTA PARA EL AUTOCOMPLETADO DE TIPO ---
+const tiposPropiedad = [
+    "Casa", "Departamento", "Duplex", "Terreno Urbano", "Terreno Agrícola", 
+    "Terreno Industrial", "Local Comercial", "Local Industrial", "Oficina",
+    "Proyecto Casas", "Proyecto Departamentos", "Proyecto Duplex", 
+    "Proyecto Terrenos", "Proyecto Locales"
+];
+
 export default function EditarPropiedadPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -83,9 +91,10 @@ export default function EditarPropiedadPage() {
   const tieneMantenimiento = watch('tieneMantenimiento');
   const tieneVigilancia = watch('tieneVigilancia');
   
-  const esProyecto = tipoInmueble === 'Proyecto';
-  const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno') && !esProyecto;
-  const esDepartamento = tipoInmueble === 'Departamento' || tipoInmueble === 'Duplex';
+  // LÓGICA DINÁMICA: Detecta cualquier texto que contenga "proyecto", "terreno", "departamento", etc.
+  const esProyecto = tipoInmueble && String(tipoInmueble).toLowerCase().includes('proyecto');
+  const mostrarDistribucion = tipoInmueble && !String(tipoInmueble).toLowerCase().includes('terreno') && !esProyecto;
+  const esDepartamento = tipoInmueble && (String(tipoInmueble).toLowerCase().includes('departamento') || String(tipoInmueble).toLowerCase().includes('duplex'));
 
   useEffect(() => {
     const init = async () => {
@@ -213,6 +222,8 @@ export default function EditarPropiedadPage() {
 
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ La propiedad debe tener al menos un propietario.');
+    if (!data.tipo) return alert('⚠️ Por favor, ingresa o selecciona un Tipo de Propiedad.');
+
     setIsSubmitting(true);
     
     try {
@@ -225,20 +236,23 @@ export default function EditarPropiedadPage() {
             }
         });
 
-        if (esProyecto) formData.append('tipologias', JSON.stringify(data.tipologias));
+        // SOLO SE AGREGA LA TIPOLOGÍA. FECHA ENTREGA YA SE ENVIÓ EN EL BUCLE AUTOMÁTICO
+        if (esProyecto) {
+            formData.append('tipologias', JSON.stringify(data.tipologias));
+        }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
         formData.set('exclusiva', data.exclusiva === 'si' ? 'true' : 'false');
         formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
 
-        if (data.tieneMantenimiento === 'no') {
+        if (data.tieneMantenimiento === 'no' || (modalidadActual !== 'Alquiler' && !esDepartamento)) {
             formData.set('mantenimiento', '0');
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
             formData.set('monedaMantenimiento', data.monedaMantenimiento);
         }
 
-        if (data.tieneVigilancia === 'no') {
+        if (data.tieneVigilancia === 'no' || esProyecto) {
             formData.set('vigilancia', '0');
         } else {
             formData.set('vigilancia', String(data.vigilancia));
@@ -366,22 +380,25 @@ export default function EditarPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border p-8 border-gray-100">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO</label>
-                        <select {...register('tipo')} className="select select-bordered w-full bg-white">
-                            <option value="Casa">Casa</option>
-                            <option value="Departamento">Departamento</option>
-                            <option value="Duplex">Duplex</option>
-                            <option value="Terreno Urbano">Terreno Urbano</option>
-                            <option value="Terreno Agricola">Terreno Agrícola</option>
-                            <option value="Terreno Industrial">Terreno Industrial</option>
-                            <option value="Local">Local Comercial</option>
-                            <option value="Local Industrial">Local Industrial</option>
-                            <option value="Oficina">Oficina</option>
-                            <option value="Proyecto">Proyecto</option>
-                        </select>
+                    
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
+                        <input 
+                            list="tipos-propiedad-edit" 
+                            {...register('tipo', {required:true})} 
+                            className="input input-bordered w-full bg-white font-semibold text-sm" 
+                            placeholder="Ej: Casa, Proyecto Departamentos..."
+                            autoComplete="off"
+                        />
+                        <datalist id="tipos-propiedad-edit">
+                            {tiposPropiedad.map((t, index) => (
+                                <option key={index} value={t} />
+                            ))}
+                        </datalist>
                     </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD</label>
-                        <select {...register('modalidad')} className="select select-bordered w-full bg-white">
+
+                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
+                        <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white">
                             <option value="Venta">Venta</option>
                             <option value="Alquiler">Alquiler</option>
                             <option value="Anticresis">Anticresis</option>
@@ -389,7 +406,7 @@ export default function EditarPropiedadPage() {
                         </select>
                     </div>
                     <div className="form-control relative">
-                        <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO</label>
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO *</label>
                         <div className="flex items-center">
                             <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
                             <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
@@ -452,8 +469,8 @@ export default function EditarPropiedadPage() {
                             <div className="form-control">
                                 <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">No</span></label>
                                 </div>
                                 {tieneVigilancia === 'si' && (
                                     <div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200">
@@ -473,8 +490,8 @@ export default function EditarPropiedadPage() {
                             <div className="form-control">
                                 <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold text-blue-800">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneMantenimiento')} className="radio radio-info radio-sm" /><span className="text-xs font-bold text-blue-800">No</span></label>
                                 </div>
                                 {tieneMantenimiento === 'si' && (
                                     <div className="flex shadow-sm rounded-lg overflow-hidden border border-blue-200">
