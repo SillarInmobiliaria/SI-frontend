@@ -12,6 +12,7 @@ import {
   FaClipboardList, FaCalendarPlus, FaPhone, FaTimes, FaBan, FaBuilding, FaCity, 
   FaRulerCombined, FaDollarSign, FaMoneyBillWave, FaUniversity 
 } from 'react-icons/fa';
+import toast, { Toaster } from 'react-hot-toast';
 
 const DISTRITOS_SUGERIDOS = [
     "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
@@ -78,12 +79,17 @@ export default function SeguimientoPage() {
 
   const handleCambiarEstado = async (id: string, estadoActual: string) => {
     const nuevoEstado = estadoActual === 'PENDIENTE' ? 'FINALIZADO' : 'PENDIENTE';
-    try { await updateSeguimiento(id, { estado: nuevoEstado }); cargarDatos(); } 
-    catch (error) { alert('Error al actualizar'); }
+    const loadingToast = toast.loading("Actualizando estado...");
+    try { 
+        await updateSeguimiento(id, { estado: nuevoEstado }); 
+        cargarDatos(); 
+        toast.success(`Seguimiento marcado como ${nuevoEstado}`, { id: loadingToast });
+    } 
+    catch (error) { toast.error('Error al actualizar estado', { id: loadingToast }); }
   };
 
   const handleCierreVenta = (clienteNombre: string) => {
-    alert(`🎉 INICIANDO CIERRE DE VENTA\n\nCliente: ${clienteNombre}`);
+    toast.success(`🎉 INICIANDO CIERRE DE VENTA\n\nCliente: ${clienteNombre}`, { duration: 4000 });
   };
 
   const formatearFecha = (fechaString: string) => {
@@ -154,6 +160,7 @@ export default function SeguimientoPage() {
       e.preventDefault();
       if(!newComment.trim() || !selectedItem) return;
 
+      const loadingToast = toast.loading("Guardando comentario...");
       try {
           const itemsPendientes = clientHistory.filter(h => h.estado === 'PENDIENTE');
           for (const item of itemsPendientes) {
@@ -171,12 +178,12 @@ export default function SeguimientoPage() {
               fechaProxima: fechaProxISO
           });
           
-          alert("✅ Nuevo seguimiento registrado");
+          toast.success("Nuevo seguimiento registrado", { id: loadingToast });
           setNewComment('');
           setHistoryOpen(false); 
           cargarDatos(); 
           
-      } catch (error) { console.error(error); }
+      } catch (error) { toast.error("Error al guardar", { id: loadingToast }); }
   };
 
   const handleGoToVisitas = () => {
@@ -207,6 +214,7 @@ export default function SeguimientoPage() {
       // Si eligió DESCARTADO, pedimos confirmación extra por si acaso
       if (data.reqPrioridad === 'DESCARTADO' && !confirm("⚠️ ¿Marcar este cliente como DESCARTADO?\nEsto indicará que el requerimiento no es viable.")) return;
 
+      const loadingToast = toast.loading(data.reqPrioridad === 'DESCARTADO' ? "Descartando..." : "Creando requerimiento...");
       try {
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : data.reqZonas;
           
@@ -223,13 +231,12 @@ export default function SeguimientoPage() {
           }
 
           // 1. Crear el requerimiento
-          // NOTA: Si es DESCARTADO, pasamos el estado 'DESCARTADO' al backend. Si no, dejamos que el backend ponga 'PENDIENTE'
           await createRequerimiento({
               clienteId: selectedItem.clienteId,
               fecha: new Date().toISOString(),
               pedido: detallePedido,
-              prioridad: data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad, // Guardamos prioridad normal para no romper enum si no existe 'DESCARTADO' en prioridad
-              estado: data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE', // Aquí sí mandamos el estado
+              prioridad: data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad, 
+              estado: data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE', 
               usuarioId: user?.id
           });
 
@@ -241,19 +248,25 @@ export default function SeguimientoPage() {
                   : `[SISTEMA]: Seguimiento convertido a REQUERIMIENTO.`
           });
 
-          alert(data.reqPrioridad === 'DESCARTADO' ? "⛔ Cliente marcado como DESCARTADO." : "✅ Requerimiento creado exitosamente.");
+          if (data.reqPrioridad === 'DESCARTADO') {
+              toast.success("Cliente marcado como DESCARTADO.", { id: loadingToast, icon: '⛔' });
+          } else {
+              toast.success("Requerimiento creado exitosamente.", { id: loadingToast });
+          }
+          
           setReqOpen(false);
           setHistoryOpen(false);
           cargarDatos();
       } catch (error) { 
-          console.error(error);
-          alert("Error al procesar"); 
+          toast.error("Error al procesar", { id: loadingToast }); 
       }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-purple-50 font-sans text-slate-800 flex flex-col">
       <Navbar />
+      {/* TOASTER AGREGADO */}
+      <Toaster position="top-right" reverseOrder={false} />
       
       <div className="flex flex-1 relative">
           <SidebarAtencion /> 
