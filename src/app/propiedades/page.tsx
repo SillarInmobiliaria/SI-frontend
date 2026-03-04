@@ -101,7 +101,7 @@ export default function PropiedadesPage() {
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
 
                         <select 
-                            className="select select-sm select-ghost w-full md:w-44 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
+                            className="select select-sm select-ghost w-full md:w-56 bg-transparent focus:bg-white focus:shadow-sm rounded-lg text-gray-700 font-medium h-10" 
                             value={filtroTipo} 
                             onChange={e=>setFiltroTipo(e.target.value)}
                         >
@@ -109,14 +109,18 @@ export default function PropiedadesPage() {
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Duplex">Duplex</option>
-                            <option value="Terreno">Terreno</option>
                             <option value="Terreno Urbano">Terreno Urbano</option>
                             <option value="Terreno Agricola">Terreno Agrícola</option>
                             <option value="Terreno Industrial">Terreno Industrial</option>
-                            <option value="Local">Local Comercial</option>
+                            <option value="Local Comercial">Local Comercial</option>
                             <option value="Local Industrial">Local Industrial</option>
                             <option value="Oficina">Oficina</option>
-                            <option value="Proyecto">Proyecto</option>
+                            <option value="Proyecto Casas">Proyecto Casas</option>
+                            <option value="Proyecto Departamentos">Proyecto Departamentos</option>
+                            <option value="Proyecto Duplex">Proyecto Duplex</option>
+                            <option value="Proyecto Terrenos">Proyecto Terrenos</option>
+                            <option value="Proyecto Locales">Proyecto Locales</option>
+                            <option value="Proyecto">Proyecto</option> {/* Dejado por compatibilidad */}
                         </select>
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
