@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +8,7 @@ import { createPropietario, toggleEstadoPropietario, eliminarPropietario, update
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing, FaBuilding, FaFileContract
+  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing, FaBuilding, FaFileContract, FaPlus
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -23,8 +23,18 @@ export default function PropietariosPage() {
   
   const [editingPropId, setEditingPropId] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, setValue, watch } = useForm<any>({
-      defaultValues: { tipoPersona: 'PN' }
+  const { register, handleSubmit, reset, setValue, watch, control } = useForm<any>({
+      defaultValues: { 
+          tipoPersona: 'PN',
+          // VALOR POR DEFECTO PARA CUENTAS BANCARIAS
+          cuentasBancarias: [{ banco: '', moneda: 'PEN', cuenta: '', cci: '' }] 
+      }
+  });
+
+  // MANEJO DEL ARRAY DE CUENTAS BANCARIAS
+  const { fields: cuentasFields, append: appendCuenta, remove: removeCuenta } = useFieldArray({
+      control,
+      name: "cuentasBancarias"
   });
   
   const tipoPersona = watch('tipoPersona');
@@ -44,7 +54,11 @@ export default function PropietariosPage() {
 
   const openCrearModal = () => {
       setEditingPropId(null);
-      reset({ fechaNacimiento: today, tipoPersona: 'PN' }); 
+      reset({ 
+          fechaNacimiento: today, 
+          tipoPersona: 'PN',
+          cuentasBancarias: [{ banco: '', moneda: 'PEN', cuenta: '', cci: '' }]
+      }); 
       setModalOpen(true);
   };
 
@@ -64,9 +78,6 @@ export default function PropietariosPage() {
       setValue('celular2', prop.celular2);
       setValue('email', prop.email);
       setValue('direccion', prop.direccion);
-      setValue('banco', prop.banco);
-      setValue('cuenta', prop.cuenta);
-      setValue('cci', prop.cci);
       setValue('detalles', prop.detalles);
       
       setValue('ocupacion', prop.ocupacion || '');
@@ -76,6 +87,17 @@ export default function PropietariosPage() {
           setValue('fechaNacimiento', prop.fechaNacimiento.split('T')[0]);
       } else {
           setValue('fechaNacimiento', '');
+      }
+
+      if (prop.cuentasBancarias && prop.cuentasBancarias.length > 0) {
+          const parsedCuentas = typeof prop.cuentasBancarias === 'string' ? JSON.parse(prop.cuentasBancarias) : prop.cuentasBancarias;
+          setValue('cuentasBancarias', parsedCuentas);
+      } else {
+          if (prop.banco || prop.cuenta || prop.cci) {
+              setValue('cuentasBancarias', [{ banco: prop.banco || '', moneda: 'PEN', cuenta: prop.cuenta || '', cci: prop.cci || '' }]);
+          } else {
+              setValue('cuentasBancarias', [{ banco: '', moneda: 'PEN', cuenta: '', cci: '' }]);
+          }
       }
       
       setModalOpen(true);
@@ -87,8 +109,10 @@ export default function PropietariosPage() {
           if (data.tipoPersona === 'PN') {
               data.empresa = '';
               data.ruc = '';
-              data.rolRepresentante = '';
+              data.rolRepresentante = ''; 
           }
+
+          data.cuentasBancarias = data.cuentasBancarias.filter((c: any) => c.banco !== '' || c.cuenta !== '' || c.cci !== '');
 
           if (editingPropId) {
               await updatePropietario(editingPropId, data);
@@ -394,31 +418,62 @@ export default function PropietariosPage() {
                                 </div>
                             </div>
 
-                            <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2">
+                            {/* SECCIÓN BANCARIA DINÁMICA */}
+                            <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2 flex justify-between items-center">
                               <h4 className="text-sm font-bold text-purple-700 uppercase flex items-center gap-2">
                                 <FaCreditCard/> Información Bancaria (Opcional)
                               </h4>
-                            </div>
-                            <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">Banco</label>
-                              <select {...register('banco')} className="select select-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors">
-                                <option value="">-- Seleccionar --</option>
-                                <option value="BCP">BCP</option>
-                                <option value="Interbank">Interbank</option>
-                                <option value="BBVA">BBVA</option>
-                                <option value="Scotiabank">Scotiabank</option>
-                                <option value="Nacion">Banco de la Nación</option>
-                              </select>
-                            </div>
-                            <div className="form-control">
-                              <label className="label font-bold text-gray-700 text-sm">N° de Cuenta</label>
-                              <input {...register('cuenta')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" onInput={handleNumberInput}/>
-                            </div>
-                            <div className="form-control md:col-span-2">
-                              <label className="label font-bold text-gray-700 text-sm">CCI</label>
-                              <input {...register('cci')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" onInput={handleNumberInput}/>
+                              <button type="button" onClick={() => appendCuenta({ banco: '', moneda: 'PEN', cuenta: '', cci: '' })} className="btn btn-xs btn-outline text-purple-600 hover:bg-purple-600 hover:border-purple-600 hover:text-white">
+                                  <FaPlus/> Añadir Cuenta
+                              </button>
                             </div>
 
+                            <div className="md:col-span-2 space-y-4">
+                                {cuentasFields.map((field, index) => (
+                                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-purple-50/50 p-4 rounded-xl border border-purple-100 relative group">
+                                        <div className="form-control md:col-span-3">
+                                            <label className="label font-bold text-gray-700 text-xs">Banco</label>
+                                            <select {...register(`cuentasBancarias.${index}.banco` as const)} className="select select-sm select-bordered w-full bg-white font-semibold text-gray-700">
+                                                <option value="">-- Seleccionar --</option>
+                                                <option value="BCP">BCP</option>
+                                                <option value="Interbank">Interbank</option>
+                                                <option value="BBVA">BBVA</option>
+                                                <option value="Scotiabank">Scotiabank</option>
+                                                <option value="BanBif">BanBif</option>
+                                                <option value="Pichincha">Pichincha</option>
+                                                <option value="Caja Arequipa">Caja Arequipa</option>
+                                                <option value="Nacion">Banco de la Nación</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-control md:col-span-2">
+                                            <label className="label font-bold text-gray-700 text-xs">Moneda</label>
+                                            <select {...register(`cuentasBancarias.${index}.moneda` as const)} className="select select-sm select-bordered w-full bg-white font-bold text-indigo-700">
+                                                <option value="PEN">Soles (S/)</option>
+                                                <option value="USD">Dólares ($)</option>
+                                                <option value="EUR">Euros (€)</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-control md:col-span-3">
+                                            <label className="label font-bold text-gray-700 text-xs">N° de Cuenta</label>
+                                            <input {...register(`cuentasBancarias.${index}.cuenta` as const)} className="input input-sm input-bordered w-full bg-white font-mono" onInput={handleNumberInput} placeholder="Ej: 215-0000000000"/>
+                                        </div>
+                                        <div className="form-control md:col-span-3">
+                                            <label className="label font-bold text-gray-700 text-xs">CCI</label>
+                                            <input {...register(`cuentasBancarias.${index}.cci` as const)} className="input input-sm input-bordered w-full bg-white font-mono" onInput={handleNumberInput} placeholder="Ej: 00221500000000000000"/>
+                                        </div>
+                                        
+                                        {/* Botón de Eliminar Cuenta (Solo aparece si hay más de 1 cuenta y le pasas el mouse por encima) */}
+                                        <div className="md:col-span-1 flex items-end justify-center pb-1">
+                                            {cuentasFields.length > 1 && (
+                                                <button type="button" onClick={() => removeCuenta(index)} className="btn btn-square btn-sm btn-ghost text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar cuenta">
+                                                    <FaTrash/>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
                             <div className="md:col-span-2 pb-3 border-b-2 border-blue-100 mt-4 mb-2">
                               <h4 className="text-sm font-bold text-blue-700 uppercase flex items-center gap-2">
                                 <FaStickyNote/> Notas Adicionales
@@ -441,7 +496,7 @@ export default function PropietariosPage() {
             </div>
         )}
 
-        {/* MODAL DETALLE */}
+        {/* MODAL DETALLE (OJITO) */}
         {selectedProp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
                 <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-4 max-h-[95vh] overflow-y-auto">
@@ -453,8 +508,8 @@ export default function PropietariosPage() {
                         <div className="flex justify-between items-start relative z-10">
                             <div className="flex gap-5 items-center">
                                 <div className="avatar placeholder">
-                                    <div className={`bg-white/20 backdrop-blur-sm text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10 ${selectedProp.tipoPersona === 'PJ' ? 'bg-indigo-500/50' : ''}`}>
-                                        {selectedProp.tipoPersona === 'PJ' ? <FaBuilding size={32}/> : selectedProp.nombre.charAt(0).toUpperCase()}
+                                    <div className={`text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10 ${selectedProp.tipoPersona === 'PJ' ? 'bg-indigo-500/80 backdrop-blur-sm' : 'bg-white/20 backdrop-blur-sm'}`}>
+                                        {selectedProp.tipoPersona === 'PJ' ? <FaBuilding size={32} /> : selectedProp.nombre.charAt(0).toUpperCase()}
                                     </div>
                                 </div>
                                 <div>
@@ -579,25 +634,55 @@ export default function PropietariosPage() {
                                     <h3 className="text-sm font-bold uppercase mb-5 pb-3 border-b-2 border-white/20 flex items-center gap-2">
                                       <FaCreditCard className="text-lg"/> Información Bancaria
                                     </h3>
-                                    {selectedProp.banco ? (
-                                        <div className="space-y-3">
-                                            <div className="bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-lg">
-                                              <p className="text-xs font-bold uppercase mb-2 opacity-80">Banco</p>
-                                              <p className="font-bold text-xl">{selectedProp.banco}</p>
-                                            </div>
-                                            <div className="bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-lg">
-                                              <p className="text-xs font-bold uppercase mb-2 opacity-80">N° Cuenta</p>
-                                              <p className="font-mono text-lg">{selectedProp.cuenta || 'No registrado'}</p>
-                                            </div>
-                                            <div className="bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-lg">
-                                              <p className="text-xs font-bold uppercase mb-2 opacity-80">CCI</p>
-                                              <p className="font-mono text-sm">{selectedProp.cci || 'No registrado'}</p>
-                                            </div>
+                                    
+                                    {selectedProp.cuentasBancarias && (typeof selectedProp.cuentasBancarias === 'string' ? JSON.parse(selectedProp.cuentasBancarias) : selectedProp.cuentasBancarias).length > 0 ? (
+                                        <div className="space-y-4">
+                                            {(typeof selectedProp.cuentasBancarias === 'string' ? JSON.parse(selectedProp.cuentasBancarias) : selectedProp.cuentasBancarias).map((cta: any, idx: number) => (
+                                                <div key={idx} className="bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-lg grid grid-cols-2 gap-y-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold uppercase mb-1 opacity-80">Banco</p>
+                                                        <p className="font-bold text-lg">{cta.banco || '---'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold uppercase mb-1 opacity-80">Moneda</p>
+                                                        <div className="badge badge-sm bg-white text-indigo-700 font-bold border-none">{cta.moneda === 'USD' ? 'Dólares ($)' : cta.moneda === 'EUR' ? 'Euros (€)' : 'Soles (S/)'}</div>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[10px] font-bold uppercase mb-1 opacity-80">N° Cuenta</p>
+                                                        <p className="font-mono text-sm tracking-widest">{cta.cuenta || '---'}</p>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <p className="text-[10px] font-bold uppercase mb-1 opacity-80">CCI</p>
+                                                        <p className="font-mono text-sm tracking-widest opacity-80">{cta.cci || '---'}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     ) : (
-                                      <div className="text-center py-8 italic opacity-70 bg-white/5 rounded-xl border border-white/10">
-                                        Sin información bancaria registrada
-                                      </div>
+                                        selectedProp.banco || selectedProp.cuenta || selectedProp.cci ? (
+                                            <div className="bg-white/15 backdrop-blur-sm p-4 rounded-xl border border-white/20 shadow-lg grid grid-cols-2 gap-y-3">
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase mb-1 opacity-80">Banco</p>
+                                                    <p className="font-bold text-lg">{selectedProp.banco || '---'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase mb-1 opacity-80">Moneda</p>
+                                                    <div className="badge badge-sm bg-white text-indigo-700 font-bold border-none">Soles (S/)</div>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[10px] font-bold uppercase mb-1 opacity-80">N° Cuenta</p>
+                                                    <p className="font-mono text-sm tracking-widest">{selectedProp.cuenta || '---'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[10px] font-bold uppercase mb-1 opacity-80">CCI</p>
+                                                    <p className="font-mono text-sm tracking-widest opacity-80">{selectedProp.cci || '---'}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 italic opacity-70 bg-white/5 rounded-xl border border-white/10">
+                                                Sin información bancaria registrada
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>
