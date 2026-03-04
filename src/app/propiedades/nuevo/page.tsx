@@ -49,7 +49,7 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-// --- LISTA PARA EL AUTOCOMPLETADO DE TIPO ---
+// --- NUEVA LISTA DE AUTOCOMPLETADO ---
 const tiposPropiedad = [
     "Casa", "Departamento", "Duplex", "Terreno Urbano", "Terreno Agrícola", 
     "Terreno Industrial", "Local Comercial", "Local Industrial", "Oficina",
@@ -120,7 +120,7 @@ export default function NuevaPropiedadPage() {
         monedaMantenimiento: 'PEN',
         monedaVigilancia: 'PEN',
         modalidad: 'Venta', 
-        tipo: 'Casa', 
+        tipo: '', 
         tieneMantenimiento: 'no',
         tieneVigilancia: 'no',
         exclusiva: 'no',
@@ -154,13 +154,14 @@ export default function NuevaPropiedadPage() {
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
   const modalidadActual = watch('modalidad', 'Venta');
-  const tipoInmueble = watch('tipo', 'Casa');
+  const tipoInmueble = watch('tipo', '');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
   const tieneVigilancia = watch('tieneVigilancia', 'no');
 
-  const esProyecto = tipoInmueble?.toLowerCase().includes('proyecto');
-  const mostrarDistribucion = !tipoInmueble?.toLowerCase().includes('terreno') && !esProyecto;
-  const esDepartamento = tipoInmueble?.toLowerCase().includes('departamento') || tipoInmueble?.toLowerCase().includes('duplex');
+  // LÓGICA DINÁMICA: Detecta cualquier texto que contenga "proyecto", "terreno", "departamento", etc.
+  const esProyecto = tipoInmueble && String(tipoInmueble).toLowerCase().includes('proyecto');
+  const mostrarDistribucion = tipoInmueble && !String(tipoInmueble).toLowerCase().includes('terreno') && !esProyecto;
+  const esDepartamento = tipoInmueble && (String(tipoInmueble).toLowerCase().includes('departamento') || String(tipoInmueble).toLowerCase().includes('duplex'));
 
   useEffect(() => {
     fetchPropietarios();
@@ -248,8 +249,8 @@ export default function NuevaPropiedadPage() {
 
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
-    if (!data.tipo) return alert('⚠️ Escribe o selecciona un Tipo de Propiedad.');
-
+    if (!data.tipo) return alert('⚠️ Por favor, ingresa o selecciona un Tipo de Propiedad.');
+    
     setIsSubmitting(true);
     try {
         const formData = new FormData();
@@ -265,7 +266,6 @@ export default function NuevaPropiedadPage() {
 
         if (esProyecto) {
             formData.append('tipologias', JSON.stringify(data.tipologias));
-            if(data.fechaEntrega) formData.append('fechaEntrega', data.fechaEntrega); 
         }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
@@ -301,7 +301,7 @@ export default function NuevaPropiedadPage() {
         await createPropiedad(formData);
         alert('✅ Propiedad Publicada con éxito');
         router.push('/propiedades');
-    } catch (e) { alert('❌ Error al publicar.'); } finally { setIsSubmitting(false); }
+    } catch (e) { alert('❌ Error al publicar. Revisa la consola.'); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -396,13 +396,13 @@ export default function NuevaPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     
-                    {/* CAMBIADO A INPUT CON DATALIST PARA AUTOCOMPLETADO INTELIGENTE */}
+                    {/* MODIFICADO A DATALIST PARA AUTOCOMPLETADO INTELIGENTE */}
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
                         <input 
                             list="tipos-propiedad" 
                             {...register('tipo', {required:true})} 
-                            className="input input-bordered w-full bg-white" 
+                            className="input input-bordered w-full bg-white font-semibold text-sm" 
                             placeholder="Ej: Casa, Proyecto Departamentos..."
                             autoComplete="off"
                         />
@@ -463,6 +463,7 @@ export default function NuevaPropiedadPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaCalendarAlt className="mr-1"/> Fecha de Inicio</label><input type="date" {...register('fechaInicioProyecto')} className="input input-bordered w-full bg-white"/></div>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Tiempo Ejecución</label><input type="text" {...register('tiempoEjecucion')} placeholder="Ej: 18 meses" className="input input-bordered w-full bg-white"/></div>
+                            
                             <div className="form-control">
                                 <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">
                                     <FaKey className="mr-1"/> Fecha Entrega
