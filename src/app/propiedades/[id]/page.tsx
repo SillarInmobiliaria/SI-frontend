@@ -275,7 +275,7 @@ export default function PropiedadDetallePage() {
                                                 <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaTools size={20}/></div>
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 font-black uppercase">Ejecución</p>
-                                                    <p className="font-black text-indigo-900">{propiedad.tiempoEjecucion || 'No especificado'}</p>
+                                                    <p className="font-black text-indigo-900">{propiedad.fechaEntrega || 'No especificado'}</p>
                                                 </div>
                                             </div>
                                             <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
