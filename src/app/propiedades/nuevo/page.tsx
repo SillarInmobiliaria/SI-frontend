@@ -15,7 +15,7 @@ import {
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
   FaCheckCircle, FaCheck, FaPercent, FaTimes, FaFileUpload,
-  FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaIdCard 
+  FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaIdCard, FaKey 
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -38,7 +38,7 @@ interface FormInputs {
   link1: string; link2: string; link3: string; link4: string; link5: string;
   fechaInicioProyecto: string;
   tiempoEjecucion: string;
-  constructoraId: string;
+  constructoraId: string; // <-- Este ahora guardará el texto de Fecha Entrega
   tipologias: { precio: string; areaConstruida: string; nombre: string; }[];
 }
 
@@ -82,6 +82,7 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
                         </div>
                     ))}
 
+                    {/* Botón para subir */}
                     <label className="flex items-center justify-center gap-2 cursor-pointer w-full py-1.5 mt-1 border border-blue-200 border-dashed rounded bg-blue-50/50 hover:bg-blue-100 transition-colors">
                         <FaPlus className="text-blue-600 text-xs"/> <FaFileUpload className="text-blue-500 text-xs"/>
                         <span className="text-[10px] font-bold uppercase text-blue-600">Agregar PDF</span>
@@ -134,11 +135,8 @@ export default function NuevaPropiedadPage() {
   const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
-  const [constructorasDB, setConstructorasDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
-  const [busquedaConstructora, setBusquedaConstructora] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
-  const [mostrarSugerenciasConstructora, setMostrarSugerenciasConstructora] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
   
@@ -168,9 +166,6 @@ export default function NuevaPropiedadPage() {
             const resAsesores = await fetch(`${API_BASE_URL}/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
             const dataAsesores = await resAsesores.json();
             setAsesoresDB(dataAsesores);
-
-            const resCartera = await getCartera();
-            setConstructorasDB(resCartera.filter((c: any) => c.tipoPersona === 'PJ'));
         } catch (error) { console.error(error); }
     };
     fetchData();
@@ -238,7 +233,6 @@ export default function NuevaPropiedadPage() {
   const removerFotoGaleria = (idx: number) => { setGaleriaFiles(galeriaFiles.filter((_, i) => i !== idx)); setPreviewGallery(previewGallery.filter((_, i) => i !== idx)); };
   const seleccionarDistrito = (d: string) => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); };
   const seleccionarAsesor = (a: any) => { setBusquedaAsesor(a.nombre); setValue('asesor', a.nombre); setMostrarSugerenciasAsesor(false); };
-  const seleccionarConstructora = (c: any) => { setBusquedaConstructora(c.empresa); setValue('constructoraId', c.id); setMostrarSugerenciasConstructora(false); };
 
   const seleccionarPropietario = (propObj: any) => {
       if (!propietariosSeleccionados.find(p => p.id === propObj.id)) {
@@ -282,7 +276,6 @@ export default function NuevaPropiedadPage() {
         }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
-        // CORRECCIÓN TYPESCRIPT
         propietariosSeleccionados.forEach((p: any) => formData.append('propietariosIds[]', p.id));
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
@@ -379,12 +372,10 @@ export default function NuevaPropiedadPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    {/* CORRECCIÓN TYPESCRIPT: (p: any) */}
                     {propietariosSeleccionados.map((p: any) => (
                         <div key={p.id} className={`badge badge-lg p-4 gap-3 font-bold uppercase ${p.tipoPersona === 'PJ' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
                             {p.tipoPersona === 'PJ' ? <FaBuilding /> : <FaUserTie />}
                             {p.tipoPersona === 'PJ' && p.empresa ? p.empresa : p.nombre} 
-                            {/* CORRECCIÓN TYPESCRIPT: (x: any) */}
                             <FaTrash className="cursor-pointer text-red-500 text-xs hover:scale-125 transition-transform" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter((x: any) => x.id !== p.id))}/>
                         </div>
                     ))}
@@ -459,16 +450,8 @@ export default function NuevaPropiedadPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaCalendarAlt className="mr-1"/> Fecha de Inicio</label><input type="date" {...register('fechaInicioProyecto')} className="input input-bordered w-full bg-white"/></div>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Tiempo Ejecución</label><input type="text" {...register('tiempoEjecucion')} placeholder="Ej: 18 meses" className="input input-bordered w-full bg-white"/></div>
-                            <div className="form-control relative"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaBuilding className="mr-1"/> Constructora (PJ)</label>
-                                <div className="flex items-center"><FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/><input type="text" className="input input-bordered w-full bg-white pl-10 text-sm" placeholder="Buscar empresa..." value={busquedaConstructora} onChange={(e) => { setBusquedaConstructora(e.target.value); setMostrarSugerenciasConstructora(true); }} onFocus={() => setMostrarSugerenciasConstructora(true)}/></div>
-                                {mostrarSugerenciasConstructora && busquedaConstructora.length > 0 && (
-                                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1 font-bold text-xs uppercase">
-                                        {constructorasDB.filter(c => c.empresa.toLowerCase().includes(busquedaConstructora.toLowerCase())).map((c) => (
-                                            <div key={c.id} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col" onClick={() => seleccionarConstructora(c)}><span className="font-bold text-indigo-700 text-xs uppercase">{c.empresa}</span><span className="text-[10px] text-gray-400">RUC: {c.ruc}</span></div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaKey className="mr-1"/> Fecha Entrega</label><input type="text" {...register('constructoraId')} placeholder="Ej: Diciembre 2026" className="input input-bordered w-full bg-white"/></div>
                         </div>
                     </div>
                 ) : (
@@ -485,8 +468,8 @@ export default function NuevaPropiedadPage() {
                             <div className="form-control">
                                 <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">No</span></label>
                                 </div>
                                 {tieneVigilancia === 'si' && (<div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200"><select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs"><option value="PEN">S/</option><option value="USD">$</option></select><input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/></div>)}
                             </div>
