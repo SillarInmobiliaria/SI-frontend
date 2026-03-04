@@ -38,7 +38,7 @@ interface FormInputs {
   link1: string; link2: string; link3: string; link4: string; link5: string;
   fechaInicioProyecto: string;
   tiempoEjecucion: string;
-  constructoraId: string; // <-- Este ahora guardará el texto de Fecha Entrega
+  fechaEntrega: string;
   tipologias: { precio: string; areaConstruida: string; nombre: string; }[];
 }
 
@@ -257,7 +257,10 @@ export default function NuevaPropiedadPage() {
             }
         });
 
-        if (esProyecto) formData.append('tipologias', JSON.stringify(data.tipologias));
+        if (esProyecto) {
+            formData.append('tipologias', JSON.stringify(data.tipologias));
+            if(data.fechaEntrega) formData.append('fechaEntrega', data.fechaEntrega); 
+        }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
         
@@ -451,7 +454,12 @@ export default function NuevaPropiedadPage() {
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaCalendarAlt className="mr-1"/> Fecha de Inicio</label><input type="date" {...register('fechaInicioProyecto')} className="input input-bordered w-full bg-white"/></div>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Tiempo Ejecución</label><input type="text" {...register('tiempoEjecucion')} placeholder="Ej: 18 meses" className="input input-bordered w-full bg-white"/></div>
                             
-                            <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaKey className="mr-1"/> Fecha Entrega</label><input type="text" {...register('constructoraId')} placeholder="Ej: Diciembre 2026" className="input input-bordered w-full bg-white"/></div>
+                            <div className="form-control">
+                                <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">
+                                    <FaKey className="mr-1"/> Fecha Entrega
+                                </label>
+                                <input type="text" {...register('fechaEntrega')} placeholder="Ej: Diciembre 2026" className="input input-bordered w-full bg-white"/>
+                            </div>
                         </div>
                     </div>
                 ) : (
