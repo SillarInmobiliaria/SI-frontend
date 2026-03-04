@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { useRouter, useParams } from 'next/navigation';
 import Navbar from '../../../../components/Navbar';
 import { useInmobiliariaStore } from '../../../../store/useInmobiliariaStore';
@@ -13,7 +13,8 @@ const BACKEND_URL = 'https://sillar-backend.onrender.com';
 import { 
   FaHome, FaBed, FaBath, FaCar, FaImages, FaSave, FaArrowLeft, FaVideo, 
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch, FaMapMarkerAlt, 
-  FaMagic, FaListUl, FaPercent, FaTimes, FaShieldAlt, FaTools
+  FaMagic, FaListUl, FaPercent, FaTimes, FaShieldAlt, FaTools,
+  FaCalendarAlt, FaBuilding, FaKey, FaIdCard
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -25,14 +26,17 @@ interface FormInputs {
   inicioContrato: string; finContrato: string; tipoContrato: string;
   comision: string; videoUrl: string; mapaUrl: string; asesor: string;
   
-  // --- CAMPOS NUEVOS SINCRONIZADOS ---
   tieneMantenimiento: string; mantenimiento: string; monedaMantenimiento: string;
   tieneVigilancia: string; vigilancia: string; monedaVigilancia: string;
   incluyeIgv: string;
-  // -----------------------------------
   
   exclusiva: string; renovable: string;
   link1: string; link2: string; link3: string; link4: string; link5: string;
+  
+  fechaInicioProyecto: string;
+  tiempoEjecucion: string;
+  fechaEntrega: string; 
+  tipologias: { precio: string; areaConstruida: string; nombre: string; }[];
 }
 
 const distritosArequipa = [
@@ -46,14 +50,19 @@ export default function EditarPropiedadPage() {
   const router = useRouter();
   const { id } = useParams();
   const { propietarios, fetchPropietarios } = useInmobiliariaStore();
-  const { register, handleSubmit, watch, setValue } = useForm<FormInputs>();
+  const { register, handleSubmit, watch, setValue, control } = useForm<FormInputs>();
+
+  const { fields, append, remove } = useFieldArray({ control, name: "tipologias" });
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
-  const [propietarioSelectId, setPropietarioSelectId] = useState('');
+  
+  // ESTADOS PARA BUSCADOR PROPIETARIO
+  const [busquedaPropietario, setBusquedaPropietario] = useState('');
+  const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
@@ -73,7 +82,10 @@ export default function EditarPropiedadPage() {
   const tipoInmueble = watch('tipo', '');
   const tieneMantenimiento = watch('tieneMantenimiento');
   const tieneVigilancia = watch('tieneVigilancia');
-  const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno');
+  
+  const esProyecto = tipoInmueble === 'Proyecto';
+  const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno') && !esProyecto;
+  const esDepartamento = tipoInmueble === 'Departamento' || tipoInmueble === 'Duplex';
 
   useEffect(() => {
     const init = async () => {
@@ -86,7 +98,7 @@ export default function EditarPropiedadPage() {
 
             const { data: p } = await api.get(`/propiedades/${id}`);
             
-            const campos = ['tipo', 'modalidad', 'ubicacion', 'direccion', 'precio', 'moneda', 'area', 'areaConstruida', 'habitaciones', 'banos', 'cocheras', 'descripcion', 'detalles', 'partidaRegistral', 'partidaCochera', 'partidaDeposito', 'comision', 'videoUrl', 'mapaUrl', 'asesor', 'link1', 'link2', 'link3', 'link4', 'link5'];
+            const campos = ['tipo', 'modalidad', 'ubicacion', 'direccion', 'precio', 'moneda', 'area', 'areaConstruida', 'habitaciones', 'banos', 'cocheras', 'descripcion', 'detalles', 'partidaRegistral', 'partidaCochera', 'partidaDeposito', 'comision', 'videoUrl', 'mapaUrl', 'asesor', 'link1', 'link2', 'link3', 'link4', 'link5', 'tiempoEjecucion', 'fechaEntrega'];
             campos.forEach(key => {
                 if (p[key] !== null && p[key] !== undefined) setValue(key as any, p[key]);
             });
@@ -94,6 +106,7 @@ export default function EditarPropiedadPage() {
             if(p.inicioContrato) setValue('inicioContrato', p.inicioContrato.split('T')[0]);
             if(p.finContrato) setValue('finContrato', p.finContrato.split('T')[0]);
             if(p.fechaCaptacion) setValue('fechaCaptacion', p.fechaCaptacion.split('T')[0]);
+            if(p.fechaInicioProyecto) setValue('fechaInicioProyecto', p.fechaInicioProyecto.split('T')[0]);
 
             setValue('exclusiva', p.exclusiva ? 'si' : 'no');
             setValue('renovable', p.renovable ? 'si' : 'no');
@@ -115,6 +128,14 @@ export default function EditarPropiedadPage() {
                 setValue('tieneVigilancia', 'no');
             }
             setValue('monedaVigilancia', p.monedaVigilancia || 'PEN');
+
+            // CARGAR TIPOLOGÍAS
+            if (p.tipologias) {
+                const tipoArr = typeof p.tipologias === 'string' ? JSON.parse(p.tipologias) : p.tipologias;
+                setValue('tipologias', tipoArr);
+            } else {
+                setValue('tipologias', [{ precio: '', areaConstruida: '', nombre: '' }]);
+            }
 
             setBusquedaUbicacion(p.ubicacion);
             setBusquedaAsesor(p.asesor || '');
@@ -182,6 +203,14 @@ export default function EditarPropiedadPage() {
   const seleccionarDistrito = (d: string) => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); };
   const seleccionarAsesor = (a: any) => { setBusquedaAsesor(a.nombre); setValue('asesor', a.nombre); setMostrarSugerenciasAsesor(false); };
 
+  const seleccionarPropietario = (propObj: any) => {
+      if (!propietariosSeleccionados.find(p => p.id === propObj.id)) {
+          setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+      }
+      setBusquedaPropietario('');
+      setMostrarSugerenciasProp(false);
+  };
+
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ La propiedad debe tener al menos un propietario.');
     setIsSubmitting(true);
@@ -191,17 +220,18 @@ export default function EditarPropiedadPage() {
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
-            if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+            if (data[k] !== undefined && data[k] !== null && data[k] !== '' && k !== 'tipologias') {
                 formData.append(k, String(data[k]));
             }
         });
 
-        // SOBRESCRIBIR LÓGICAS ESPECIALES
+        if (esProyecto) formData.append('tipologias', JSON.stringify(data.tipologias));
+
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
         formData.set('exclusiva', data.exclusiva === 'si' ? 'true' : 'false');
         formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
 
-        if (data.tieneMantenimiento === 'no' || modalidadActual !== 'Alquiler') {
+        if (data.tieneMantenimiento === 'no') {
             formData.set('mantenimiento', '0');
         } else {
             formData.set('mantenimiento', String(data.mantenimiento));
@@ -215,7 +245,7 @@ export default function EditarPropiedadPage() {
             formData.set('monedaVigilancia', data.monedaVigilancia);
         }
 
-        propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
+        propietariosSeleccionados.forEach((p: any) => formData.append('propietariosIds[]', p.id));
 
         if (existingMainPhoto) formData.append('existingMainPhoto', existingMainPhoto);
         formData.append('existingGallery', JSON.stringify(existingGallery));
@@ -262,25 +292,71 @@ export default function EditarPropiedadPage() {
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* 1. PROPIETARIOS (EDITABLES) */}
+            {/* 1. PROPIETARIOS */}
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
-                <div className="flex gap-4 items-end mb-4">
-                    <div className="form-control flex-1">
-                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
-                            <option value="">-- Buscar en Base de Datos --</option>
-                            {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
-                        </select>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS / EMPRESAS</h3>
+                
+                <div className="form-control relative mb-4">
+                    <div className="flex items-center">
+                        <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
+                        <input 
+                            type="text" 
+                            className="input input-bordered w-full bg-white pl-9 text-sm font-bold text-indigo-800" 
+                            placeholder="Buscar por Nombre, Empresa o DNI/RUC..." 
+                            value={busquedaPropietario} 
+                            onChange={(e) => { 
+                                setBusquedaPropietario(e.target.value); 
+                                setMostrarSugerenciasProp(true); 
+                            }} 
+                            onFocus={() => setMostrarSugerenciasProp(true)}
+                        />
                     </div>
-                    <button type="button" onClick={() => {
-                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
-                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
+
+                    {mostrarSugerenciasProp && busquedaPropietario.length > 0 && (
+                        <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-2xl z-50 max-h-60 overflow-y-auto mt-1">
+                            {propietarios
+                                .filter((p: any) => 
+                                    p.nombre.toLowerCase().includes(busquedaPropietario.toLowerCase()) || 
+                                    p.dni.includes(busquedaPropietario) || 
+                                    (p.empresa && p.empresa.toLowerCase().includes(busquedaPropietario.toLowerCase())) ||
+                                    (p.ruc && p.ruc.includes(busquedaPropietario))
+                                )
+                                .map((p: any) => (
+                                    <div 
+                                        key={p.id} 
+                                        className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex items-center justify-between group" 
+                                        onClick={() => seleccionarPropietario(p)}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-slate-800 text-xs uppercase flex items-center gap-2">
+                                                {p.tipoPersona === 'PJ' ? <FaBuilding className="text-indigo-400" /> : <FaUserTie className="text-blue-400" />}
+                                                {p.nombre}
+                                            </span>
+                                            {p.tipoPersona === 'PJ' && p.empresa && (
+                                                <span className="text-[10px] text-indigo-600 font-bold ml-5">{p.empresa}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            {p.tipoPersona === 'PJ' ? (
+                                                <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>
+                                            ) : (
+                                                <span className="badge badge-sm bg-blue-100 text-blue-700 font-bold border-none">PN</span>
+                                            )}
+                                            <span className="text-[10px] text-gray-500 font-mono mt-1">ID: {p.tipoPersona === 'PJ' && p.ruc ? p.ruc : p.dni}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    )}
                 </div>
+
                 <div className="flex flex-wrap gap-2">
-                    {propietariosSeleccionados.map(p => (
-                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
-                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
+                    {propietariosSeleccionados.map((p: any) => (
+                        <div key={p.id} className={`badge badge-lg p-4 gap-3 font-bold uppercase ${p.tipoPersona === 'PJ' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+                            {p.tipoPersona === 'PJ' ? <FaBuilding /> : <FaUserTie />}
+                            {p.tipoPersona === 'PJ' && p.empresa ? p.empresa : p.nombre} 
+                            <FaTrash className="cursor-pointer text-red-500 text-xs hover:scale-125 transition-transform" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter((x: any) => x.id !== p.id))}/>
                         </div>
                     ))}
                 </div>
@@ -295,7 +371,6 @@ export default function EditarPropiedadPage() {
                             <option value="Casa">Casa</option>
                             <option value="Departamento">Departamento</option>
                             <option value="Duplex">Duplex</option>
-                            <option value="Terreno">Terreno</option>
                             <option value="Terreno Urbano">Terreno Urbano</option>
                             <option value="Terreno Agricola">Terreno Agrícola</option>
                             <option value="Terreno Industrial">Terreno Industrial</option>
@@ -315,11 +390,14 @@ export default function EditarPropiedadPage() {
                     </div>
                     <div className="form-control relative">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO</label>
-                        <input type="text" className="input input-bordered w-full bg-white" value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
-                        {mostrarSugerenciasUbi && (
+                        <div className="flex items-center">
+                            <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
+                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
+                        </div>
+                        {mostrarSugerenciasUbi && busquedaUbicacion.length > 0 && (
                             <div className="absolute top-full left-0 w-full bg-white border z-50 max-h-48 overflow-y-auto mt-1 rounded-b-lg shadow-xl">
-                                {distritosArequipa.filter(d => d.toLowerCase().includes(busquedaUbicacion.toLowerCase())).map(d => (
-                                    <div key={d} className="p-3 hover:bg-indigo-50 cursor-pointer text-xs uppercase font-bold" onClick={() => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); }}>{d}</div>
+                                {distritosArequipa.filter(d => d.toLowerCase().includes(busquedaUbicacion.toLowerCase())).map((d, i) => (
+                                    <div key={i} className="p-3 hover:bg-indigo-50 cursor-pointer text-xs uppercase font-bold" onClick={() => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); }}>{d}</div>
                                 ))}
                             </div>
                         )}
@@ -328,40 +406,69 @@ export default function EditarPropiedadPage() {
                 
                 <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-[10px] uppercase">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Precio</label>
-                        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                            <select {...register('moneda')} className="bg-gray-100 px-3 font-bold border-r border-gray-300 text-xs outline-none"><option value="USD">USD</option><option value="PEN">PEN</option></select>
-                            <input type="number" step="0.01" {...register('precio')} className="input w-full bg-white font-bold border-none focus:outline-none"/>
-                        </div>
-                    </div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Área Total (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white"/></div>
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Área Const. (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white"/></div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* VIGILANCIA: Siempre Visible */}
-                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
-                        <div className="form-control">
-                            <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
-                            <div className="flex gap-4 mb-3">
-                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
-                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
+                {esProyecto ? (
+                    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 shadow-inner">
+                            <div className="flex justify-between items-center mb-4">
+                                <label className="label font-black text-indigo-900 text-[10px] uppercase tracking-widest">Precios y Tipologías</label>
+                                <button type="button" onClick={() => append({ precio: '', areaConstruida: '', nombre: '' })} className="btn btn-xs btn-primary gap-1"><FaPlus/> Añadir Tipología</button>
                             </div>
-                            {tieneVigilancia === 'si' && (
-                                <div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200">
-                                    <select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs">
-                                        <option value="PEN">S/</option>
-                                        <option value="USD">$</option>
-                                    </select>
-                                    <input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
-                                </div>
-                            )}
+                            <div className="space-y-3 font-bold">
+                                {fields.map((field, index) => (
+                                    <div key={field.id} className="flex gap-3 items-center bg-white p-3 rounded-xl border shadow-sm">
+                                        <div className="flex-1"><input type="number" step="0.01" {...register(`tipologias.${index}.precio` as const)} placeholder="Precio" className="input input-sm input-bordered w-full bg-white text-gray-800 font-bold" /></div>
+                                        <div className="flex-1"><input type="number" step="0.01" {...register(`tipologias.${index}.areaConstruida` as const)} placeholder="Área Const. m²" className="input input-sm input-bordered w-full bg-white" /></div>
+                                        <div className="flex-[1.5]"><input type="text" {...register(`tipologias.${index}.nombre` as const)} placeholder="Tipología (Ej: 3 Dorm + Terraza)" className="input input-sm input-bordered w-full bg-white font-medium" /></div>
+                                        {fields.length > 1 && (
+                                            <button type="button" onClick={() => remove(index)} className="btn btn-square btn-ghost btn-sm text-red-500"><FaTrash/></button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaCalendarAlt className="mr-1"/> Fecha de Inicio</label><input type="date" {...register('fechaInicioProyecto')} className="input input-bordered w-full bg-white"/></div>
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Tiempo Ejecución</label><input type="text" {...register('tiempoEjecucion')} placeholder="Ej: 18 meses" className="input input-bordered w-full bg-white"/></div>
+                            <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaKey className="mr-1"/> Fecha Entrega</label><input type="text" {...register('fechaEntrega')} placeholder="Ej: Diciembre 2026" className="input input-bordered w-full bg-white"/></div>
                         </div>
                     </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Precio</label>
+                            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                                <select {...register('moneda')} className="bg-gray-100 px-3 font-bold border-r border-gray-300 text-xs outline-none"><option value="USD">USD</option><option value="PEN">PEN</option></select>
+                                <input type="number" step="0.01" {...register('precio')} className="input w-full bg-white font-bold border-none focus:outline-none"/>
+                            </div>
+                        </div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Área Total (m²)</label><input type="number" step="0.01" {...register('area')} className="input input-bordered w-full bg-white"/></div>
+                        <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Área Const. (m²)</label><input type="number" step="0.01" {...register('areaConstruida')} className="input input-bordered w-full bg-white"/></div>
+                    </div>
+                )}
 
-                    {/* MANTENIMIENTO: Solo Alquiler */}
-                    {modalidadActual === 'Alquiler' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                    {!esProyecto && (
+                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                            <div className="form-control">
+                                <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
+                                <div className="flex gap-4 mb-3">
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
+                                </div>
+                                {tieneVigilancia === 'si' && (
+                                    <div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200">
+                                        <select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs">
+                                            <option value="PEN">S/</option>
+                                            <option value="USD">$</option>
+                                        </select>
+                                        <input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
                                 <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
@@ -409,11 +516,11 @@ export default function EditarPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className={`form-control ${modalidadActual === 'Alquiler' ? 'md:col-span-1' : 'md:col-span-3'}`}>
+                    <div className={`form-control ${modalidadActual === 'Alquiler' || esDepartamento ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Registral (Principal)</label>
                         <input {...register('partidaRegistral')} className="input input-bordered w-full bg-white font-mono text-sm"/>
                     </div>
-                    {modalidadActual === 'Alquiler' && (
+                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Cochera</label><input {...register('partidaCochera')} className="input input-bordered w-full bg-white font-mono text-sm"/></div>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">Partida Depósito</label><input {...register('partidaDeposito')} className="input input-bordered w-full bg-white font-mono text-sm"/></div>
