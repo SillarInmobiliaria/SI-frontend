@@ -13,7 +13,7 @@ import {
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const distritosArequipa = [
-    "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
+    "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
