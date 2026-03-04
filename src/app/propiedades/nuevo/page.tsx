@@ -15,7 +15,7 @@ import {
   FaUserTie, FaGavel, FaLink, FaPlus, FaTrash, FaSearch,
   FaMapMarkerAlt, FaMagic, FaListUl, 
   FaCheckCircle, FaCheck, FaPercent, FaTimes, FaFileUpload,
-  FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding 
+  FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaIdCard 
 } from 'react-icons/fa';
 
 interface FormInputs {
@@ -82,7 +82,6 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
                         </div>
                     ))}
 
-                    {/* Botón para subir */}
                     <label className="flex items-center justify-center gap-2 cursor-pointer w-full py-1.5 mt-1 border border-blue-200 border-dashed rounded bg-blue-50/50 hover:bg-blue-100 transition-colors">
                         <FaPlus className="text-blue-600 text-xs"/> <FaFileUpload className="text-blue-500 text-xs"/>
                         <span className="text-[10px] font-bold uppercase text-blue-600">Agregar PDF</span>
@@ -130,7 +129,10 @@ export default function NuevaPropiedadPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generandoIA, setGenerandoIA] = useState(false);
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
-  const [propietarioSelectId, setPropietarioSelectId] = useState('');
+  
+  const [busquedaPropietario, setBusquedaPropietario] = useState('');
+  const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
+  
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [constructorasDB, setConstructorasDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
@@ -156,7 +158,6 @@ export default function NuevaPropiedadPage() {
   const esProyecto = tipoInmueble === 'Proyecto';
   const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno') && !esProyecto;
 
-  // NUEVA LÓGICA: Determina si se muestran campos de departamento
   const esDepartamento = tipoInmueble === 'Departamento' || tipoInmueble === 'Duplex';
 
   useEffect(() => {
@@ -199,6 +200,7 @@ export default function NuevaPropiedadPage() {
   const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
           const filesArray = Array.from(e.target.files);
+          if (galeriaFiles.length + filesArray.length > 30) return alert("⚠️ Máximo 30 fotos.");
           const compressedFiles: File[] = [];
           for (const file of filesArray) {
               const compressed = await imageCompression(file, { maxSizeMB: 0.6, maxWidthOrHeight: 1600, useWebWorker: true });
@@ -238,6 +240,14 @@ export default function NuevaPropiedadPage() {
   const seleccionarAsesor = (a: any) => { setBusquedaAsesor(a.nombre); setValue('asesor', a.nombre); setMostrarSugerenciasAsesor(false); };
   const seleccionarConstructora = (c: any) => { setBusquedaConstructora(c.empresa); setValue('constructoraId', c.id); setMostrarSugerenciasConstructora(false); };
 
+  const seleccionarPropietario = (propObj: any) => {
+      if (!propietariosSeleccionados.find(p => p.id === propObj.id)) {
+          setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
+      }
+      setBusquedaPropietario('');
+      setMostrarSugerenciasProp(false);
+  };
+
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
     setIsSubmitting(true);
@@ -257,7 +267,6 @@ export default function NuevaPropiedadPage() {
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
         
-        // MODIFICADO: Mantenimiento se envía si es Alquiler O si es Departamento
         if (data.tieneMantenimiento === 'si') { 
             formData.set('mantenimiento', String(data.mantenimiento)); 
             formData.set('monedaMantenimiento', data.monedaMantenimiento); 
@@ -273,7 +282,8 @@ export default function NuevaPropiedadPage() {
         }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
-        propietariosSeleccionados.forEach(p => formData.append('propietariosIds[]', p.id));
+        // CORRECCIÓN TYPESCRIPT
+        propietariosSeleccionados.forEach((p: any) => formData.append('propietariosIds[]', p.id));
         if (fotoPrincipalFile) formData.append('fotoPrincipal', fotoPrincipalFile);
         galeriaFiles.forEach(f => formData.append('galeria', f));
         
@@ -309,25 +319,73 @@ export default function NuevaPropiedadPage() {
 
       <main className="container mx-auto px-6 max-w-5xl mt-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* 1. PROPIETARIOS */}
+            
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-8">
-                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS</h3>
-                <div className="flex gap-4 items-end mb-4">
-                    <div className="form-control flex-1">
-                        <select className="select select-bordered w-full bg-white text-sm" value={propietarioSelectId} onChange={(e) => setPropietarioSelectId(e.target.value)}>
-                            <option value="">-- Buscar en Base de Datos --</option>
-                            {propietarios.map(p => <option key={p.id} value={p.id}>{p.nombre} ({p.dni})</option>)}
-                        </select>
+                <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 font-mono"><FaUserTie className="text-indigo-600"/> 1. PROPIETARIOS / EMPRESAS</h3>
+                
+                <div className="form-control relative mb-4">
+                    <div className="flex items-center">
+                        <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
+                        <input 
+                            type="text" 
+                            className="input input-bordered w-full bg-white pl-9 text-sm font-bold text-indigo-800" 
+                            placeholder="Buscar por Nombre, Empresa o DNI/RUC..." 
+                            value={busquedaPropietario} 
+                            onChange={(e) => { 
+                                setBusquedaPropietario(e.target.value); 
+                                setMostrarSugerenciasProp(true); 
+                            }} 
+                            onFocus={() => setMostrarSugerenciasProp(true)}
+                        />
                     </div>
-                    <button type="button" onClick={() => {
-                        const propObj = propietarios.find(p => p.id === propietarioSelectId);
-                        if (propObj && !propietariosSeleccionados.find(p => p.id === propObj.id)) setPropietariosSeleccionados([...propietariosSeleccionados, propObj]);
-                    }} className="btn btn-primary bg-indigo-600 text-white border-none px-6 text-xs uppercase font-bold"><FaPlus/> AGREGAR</button>
+
+                    {mostrarSugerenciasProp && busquedaPropietario.length > 0 && (
+                        <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-2xl z-50 max-h-60 overflow-y-auto mt-1">
+                            {propietarios
+                                .filter((p: any) => 
+                                    p.nombre.toLowerCase().includes(busquedaPropietario.toLowerCase()) || 
+                                    p.dni.includes(busquedaPropietario) || 
+                                    (p.empresa && p.empresa.toLowerCase().includes(busquedaPropietario.toLowerCase())) ||
+                                    (p.ruc && p.ruc.includes(busquedaPropietario))
+                                )
+                                .map((p: any) => (
+                                    <div 
+                                        key={p.id} 
+                                        className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex items-center justify-between group" 
+                                        onClick={() => seleccionarPropietario(p)}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-slate-800 text-xs uppercase flex items-center gap-2">
+                                                {p.tipoPersona === 'PJ' ? <FaBuilding className="text-indigo-400" /> : <FaUserTie className="text-blue-400" />}
+                                                {p.nombre}
+                                            </span>
+                                            {p.tipoPersona === 'PJ' && p.empresa && (
+                                                <span className="text-[10px] text-indigo-600 font-bold ml-5">{p.empresa}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            {p.tipoPersona === 'PJ' ? (
+                                                <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>
+                                            ) : (
+                                                <span className="badge badge-sm bg-blue-100 text-blue-700 font-bold border-none">PN</span>
+                                            )}
+                                            <span className="text-[10px] text-gray-500 font-mono mt-1">ID: {p.tipoPersona === 'PJ' && p.ruc ? p.ruc : p.dni}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    )}
                 </div>
+
                 <div className="flex flex-wrap gap-2">
-                    {propietariosSeleccionados.map(p => (
-                        <div key={p.id} className="badge badge-lg p-4 gap-3 bg-indigo-50 border-indigo-200 text-indigo-800 font-bold uppercase">
-                            {p.nombre} <FaTrash className="cursor-pointer text-red-500 text-xs" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter(x => x.id !== p.id))}/>
+                    {/* CORRECCIÓN TYPESCRIPT: (p: any) */}
+                    {propietariosSeleccionados.map((p: any) => (
+                        <div key={p.id} className={`badge badge-lg p-4 gap-3 font-bold uppercase ${p.tipoPersona === 'PJ' ? 'bg-indigo-50 border-indigo-200 text-indigo-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+                            {p.tipoPersona === 'PJ' ? <FaBuilding /> : <FaUserTie />}
+                            {p.tipoPersona === 'PJ' && p.empresa ? p.empresa : p.nombre} 
+                            {/* CORRECCIÓN TYPESCRIPT: (x: any) */}
+                            <FaTrash className="cursor-pointer text-red-500 text-xs hover:scale-125 transition-transform" onClick={() => setPropietariosSeleccionados(propietariosSeleccionados.filter((x: any) => x.id !== p.id))}/>
                         </div>
                     ))}
                 </div>
@@ -427,15 +485,14 @@ export default function NuevaPropiedadPage() {
                             <div className="form-control">
                                 <label className="label font-bold text-emerald-800 text-[10px] uppercase"><FaShieldAlt className="mr-1"/> ¿Pago de Vigilancia?</label>
                                 <div className="flex gap-4 mb-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">Sí</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold text-emerald-800">No</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">Sí</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('tieneVigilancia')} className="radio radio-success radio-sm" /><span className="text-xs font-bold">No</span></label>
                                 </div>
                                 {tieneVigilancia === 'si' && (<div className="flex shadow-sm rounded-lg overflow-hidden border border-emerald-200"><select {...register('monedaVigilancia')} className="bg-white px-3 font-bold text-emerald-700 outline-none border-r border-emerald-200 text-xs"><option value="PEN">S/</option><option value="USD">$</option></select><input type="number" step="0.01" {...register('vigilancia')} className="input w-full bg-white font-bold focus:outline-none border-none text-gray-800 h-10" placeholder="Monto Mensual"/></div>)}
                             </div>
                         </div>
                     )}
                     
-                    {/* MODIFICADO: Mantenimiento aparece en Alquiler O en Departamentos */}
                     {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
@@ -476,7 +533,6 @@ export default function NuevaPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    {/* MODIFICADO: Partida Registral Principal siempre ocupa todo a menos que sea Alquiler o Departamento */}
                     <div className={`form-control ${(modalidadActual === 'Alquiler' || esDepartamento) ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
                             Partida Registral (Principal)
@@ -487,7 +543,6 @@ export default function NuevaPropiedadPage() {
                         />
                     </div>
 
-                    {/* MODIFICADO: Partidas Secundarias aparecen en Alquiler O en Departamentos */}
                     {(modalidadActual === 'Alquiler' || esDepartamento) && (
                         <>
                             <div className="form-control">
