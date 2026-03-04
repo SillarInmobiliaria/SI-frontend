@@ -159,7 +159,7 @@ export default function ClientesPage() {
       setShowPropSuggestions(false); 
       setTipologiasInteres([]); // Limpiamos las tipologías al cambiar de propiedad
   };
- 
+
   const handleAddZona = (zona: string) => {
       const nuevasZonas = [...zonasSelected, zona];
       setZonasSelected(nuevasZonas);
@@ -724,7 +724,104 @@ export default function ClientesPage() {
             )}
            
             {/* OTROS MODALES */}
-            {isDetailOpen && selectedCliente && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in"><div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl"><button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 absolute right-6 top-6"><FaTimes/></button><h2 className="text-2xl font-bold text-indigo-900 mb-4">{selectedCliente.nombre}</h2><div className="grid grid-cols-2 gap-4 text-sm"><p><strong>Celular:</strong> {selectedCliente.telefono1}</p><p><strong>Canal:</strong> {selectedCliente.origen || '---'}</p><p><strong>Email:</strong> {selectedCliente.email || '---'}</p></div></div></div>)}
+            {isDetailOpen && selectedCliente && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl">
+                        <button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 absolute right-6 top-6"><FaTimes/></button>
+                        
+                        {/* Cabecera del Cliente */}
+                        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center text-2xl font-black shadow-lg">
+                                {selectedCliente.nombre.charAt(0)}
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-indigo-900">{selectedCliente.nombre}</h2>
+                                <p className="text-sm font-bold text-gray-500 flex items-center gap-2 mt-1">
+                                    <span className="badge badge-sm bg-indigo-100 text-indigo-700 border-none">{selectedCliente.tipo}</span>
+                                    {selectedCliente.origen && <span className="flex items-center gap-1"><FaBullhorn className="text-orange-400"/> {selectedCliente.origen}</span>}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Datos de Contacto */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-1"><FaPhone/> Teléfono</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.telefono1}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-1"><FaEnvelope/> Correo Electrónico</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.email || 'No registrado'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-1"><FaIdCard/> Documento (DNI/RUC)</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.dni || 'No registrado'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-1"><FaCalendarAlt/> Fecha de Registro</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString() : '---'}</p>
+                            </div>
+                        </div>
+
+                        {/* Información de Interés / Requerimiento */}
+                        <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">Información de Interés</h4>
+                        
+                        {(() => {
+                            const interes = intereses.find((i: any) => i.clienteId === selectedCliente.id);
+                            const requerimiento = requerimientos.find((r: any) => r.clienteId === selectedCliente.id);
+
+                            if (interes && interes.Propiedad) {
+                                return (
+                                    <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><FaHome size={24}/></div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Propiedad Asociada</p>
+                                                <h5 className="font-black text-blue-900">{interes.Propiedad.tipo} en {interes.Propiedad.ubicacion}</h5>
+                                                <p className="text-sm text-blue-700 font-medium mt-1">{interes.Propiedad.direccion}</p>
+                                                <div className="mt-2 flex gap-3 text-xs font-bold text-blue-800">
+                                                    <span className="bg-white px-2 py-1 rounded-md shadow-sm border border-blue-100">{interes.Propiedad.moneda} {Number(interes.Propiedad.precio).toLocaleString()}</span>
+                                                    {interes.Propiedad.area && <span className="bg-white px-2 py-1 rounded-md shadow-sm border border-blue-100">{interes.Propiedad.area} m²</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {interes.nota && (
+                                            <div className="mt-4 pt-4 border-t border-blue-200">
+                                                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Notas del Interés / Tipologías</p>
+                                                <p className="text-sm font-medium text-blue-800 whitespace-pre-line">{interes.nota}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+
+                            if (requerimiento) {
+                                return (
+                                    <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl"><FaClipboardList size={24}/></div>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Requerimiento de Búsqueda</p>
+                                                    <span className={`badge badge-sm font-bold border-none ${requerimiento.prioridad === 'URGENTE' ? 'bg-red-500 text-white' : 'bg-amber-200 text-amber-800'}`}>{requerimiento.prioridad}</span>
+                                                </div>
+                                                <p className="text-sm font-medium text-amber-900 whitespace-pre-line leading-relaxed">{requerimiento.pedido}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 text-center">
+                                    <p className="text-sm font-bold text-gray-500">No hay información de interés o requerimiento registrado.</p>
+                                </div>
+                            );
+                        })()}
+
+                    </div>
+                </div>
+            )}
            
             {/* MODAL REQUERIMIENTO COMPLETO */}
             {isReqOpen && clienteReq && (
