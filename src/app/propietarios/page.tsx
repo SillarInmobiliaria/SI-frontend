@@ -8,7 +8,7 @@ import { createPropietario, toggleEstadoPropietario, eliminarPropietario, update
 import { 
   FaUserPlus, FaSearch, FaWhatsapp, FaTrash, FaBan, FaCheck, FaEye, 
   FaUserTie, FaCreditCard, FaStickyNote, FaIdCard, FaEnvelope, FaMapMarkerAlt,
-  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing, FaBuilding
+  FaBirthdayCake, FaCalendarAlt, FaEdit, FaBriefcase, FaRing, FaBuilding, FaFileContract
 } from 'react-icons/fa';
 
 export default function PropietariosPage() {
@@ -23,7 +23,6 @@ export default function PropietariosPage() {
   
   const [editingPropId, setEditingPropId] = useState<string | null>(null);
 
-  // SOLUCIÓN ERRORES TS: Agregamos <any> para que TypeScript no bloquee los campos
   const { register, handleSubmit, reset, setValue, watch } = useForm<any>({
       defaultValues: { tipoPersona: 'PN' }
   });
@@ -55,6 +54,10 @@ export default function PropietariosPage() {
       setValue('tipoPersona', prop.tipoPersona || 'PN');
       setValue('empresa', prop.empresa || '');
       setValue('ruc', prop.ruc || '');
+      
+      setValue('rolRepresentante', prop.rolRepresentante || '');
+      setValue('partidaElectronica', prop.partidaElectronica || '');
+      
       setValue('nombre', prop.nombre);
       setValue('dni', prop.dni);
       setValue('celular1', prop.celular1);
@@ -81,10 +84,10 @@ export default function PropietariosPage() {
   const onSubmit = async (data: any) => {
       setIsSubmitting(true);
       try { 
-          // Si es Persona Natural, limpiamos los datos de empresa
           if (data.tipoPersona === 'PN') {
               data.empresa = '';
               data.ruc = '';
+              data.rolRepresentante = '';
           }
 
           if (editingPropId) {
@@ -104,7 +107,6 @@ export default function PropietariosPage() {
 
   const handleNumberInput = (e: any) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
   
-  // SOLUCIÓN ERRORES TS: Forzamos (p: any) para que reconozca "empresa"
   const filtrados = propietarios.filter((p: any) => 
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
       p.dni?.includes(busqueda) || 
@@ -290,22 +292,20 @@ export default function PropietariosPage() {
                     </div>
                     <form onSubmit={handleSubmit(onSubmit)} className="p-8 bg-gradient-to-br from-gray-50 to-white">
                         
-                        {/* SECCIÓN TIPO DE PERSONA */}
                         <div className="form-control bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                             <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Persona *</label>
                             <div className="flex gap-6">
                                 <label className="flex items-center gap-2 cursor-pointer group">
-                                    <input type="radio" value="PN" {...register('tipoPersona')} className="radio radio-primary radio-sm" />
-                                    <span className="font-bold text-slate-600 group-hover:text-primary transition-colors">Persona Natural</span>
+                                    <input type="radio" value="PN" {...register('tipoPersona')} className="radio radio-indigo radio-sm" />
+                                    <span className="font-bold text-slate-600 group-hover:text-indigo-700 transition-colors">Persona Natural</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer group">
-                                    <input type="radio" value="PJ" {...register('tipoPersona')} className="radio radio-primary radio-sm" />
-                                    <span className="font-bold text-slate-600 group-hover:text-primary transition-colors">Persona Jurídica</span>
+                                    <input type="radio" value="PJ" {...register('tipoPersona')} className="radio radio-indigo radio-sm" />
+                                    <span className="font-bold text-slate-600 group-hover:text-indigo-700 transition-colors">Persona Jurídica</span>
                                 </label>
                             </div>
                         </div>
 
-                        {/* DATOS DE EMPRESA (SÓLO SI ES PJ) */}
                         {tipoPersona === 'PJ' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mb-6 animate-fade-in">
                                 <div className="form-control">
@@ -320,11 +320,23 @@ export default function PropietariosPage() {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                            <div className="md:col-span-2 pb-3 border-b-2 border-indigo-100 mb-2">
+                            <div className="md:col-span-2 pb-3 border-b-2 border-indigo-100 mb-2 flex justify-between items-center">
                               <h4 className="text-sm font-bold text-indigo-700 uppercase flex items-center gap-2">
                                 <FaUserTie/> Información {tipoPersona === 'PJ' ? 'del Representante' : 'Personal'}
                               </h4>
+                              {tipoPersona === 'PJ' && (
+                                <div className="w-1/3">
+                                    <select {...register('rolRepresentante', {required: tipoPersona === 'PJ'})} className="select select-sm select-bordered w-full bg-white border-indigo-200 text-indigo-700 font-bold">
+                                        <option value="">-- Seleccionar Rol --</option>
+                                        <option value="Gerente General">Gerente General</option>
+                                        <option value="Administrador">Administrador</option>
+                                        <option value="Director">Director</option>
+                                        <option value="Apoderado">Apoderado</option>
+                                    </select>
+                                </div>
+                              )}
                             </div>
+                            
                             <div className="form-control">
                               <label className="label font-bold text-gray-700 text-sm">{tipoPersona === 'PJ' ? 'Nombre del Representante *' : 'Nombre Completo *'}</label>
                               <input {...register('nombre', {required:true})} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors"/>
@@ -333,6 +345,14 @@ export default function PropietariosPage() {
                               <label className="label font-bold text-gray-700 text-sm">{tipoPersona === 'PJ' ? 'DNI del Representante *' : 'DNI *'}</label>
                               <input {...register('dni', {required:true, maxLength:8})} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" onInput={handleNumberInput} maxLength={8}/>
                             </div>
+                            
+                            <div className="form-control md:col-span-2 mt-2 mb-2">
+                                <label className="label font-bold text-gray-700 text-sm flex items-center gap-2">
+                                    <FaFileContract className="text-slate-400" /> Partida Electrónica
+                                </label>
+                                <input {...register('partidaElectronica')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors font-mono" placeholder="N° Partida" />
+                            </div>
+
                             <div className="form-control">
                               <label className="label font-bold text-gray-700 text-sm">Celular 1 *</label>
                               <input {...register('celular1', {required:true, maxLength:9})} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" onInput={handleNumberInput} maxLength={9}/>
@@ -366,9 +386,12 @@ export default function PropietariosPage() {
 
                             <div className="form-control md:col-span-2 mt-2">
                                 <label className="label font-bold text-gray-700 text-sm">
-                                    {tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección'}
+                                    {tipoPersona === 'PJ' ? 'Dirección Fiscal' : 'Dirección del propietario'}
                                 </label>
-                                <input {...register('direccion')} className="input input-bordered w-full bg-white border-2 border-gray-200 focus:border-indigo-500 transition-colors" placeholder="Dirección registrada" />
+                                <div className="relative">
+                                    <FaMapMarkerAlt className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"/>
+                                    <input {...register('direccion')} className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-indigo-500 transition-colors" placeholder="Dirección registrada" />
+                                </div>
                             </div>
 
                             <div className="md:col-span-2 pb-3 border-b-2 border-purple-100 mt-4 mb-2">
@@ -418,7 +441,7 @@ export default function PropietariosPage() {
             </div>
         )}
 
-        {/* MODAL DETALLE (OJITO) */}
+        {/* MODAL DETALLE */}
         {selectedProp && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto">
                 <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-4 max-h-[95vh] overflow-y-auto">
@@ -430,8 +453,8 @@ export default function PropietariosPage() {
                         <div className="flex justify-between items-start relative z-10">
                             <div className="flex gap-5 items-center">
                                 <div className="avatar placeholder">
-                                    <div className={`text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10 ${selectedProp.tipoPersona === 'PJ' ? 'bg-indigo-500/80 backdrop-blur-sm' : 'bg-white/20 backdrop-blur-sm'}`}>
-                                        {selectedProp.tipoPersona === 'PJ' ? <FaBuilding size={32} /> : selectedProp.nombre.charAt(0).toUpperCase()}
+                                    <div className={`bg-white/20 backdrop-blur-sm text-white rounded-2xl w-20 h-20 flex items-center justify-center text-4xl font-bold shadow-2xl border-4 border-white/30 ring-4 ring-white/10 ${selectedProp.tipoPersona === 'PJ' ? 'bg-indigo-500/50' : ''}`}>
+                                        {selectedProp.tipoPersona === 'PJ' ? <FaBuilding size={32}/> : selectedProp.nombre.charAt(0).toUpperCase()}
                                     </div>
                                 </div>
                                 <div>
@@ -471,13 +494,25 @@ export default function PropietariosPage() {
                                       <FaUserTie className="text-blue-500 text-lg"/> Información {selectedProp.tipoPersona === 'PJ' ? 'del Representante' : 'Personal'}
                                     </h3>
                                     <div className="space-y-4">
+                                        {selectedProp.tipoPersona === 'PJ' && selectedProp.rolRepresentante && (
+                                            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100/50 p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                                              <p className="text-xs text-indigo-700 font-bold uppercase mb-1.5">Rol del Representante</p>
+                                              <p className="font-bold text-gray-900 text-lg">{selectedProp.rolRepresentante}</p>
+                                            </div>
+                                        )}
                                         <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
                                           <p className="text-xs text-blue-700 font-bold uppercase mb-1.5">Nombre Completo</p>
                                           <p className="font-bold text-gray-900 text-lg">{selectedProp.nombre}</p>
                                         </div>
-                                        <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-xl border-l-4 border-purple-500 shadow-sm">
-                                          <p className="text-xs text-purple-700 font-bold uppercase mb-1.5">DNI</p>
-                                          <p className="font-mono font-bold text-gray-900 text-lg">{selectedProp.dni}</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-xl border-l-4 border-purple-500 shadow-sm">
+                                              <p className="text-xs text-purple-700 font-bold uppercase mb-1.5">DNI</p>
+                                              <p className="font-mono font-bold text-gray-900 text-lg">{selectedProp.dni}</p>
+                                            </div>
+                                            <div className="bg-gradient-to-r from-slate-50 to-slate-100/50 p-4 rounded-xl border-l-4 border-slate-400 shadow-sm">
+                                              <p className="text-xs text-slate-600 font-bold uppercase mb-1.5">Partida Electrónica</p>
+                                              <p className="font-mono font-bold text-gray-900">{selectedProp.partidaElectronica || 'No registrada'}</p>
+                                            </div>
                                         </div>
                                         
                                         <div className="bg-gradient-to-r from-orange-50 to-orange-100/50 p-4 rounded-xl border-l-4 border-orange-500 shadow-sm">
