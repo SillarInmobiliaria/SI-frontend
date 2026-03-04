@@ -43,7 +43,7 @@ interface FormInputs {
 }
 
 const distritosArequipa = [
-    "Alto Selva Alegre", "Arequipa (Centro)", "Cayma", "Cerro Colorado", "Characato", 
+    "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
@@ -120,7 +120,7 @@ export default function NuevaPropiedadPage() {
         monedaMantenimiento: 'PEN',
         monedaVigilancia: 'PEN',
         modalidad: 'Venta', 
-        tipo: '', 
+        tipo: 'Casa', 
         tieneMantenimiento: 'no',
         tieneVigilancia: 'no',
         exclusiva: 'no',
@@ -154,11 +154,10 @@ export default function NuevaPropiedadPage() {
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
   const modalidadActual = watch('modalidad', 'Venta');
-  const tipoInmueble = watch('tipo', '');
+  const tipoInmueble = watch('tipo', 'Casa');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
   const tieneVigilancia = watch('tieneVigilancia', 'no');
 
-  // LÓGICA DINÁMICA: Detecta cualquier texto que contenga "proyecto", "terreno", "departamento", etc.
   const esProyecto = tipoInmueble && String(tipoInmueble).toLowerCase().includes('proyecto');
   const mostrarDistribucion = tipoInmueble && !String(tipoInmueble).toLowerCase().includes('terreno') && !esProyecto;
   const esDepartamento = tipoInmueble && (String(tipoInmueble).toLowerCase().includes('departamento') || String(tipoInmueble).toLowerCase().includes('duplex'));
@@ -249,8 +248,6 @@ export default function NuevaPropiedadPage() {
 
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
-    if (!data.tipo) return alert('⚠️ Por favor, ingresa o selecciona un Tipo de Propiedad.');
-    
     setIsSubmitting(true);
     try {
         const formData = new FormData();
@@ -301,7 +298,7 @@ export default function NuevaPropiedadPage() {
         await createPropiedad(formData);
         alert('✅ Propiedad Publicada con éxito');
         router.push('/propiedades');
-    } catch (e) { alert('❌ Error al publicar. Revisa la consola.'); } finally { setIsSubmitting(false); }
+    } catch (e) { alert('❌ Error al publicar.'); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -395,8 +392,6 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    
-                    {/* MODIFICADO A DATALIST PARA AUTOCOMPLETADO INTELIGENTE */}
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
                         <input 
@@ -412,7 +407,6 @@ export default function NuevaPropiedadPage() {
                             ))}
                         </datalist>
                     </div>
-
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
                         <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-sm">
                             <option value="Venta">Venta</option>
