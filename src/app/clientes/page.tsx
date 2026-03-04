@@ -340,7 +340,6 @@ export default function ClientesPage() {
       return filtrados;
   }, [clientes, searchTerm, filterDate, filterType]);
 
-  // LÓGICA PARA OCULTAR CUARTOS Y BAÑOS EN TERRENOS Y PROYECTOS EN EL MODAL DE FICHA
   const esTerrenoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('terreno');
   const esProyectoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('proyecto');
   const tipologiasParseadas = typeof propiedadSeleccionada?.tipologias === 'string' ? JSON.parse(propiedadSeleccionada.tipologias) : propiedadSeleccionada?.tipologias;
@@ -516,8 +515,8 @@ export default function ClientesPage() {
                                                         <span className="text-xl font-black text-green-600">{propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                                     </div>
 
-                                                    {/* CHECKBOXES DE TIPOLOGÍAS PARA PROYECTOS */}
-                                                    {propiedadSeleccionada.tipo?.toLowerCase().includes('proyecto') && tipologiasParseadas && tipologiasParseadas.length > 0 && (
+                                                    {/* SELECCIÓN DE TIPOLOGÍAS PARA PROYECTOS EN NUEVO INTERESADO */}
+                                                    {esProyectoFicha && tipologiasParseadas && tipologiasParseadas.length > 0 && (
                                                         <div className="mt-4 pt-4 border-t border-blue-200">
                                                             <p className="text-xs font-bold text-blue-800 uppercase tracking-widest mb-3">¿En qué tipologías está interesado?</p>
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
