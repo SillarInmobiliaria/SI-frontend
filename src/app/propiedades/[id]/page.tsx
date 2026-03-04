@@ -11,7 +11,7 @@ import {
   FaYoutube, FaMap, FaInfoCircle, FaPlayCircle, FaLink, FaUsers,
   FaAlignLeft, FaFileUpload, FaEye, FaExternalLinkAlt,
   FaInstagram, FaTiktok, FaGlobe, FaHandshake, FaMoneyBillWave,
-  FaChevronLeft, FaChevronRight, FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaTrash
+  FaChevronLeft, FaChevronRight, FaShieldAlt, FaTools, FaCalendarAlt, FaBuilding, FaTrash, FaKey
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -122,7 +122,6 @@ export default function PropiedadDetallePage() {
     } catch (e) { alert('❌ Error al subir PDF.'); }
   };
 
-  // NUEVA FUNCIÓN: Permite eliminar un PDF específico
   const handleEliminarPdf = async (key: string, idx: number) => {
       if(!confirm('¿Seguro que deseas eliminar este documento?')) return;
       try {
@@ -135,7 +134,6 @@ export default function PropiedadDetallePage() {
           const nuevosDocumentosUrls = { ...documentosUrls, [key]: nuevos };
           setDocumentosUrls(nuevosDocumentosUrls);
           
-          // Guardamos en la Base de Datos
           await api.put(`/propiedades/${id}`, { 
               documentosUrls: nuevosDocumentosUrls,
               documentosurls: nuevosDocumentosUrls
@@ -199,6 +197,7 @@ export default function PropiedadDetallePage() {
   
   const esTerreno = propiedad.tipo?.toLowerCase().includes('terreno');
   const esProyecto = propiedad.tipo === 'Proyecto';
+  const esDepartamento = propiedad.tipo === 'Departamento' || propiedad.tipo === 'Duplex';
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -264,7 +263,7 @@ export default function PropiedadDetallePage() {
                                     <div className="bg-indigo-50 rounded-3xl p-8 border border-indigo-100 shadow-sm">
                                         <h3 className="text-lg font-black text-indigo-900 mb-6 flex items-center gap-2 uppercase tracking-widest"><FaBuilding className="text-indigo-600"/> Detalles del Proyecto</h3>
                                         
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-sm">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-sm">
                                             <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
                                                 <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaCalendarAlt size={20}/></div>
                                                 <div>
@@ -277,6 +276,13 @@ export default function PropiedadDetallePage() {
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 font-black uppercase">Ejecución</p>
                                                     <p className="font-black text-indigo-900">{propiedad.tiempoEjecucion || 'No especificado'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaKey size={20}/></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase">Fecha Entrega</p>
+                                                    <p className="font-black text-indigo-900">{propiedad.fechaEntrega || 'No especificado'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -326,8 +332,33 @@ export default function PropiedadDetallePage() {
                     {activeTab === 'legal' && isAdmin && (
                         <div className="animate-fade-in space-y-8">
                             <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
-                                <h3 className="text-lg font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios</h3>
-                                {propietarios.length > 0 ? <div className="space-y-3">{propietarios.map((p: any) => (<div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center"><div><p className="font-black text-gray-800">{p.nombre}</p><p className="text-sm text-gray-500 font-black">DNI: {p.dni}</p></div><a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle btn-success text-white"><FaWhatsapp/></a></div>))}</div> : <p className="text-gray-500 italic font-black">Sin registros.</p>}
+                                <h3 className="text-lg font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-tighter"><FaUsers/> Propietarios / Empresas</h3>
+                                {propietarios.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {propietarios.map((p: any) => (
+                                            <div key={p.id} className="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center border border-indigo-50">
+                                                <div className="flex gap-4 items-center">
+                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md ${p.tipoPersona === 'PJ' ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600'}`}>
+                                                        {p.tipoPersona === 'PJ' ? <FaBuilding /> : p.nombre.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-black text-gray-800 text-lg flex items-center gap-2">
+                                                            {p.tipoPersona === 'PJ' && p.empresa ? p.empresa : p.nombre}
+                                                            {p.tipoPersona === 'PJ' && <span className="badge badge-sm bg-indigo-100 text-indigo-700 font-bold border-none">PJ</span>}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 font-mono font-bold mt-1">
+                                                            {p.tipoPersona === 'PJ' && p.ruc ? `RUC: ${p.ruc}` : `DNI: ${p.dni}`}
+                                                            {p.tipoPersona === 'PJ' && p.empresa && ` • Rep: ${p.nombre}`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <a href={`tel:${p.celular1}`} className="btn btn-sm btn-circle bg-emerald-500 hover:bg-emerald-600 border-none text-white shadow-md"><FaWhatsapp size={16}/></a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 italic font-black">Sin registros.</p>
+                                )}
                             </div>
 
                             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -380,7 +411,7 @@ export default function PropiedadDetallePage() {
                                         </div>
                                     )}
 
-                                    {propiedad.modalidad === 'Alquiler' && Number(propiedad.mantenimiento) > 0 && (
+                                    {(propiedad.modalidad === 'Alquiler' || esDepartamento) && Number(propiedad.mantenimiento) > 0 && (
                                         <div className="col-span-2 md:col-span-5 bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-2">
                                             <span className="text-xs text-blue-700 font-black uppercase tracking-widest flex items-center gap-2">
                                                 <FaTools className="text-blue-500 text-lg"/> Mantenimiento Edificio
@@ -390,6 +421,25 @@ export default function PropiedadDetallePage() {
                                             </span>
                                         </div>
                                     )}
+                                    
+                                    <div className="col-span-2 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col text-center">
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Partida Principal</p>
+                                            <p className="font-black text-gray-800 font-mono">{propiedad.partidaRegistral || '---'}</p>
+                                        </div>
+                                        {(propiedad.modalidad === 'Alquiler' || esDepartamento) && (
+                                            <>
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col text-center">
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Partida Cochera</p>
+                                                    <p className="font-black text-gray-800 font-mono">{propiedad.partidaCochera || '---'}</p>
+                                                </div>
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col text-center">
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Partida Depósito</p>
+                                                    <p className="font-black text-gray-800 font-mono">{propiedad.partidaDeposito || '---'}</p>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -409,7 +459,6 @@ export default function PropiedadDetallePage() {
                                                     <td className="font-black text-gray-700 text-sm">{doc.label}</td>
                                                     <td>
                                                         <div className="flex flex-col gap-2 items-start">
-                                                            {/* PDFs EN LISTA CON BOTÓN DE ELIMINAR */}
                                                             {Array.isArray(documentosUrls[doc.key]) && documentosUrls[doc.key].map((url: string, idx: number) => (
                                                                 <div key={idx} className="flex items-center gap-2">
                                                                     <a href={url.startsWith('http') ? url : `${BACKEND_URL}${url}`} target="_blank" className="btn btn-xs btn-primary text-white" title={`Ver Documento ${idx + 1}`}>
@@ -421,7 +470,6 @@ export default function PropiedadDetallePage() {
                                                                 </div>
                                                             ))}
                                                             
-                                                            {/* LEGACY: SI ERA UN SOLO STRING */}
                                                             {typeof documentosUrls[doc.key] === 'string' && (
                                                                 <div className="flex items-center gap-2">
                                                                     <a href={documentosUrls[doc.key].startsWith('http') ? documentosUrls[doc.key] : `${BACKEND_URL}${documentosUrls[doc.key]}`} target="_blank" className="btn btn-xs btn-primary text-white" title="Ver Documento">
@@ -464,7 +512,19 @@ export default function PropiedadDetallePage() {
                     
                     {propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
-                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white"><FaUserTie size={18} /></div><div className="flex flex-col"><span className="text-[9px] text-blue-500 font-black uppercase tracking-tight leading-none mb-1">Titular</span><span className="text-sm font-black text-slate-800 truncate max-w-[180px]" title={propietarios[0].nombre}>{propietarios[0].nombre}</span></div></div>
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${propietarios[0].tipoPersona === 'PJ' ? 'bg-indigo-600' : 'bg-blue-600'}`}>
+                                    {propietarios[0].tipoPersona === 'PJ' ? <FaBuilding size={18} /> : <FaUserTie size={18} />}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className={`text-[9px] font-black uppercase tracking-tight leading-none mb-1 ${propietarios[0].tipoPersona === 'PJ' ? 'text-indigo-500' : 'text-blue-500'}`}>
+                                        {propietarios[0].tipoPersona === 'PJ' ? 'Empresa Titular' : 'Titular'}
+                                    </span>
+                                    <span className="text-sm font-black text-slate-800 truncate max-w-[180px]" title={propietarios[0].tipoPersona === 'PJ' && propietarios[0].empresa ? propietarios[0].empresa : propietarios[0].nombre}>
+                                        {propietarios[0].tipoPersona === 'PJ' && propietarios[0].empresa ? propietarios[0].empresa : propietarios[0].nombre}
+                                    </span>
+                                </div>
+                            </div>
                             <a href={`https://wa.me/51${propietarios[0].celular1}`} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 hover:bg-green-700 text-white border-none w-full font-black gap-2 shadow-xl shadow-green-100 h-14 text-lg transition-all hover:scale-[1.02]"> <FaWhatsapp size={24}/> CONTACTAR </a>
                         </div>
                     )}
@@ -491,25 +551,6 @@ export default function PropiedadDetallePage() {
                     <div className="flex items-center gap-4 mb-4">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-black">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
                         <div><p className="font-black text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
-                    </div>
-
-                    {propietarios.length > 1 && (
-                        <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
-                            <div className="space-y-2">
-                                {propietarios.slice(1).map((p: any) => (
-                                    <p key={p.id} className="font-black text-gray-800 text-sm flex items-center gap-2">
-                                        <FaUserTie className="text-gray-400" />
-                                        {p.nombre}
-                                    </p>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="mt-8 text-center border-t border-gray-50 pt-6">
-                        <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
-                        <p className="text-[10px] text-gray-300 mt-1 font-black">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
                     </div>
                 </div>
             </div>
