@@ -22,7 +22,6 @@ import {
   FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight
 } from 'react-icons/fa';
 
-// 1. URL CORREGIDA
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
@@ -76,7 +75,6 @@ export default function ClientesPage() {
   const [filterDate, setFilterDate] = useState(today);
   const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS');
 
-  // Modales
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false);
@@ -91,12 +89,10 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Multi-select Zonas
   const [zonasQuery, setZonasQuery] = useState('');
   const [zonasSelected, setZonasSelected] = useState<string[]>([]);
   const [showZonasSuggestions, setShowZonasSuggestions] = useState(false);
 
-  // Formularios
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>({
       defaultValues: { modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' }
   });
@@ -107,15 +103,11 @@ export default function ClientesPage() {
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
- 
-  // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
  
-  // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
 
-  // CARGA DE DATOS
   useEffect(() => {
     const loadData = async () => {
         await Promise.all([fetchClientes(), fetchPropiedades(), fetchIntereses()]);
@@ -155,7 +147,7 @@ export default function ClientesPage() {
   const handleAddZona = (zona: string) => {
       const nuevasZonas = [...zonasSelected, zona];
       setZonasSelected(nuevasZonas);
-      setValue('reqZonas', nuevasZonas.join(', ')); // Para el form principal
+      setValue('reqZonas', nuevasZonas.join(', '));
       setZonasQuery('');
       setShowZonasSuggestions(false);
   };
@@ -187,6 +179,7 @@ export default function ClientesPage() {
           tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
       } as any);
 
+      // --- CORRECCIÓN: DEFINICIÓN DE NUEVOID ---
       const nuevoId = (resp as any).data?.id || (resp as any).id;
 
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
@@ -202,7 +195,6 @@ export default function ClientesPage() {
               if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
           }
 
-          // SI ELIGE DESCARTADO, GUARDAMOS EL ESTADO DESCARTADO
           const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
           const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
 
@@ -231,7 +223,6 @@ export default function ClientesPage() {
     finally { setIsSubmitting(false); }
   };
 
-  // 2. ELIMINACIÓN CON TOAST
   const handleEliminar = async (id: string) => {
       if(!confirm('⚠️ ¿Eliminar?')) return;
       const loadingToast = toast.loading("Eliminando cliente...");
@@ -246,28 +237,21 @@ export default function ClientesPage() {
 
   const handleViewDetail = (c: any) => { setSelectedCliente(c); setDetailOpen(true); };
   const handleOpenAgendarVisita = (c: any) => { const interes = intereses.find(i => i.clienteId === c.id); const propiedadId = interes ? interes.propiedadId : ''; router.push(`/visitas?clienteId=${c.id}&clienteNombre=${encodeURIComponent(c.nombre)}&propiedadId=${propiedadId}`); };
- 
   const handleGoToSeguimiento = () => { router.push('/seguimiento'); };
   const handleGoToRequerimientos = () => { router.push('/requerimientos'); };
 
-  // 3. HANDLERS PARA EL NUEVO MODAL DE REQUERIMIENTO COMPLETO
   const handleOpenReq = (cliente: any) => {
       setClienteReq(cliente);
       setReqOpen(true);
-      setZonasSelected([]); // Limpiamos zonas
+      setZonasSelected([]);
       setZonasQuery('');
-      resetReq({ // Valores por defecto
-          reqTipo: 'COMPRA',
-          reqPrioridad: 'NORMAL',
-          reqFormaPago: 'FINANCIADO'
-      });
+      resetReq({ reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
   };
 
   const onSubmitReq = async (data: any) => {
       if (!clienteReq) return;
       const loadingToast = toast.loading("Guardando requerimiento...");
       try {
-          // Construcción del pedido detallado
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : '';
           let detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
          
@@ -284,15 +268,13 @@ export default function ClientesPage() {
               fecha: new Date().toISOString(),
               pedido: detallePedido,
               prioridad: prioridadFinal,
-              estado: estadoFinal, // Estado correcto
+              estado: estadoFinal,
               usuarioId: user?.id
           });
 
           toast.success('Requerimiento guardado', { id: loadingToast });
           setReqOpen(false);
           resetReq();
-         
-          // Refrescar
           try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){}
       } catch (error) {
           toast.error('Error al guardar requerimiento', { id: loadingToast });
@@ -328,6 +310,9 @@ export default function ClientesPage() {
       filtrados.sort((a, b) => new Date(b.fechaAlta || b.createdAt || new Date().toISOString()).getTime() - new Date(a.fechaAlta || a.createdAt || new Date().toISOString()).getTime());
       return filtrados;
   }, [clientes, searchTerm, filterDate, filterType]);
+
+  const esTerrenoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('terreno');
+  const esProyectoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('proyecto');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans text-gray-800 flex flex-col">
@@ -378,7 +363,6 @@ export default function ClientesPage() {
                             const hasRealReq = reqC && reqC.id;
                             const hasRealSeg = segC && segC.id;
 
-                            // --- LÓGICA DE ESTADO ---
                             let statusLabel = 'INTERESADO';
                             let statusColor = 'bg-orange-100 text-orange-700';
                             let avatarColor = 'bg-gradient-to-br from-orange-400 to-amber-500';
@@ -386,9 +370,8 @@ export default function ClientesPage() {
                             if (c.tipo === 'CLIENTE') {
                                 statusLabel = 'CLIENTE';
                                 statusColor = 'bg-green-100 text-green-700';
-                                avatarColor = 'bg-gradient-to-br from-green-500 to-emerald-600';
+                                avatarColor = 'bg-gradient-to-br from-green-50 to-emerald-600';
                             } else if (hasRealReq) {
-                                // Si el requerimiento está RECHAZADO o DESCARTADO
                                 if (reqC?.estado === 'RECHAZADO' || reqC?.estado === 'DESCARTADO') {
                                     statusLabel = 'DESCARTADO';
                                     statusColor = 'bg-red-100 text-red-700';
@@ -451,7 +434,6 @@ export default function ClientesPage() {
             </div>
             }
 
-            {/* MODAL NUEVO REGISTRO */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto relative">
@@ -474,7 +456,7 @@ export default function ClientesPage() {
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-2">¿Qué busca el cliente?</label>
                                     <div className="flex bg-slate-100 p-1 rounded-xl w-full">
                                             <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'PROPIEDAD' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="PROPIEDAD" className="hidden"/> <FaHome/> Interés en Propiedad</label>
-                                            <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'REQUERIMIENTO' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="REQUERIMIENTO" className="hidden"/> <FaClipboardList/> Buscar (Requerimiento)</label>
+                                            <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'REQUERIMIENTO' ? 'bg-amber-50 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="REQUERIMIENTO" className="hidden"/> <FaClipboardList/> Buscar (Requerimiento)</label>
                                     </div>
                                 </div>
                                 {modoInteres === 'PROPIEDAD' && (
@@ -576,7 +558,13 @@ export default function ClientesPage() {
                         <div className="space-y-6">
                             <div className="w-full h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl overflow-hidden relative shadow-lg border-2 border-gray-200">
                                 {propiedadSeleccionada.fotoPrincipal ? (
-                                    <img src={`${BACKEND_URL}${propiedadSeleccionada.fotoPrincipal}`} className="w-full h-full object-cover"/>
+                                    <img 
+                                        src={propiedadSeleccionada.fotoPrincipal.startsWith('http') 
+                                            ? propiedadSeleccionada.fotoPrincipal 
+                                            : `${BACKEND_URL}${propiedadSeleccionada.fotoPrincipal.startsWith('/') ? '' : '/'}${propiedadSeleccionada.fotoPrincipal}`} 
+                                        className="w-full h-full object-cover"
+                                        alt="Principal"
+                                    />
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-gray-300"><FaImages className="text-6xl"/></div>
                                 )}
@@ -584,18 +572,40 @@ export default function ClientesPage() {
                                     {propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE')}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl text-center border-2 border-indigo-100 shadow-sm"><FaBed className="mx-auto text-3xl text-indigo-500 mb-3"/><span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.habitaciones || 0}</span><span className="text-xs text-gray-600 font-semibold">Dormitorios</span></div>
-                                <div className="bg-gradient-to-br from-sky-50 to-cyan-50 p-5 rounded-2xl text-center border-2 border-sky-100 shadow-sm"><FaBath className="mx-auto text-3xl text-sky-500 mb-3"/><span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.banos || 0}</span><span className="text-xs text-gray-600 font-semibold">Baños</span></div>
-                                <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-5 rounded-2xl text-center border-2 border-orange-100 shadow-sm"><FaCar className="mx-auto text-3xl text-orange-500 mb-3"/><span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.cocheras || 0}</span><span className="text-xs text-gray-600 font-semibold">Cocheras</span></div>
-                            </div>
+
+                            {!esTerrenoFicha && !esProyectoFicha && (
+                                <div className="grid grid-cols-3 gap-4 animate-fade-in">
+                                    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl text-center border-2 border-indigo-100 shadow-sm">
+                                        <FaBed className="mx-auto text-3xl text-indigo-500 mb-3"/>
+                                        <span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.habitaciones || 0}</span>
+                                        <span className="text-xs text-gray-600 font-semibold">Dormitorios</span>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-sky-50 to-cyan-50 p-5 rounded-2xl text-center border-2 border-sky-100 shadow-sm">
+                                        <FaBath className="mx-auto text-3xl text-sky-500 mb-3"/>
+                                        <span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.banos || 0}</span>
+                                        <span className="text-xs text-gray-600 font-semibold">Baños</span>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-5 rounded-2xl text-center border-2 border-orange-100 shadow-sm">
+                                        <FaCar className="mx-auto text-3xl text-orange-500 mb-3"/>
+                                        <span className="block font-black text-gray-800 text-2xl">{propiedadSeleccionada.cocheras || 0}</span>
+                                        <span className="text-xs text-gray-600 font-semibold">Cocheras</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {esTerrenoFicha && (
+                                <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-100 text-center animate-fade-in">
+                                    <span className="font-black text-emerald-800 uppercase tracking-widest text-xs">Propiedad tipo Terreno</span>
+                                </div>
+                            )}
+
                             {propiedadSeleccionada.descripcion && (
                                 <div className="bg-white p-6 rounded-2xl border-2 border-gray-100 shadow-md">
                                     <h4 className="font-black text-gray-800 mb-3 text-sm uppercase tracking-wider flex items-center gap-2"><FaBullhorn className="text-blue-500"/> Descripción Comercial</h4>
                                     <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{propiedadSeleccionada.descripcion}</p>
                                 </div>
                             )}
-                                {propiedadSeleccionada.detalles && (
+                            {propiedadSeleccionada.detalles && (
                                 <div className="bg-purple-50 p-6 rounded-2xl border-2 border-purple-100 shadow-md">
                                     <h4 className="font-black text-purple-900 mb-3 text-sm uppercase tracking-wider flex items-center gap-2"><FaClipboardList className="text-purple-500"/> Detalles Técnicos y Acabados</h4>
                                     <p className="text-sm text-purple-800 leading-relaxed whitespace-pre-line">{propiedadSeleccionada.detalles}</p>
@@ -612,11 +622,10 @@ export default function ClientesPage() {
             {/* OTROS MODALES */}
             {isDetailOpen && selectedCliente && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in"><div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl"><button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 absolute right-6 top-6"><FaTimes/></button><h2 className="text-2xl font-bold text-indigo-900 mb-4">{selectedCliente.nombre}</h2><div className="grid grid-cols-2 gap-4 text-sm"><p><strong>Celular:</strong> {selectedCliente.telefono1}</p><p><strong>Canal:</strong> {selectedCliente.origen || '---'}</p><p><strong>Email:</strong> {selectedCliente.email || '---'}</p></div></div></div>)}
            
-            {/* 3. MODAL DE REQUERIMIENTO COMPLETO (REEMPLAZADO) */}
+            {/* MODAL REQUERIMIENTO COMPLETO */}
             {isReqOpen && clienteReq && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                        {/* Header */}
                         <div className="bg-amber-500 p-6 text-white flex justify-between items-center">
                             <div>
                                 <h3 className="font-black text-xl flex items-center gap-2"><FaClipboardList/> Nuevo Requerimiento</h3>
@@ -625,11 +634,8 @@ export default function ClientesPage() {
                             <button onClick={()=>setReqOpen(false)} className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-all"><FaTimes/></button>
                         </div>
                        
-                        {/* Body Scrollable */}
                         <div className="p-8 overflow-y-auto bg-slate-50">
                             <form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-6">
-                               
-                                {/* Tipo y Prioridad */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="form-control">
                                         <label className="label font-bold text-slate-700">Tipo Operación</label>
@@ -648,7 +654,6 @@ export default function ClientesPage() {
                                     </div>
                                 </div>
 
-                                {/* Zonas (Reutilizando lógica) */}
                                 <div className="form-control relative">
                                     <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaCity className="text-slate-400"/> Zonas / Distritos</label>
                                     <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white flex flex-wrap gap-2 items-center min-h-[50px]">
@@ -664,7 +669,6 @@ export default function ClientesPage() {
                                             onChange={(e) => { setZonasQuery(e.target.value); setShowZonasSuggestions(true); }}
                                         />
                                     </div>
-                                    {/* Sugerencias de zonas */}
                                     {showZonasSuggestions && zonasQuery && filteredDistritos.length > 0 && (
                                         <div className="absolute z-50 w-full bg-white border-2 border-amber-200 rounded-xl shadow-xl mt-1 max-h-40 overflow-y-auto">
                                             {filteredDistritos.map(d => (
@@ -676,7 +680,6 @@ export default function ClientesPage() {
                                     )}
                                 </div>
 
-                                {/* Area y Presupuesto */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="form-control">
                                         <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaRulerCombined className="text-slate-400"/> Área (m²)</label>
@@ -714,13 +717,11 @@ export default function ClientesPage() {
                                     </div>
                                 )}
 
-                                {/* Comentarios */}
                                 <div className="form-control">
                                     <label className="label font-bold text-slate-700">Comentarios Adicionales</label>
                                     <textarea {...registerReq('reqComentarios')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl h-24 resize-none bg-white" placeholder="Ej: Que tenga jardín, cochera doble..."></textarea>
                                 </div>
 
-                                {/* Botón Guardar */}
                                 <div className="pt-4 flex justify-end">
                                     <button type="submit" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
                                         <FaSave/> Guardar Requerimiento
