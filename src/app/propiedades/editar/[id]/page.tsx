@@ -41,8 +41,8 @@ interface FormInputs {
 
 const distritosArequipa = [
     "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
-    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
-    "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
+    "Chiguata", "Chivay", "Cusco", "Ilo", "Jacobo Hunter", "José Luis Bustamante y Rivero", "Juliaca", "La Joya", "Lima", "Mariano Melgar", 
+    "Miraflores", "Mollebaya", "Mollendo", "Moquegua", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
@@ -68,6 +68,7 @@ export default function EditarPropiedadPage() {
   
   const [propietariosSeleccionados, setPropietariosSeleccionados] = useState<any[]>([]);
   
+  // ESTADOS PARA BUSCADOR PROPIETARIO
   const [busquedaPropietario, setBusquedaPropietario] = useState('');
   const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
@@ -90,6 +91,7 @@ export default function EditarPropiedadPage() {
   const tieneMantenimiento = watch('tieneMantenimiento');
   const tieneVigilancia = watch('tieneVigilancia');
   
+  // LÓGICA DINÁMICA: Detecta cualquier texto que contenga "proyecto", "terreno", "departamento", etc.
   const esProyecto = tipoInmueble && String(tipoInmueble).toLowerCase().includes('proyecto');
   const mostrarDistribucion = tipoInmueble && !String(tipoInmueble).toLowerCase().includes('terreno') && !esProyecto;
   const esDepartamento = tipoInmueble && (String(tipoInmueble).toLowerCase().includes('departamento') || String(tipoInmueble).toLowerCase().includes('duplex'));
@@ -119,6 +121,7 @@ export default function EditarPropiedadPage() {
             setValue('renovable', p.renovable ? 'si' : 'no');
             setValue('incluyeIgv', p.incluyeIgv ? 'si' : 'no');
             
+            // CARGAR MANTENIMIENTO Y VIGILANCIA
             if (Number(p.mantenimiento) > 0) {
                 setValue('tieneMantenimiento', 'si');
                 setValue('mantenimiento', p.mantenimiento);
@@ -135,6 +138,7 @@ export default function EditarPropiedadPage() {
             }
             setValue('monedaVigilancia', p.monedaVigilancia || 'PEN');
 
+            // CARGAR TIPOLOGÍAS
             if (p.tipologias) {
                 const tipoArr = typeof p.tipologias === 'string' ? JSON.parse(p.tipologias) : p.tipologias;
                 setValue('tipologias', tipoArr);
@@ -153,7 +157,7 @@ export default function EditarPropiedadPage() {
         } catch (e) { router.back(); }
     };
     init();
-  }, [id]);
+  }, [id, fetchPropietarios, setValue, router]);
 
   const handleGenerarIA = async () => {
     setGenerandoIA(true);
@@ -232,6 +236,7 @@ export default function EditarPropiedadPage() {
             }
         });
 
+        // SOLO SE AGREGA LA TIPOLOGÍA. FECHA ENTREGA YA SE ENVIÓ EN EL BUCLE AUTOMÁTICO
         if (esProyecto) {
             formData.append('tipologias', JSON.stringify(data.tipologias));
         }
@@ -609,6 +614,7 @@ export default function EditarPropiedadPage() {
                         <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Cambiar Foto Portada</label>
                         <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
                         
+                        {/* Muestra foto antigua o nueva */}
                         {existingMainPhoto && !previewMain && (
                             <div className="relative mt-4">
                                 <img src={existingMainPhoto.startsWith('http') ? existingMainPhoto : `${BACKEND_URL}${existingMainPhoto}`} alt="Portada Antigua" className="h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>
