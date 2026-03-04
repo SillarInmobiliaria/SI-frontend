@@ -1,22 +1,24 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
-import { 
+import {
     createCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento,
-    getRequerimientos 
-} from '../../services/api'; 
-import { useAuth } from '../../context/AuthContext'; 
+    getRequerimientos
+} from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { getSeguimientos } from '../../services/api';
-import { 
-  FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck, 
+import toast, { Toaster } from 'react-hot-toast';
+
+import {
+  FaUser, FaSearch, FaEye, FaPhone, FaUserPlus, FaTrafficLight, FaCalendarCheck,
   FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaHistory, FaInfoCircle, FaBullhorn,
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
-  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave, 
+  FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave,
   FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight
 } from 'react-icons/fa';
 
@@ -24,33 +26,33 @@ import {
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
-    "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
-    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", 
-    "Mariano Melgar", "Miraflores", "Mollebaya", "Paucarpata", "Pocsi", 
-    "Polobaya", "Quequeña", "Sabandía", "Sachaca", "San Juan de Siguas", 
-    "San Juan de Tarucani", "Santa Isabel de Siguas", "Santa Rita de Siguas", 
+    "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato",
+    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya",
+    "Mariano Melgar", "Miraflores", "Mollebaya", "Paucarpata", "Pocsi",
+    "Polobaya", "Quequeña", "Sabandía", "Sachaca", "San Juan de Siguas",
+    "San Juan de Tarucani", "Santa Isabel de Siguas", "Santa Rita de Siguas",
     "Socabaya", "Tiabaya", "Uchumayo", "Vitor", "Yanahuara", "Yarabamba", "Yura"
 ];
 
 const BANCOS_PERU = [
-    "BCP (Banco de Crédito)", "BBVA", "Interbank", "Scotiabank", "Banco de la Nación", 
+    "BCP (Banco de Crédito)", "BBVA", "Interbank", "Scotiabank", "Banco de la Nación",
     "BanBif", "Pichincha", "GNB", "Banco de Comercio", "Caja Arequipa", "Caja Cusco", "Otro"
 ];
 
 interface FormClienteCompleto {
   nombre: string;
-  telefono1: string; 
+  telefono1: string;
   dni?: string;
   email?: string;
   direccion?: string;
-  origen?: string; 
+  origen?: string;
   fechaAlta: string;
   modoInteres: 'PROPIEDAD' | 'REQUERIMIENTO';
   propiedadId?: string;
   asesorCliente?: string;
   observaciones?: string;
   reqTipo?: 'COMPRA' | 'ALQUILER';
-  reqZonas?: string; 
+  reqZonas?: string;
   reqAreaMin?: string;
   reqAreaMax?: string;
   reqPresupuestoMin?: string;
@@ -62,29 +64,29 @@ interface FormClienteCompleto {
 }
 
 export default function ClientesPage() {
-  const router = useRouter(); 
+  const router = useRouter();
   const { clientes, fetchClientes, propiedades, fetchPropiedades, intereses, fetchIntereses, loading } = useInmobiliariaStore();
   const { user } = useAuth();
   const isAdmin = user?.rol === 'ADMIN' || user?.rol === 'admin';
 
   const [requerimientos, setRequerimientos] = useState<any[]>([]);
   const [seguimientos, setSeguimientos] = useState<any[]>([]);
-  
+ 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
   const [filterDate, setFilterDate] = useState(today);
-  const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS'); 
+  const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS');
 
   // Modales
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
-  const [showFullProperty, setShowFullProperty] = useState(false); 
+  const [showFullProperty, setShowFullProperty] = useState(false);
   const [isSeguimientoOpen, setSeguimientoOpen] = useState(false);
   const [clienteSeguimiento, setClienteSeguimiento] = useState<any>(null);
   const [isReqOpen, setReqOpen] = useState(false);
   const [clienteReq, setClienteReq] = useState<any>(null);
 
-  const [propSearch, setPropSearch] = useState(''); 
-  const [showPropSuggestions, setShowPropSuggestions] = useState(false); 
+  const [propSearch, setPropSearch] = useState('');
+  const [showPropSuggestions, setShowPropSuggestions] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,10 +107,10 @@ export default function ClientesPage() {
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
-  
+ 
   // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
-  
+ 
   // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
@@ -132,7 +134,7 @@ export default function ClientesPage() {
   const getISOFechaPeru = (fechaStr: string) => {
       if (!fechaStr) return new Date().toISOString();
       const [anio, mes, dia] = fechaStr.split('-').map(Number);
-      const fecha = new Date(anio, mes - 1, dia, 12, 0, 0); 
+      const fecha = new Date(anio, mes - 1, dia, 12, 0, 0);
       return fecha.toISOString();
   };
 
@@ -149,42 +151,43 @@ export default function ClientesPage() {
   }, [zonasQuery, zonasSelected]);
 
   const handleSelectPropiedad = (prop: any) => { setValue('propiedadId', prop.id); setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); setShowPropSuggestions(false); };
-  
-  const handleAddZona = (zona: string) => { 
-      const nuevasZonas = [...zonasSelected, zona]; 
-      setZonasSelected(nuevasZonas); 
+ 
+  const handleAddZona = (zona: string) => {
+      const nuevasZonas = [...zonasSelected, zona];
+      setZonasSelected(nuevasZonas);
       setValue('reqZonas', nuevasZonas.join(', ')); // Para el form principal
-      setZonasQuery(''); 
-      setShowZonasSuggestions(false); 
+      setZonasQuery('');
+      setShowZonasSuggestions(false);
   };
-  
-  const handleRemoveZona = (zona: string) => { 
-      const nuevasZonas = zonasSelected.filter(z => z !== zona); 
-      setZonasSelected(nuevasZonas); 
-      setValue('reqZonas', nuevasZonas.join(', ')); 
+ 
+  const handleRemoveZona = (zona: string) => {
+      const nuevasZonas = zonasSelected.filter(z => z !== zona);
+      setZonasSelected(nuevasZonas);
+      setValue('reqZonas', nuevasZonas.join(', '));
   };
-  
+ 
   const handleOpenModal = () => {
       setModalOpen(true);
       setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery('');
-      reset({ modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' }); 
+      reset({ modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
       setShowFullProperty(false);
   };
 
   const onSubmitCliente = async (data: FormClienteCompleto) => {
     setIsSubmitting(true);
+    const loadingToast = toast.loading("Guardando cliente...");
     try {
       const resp = await createCliente({
-          nombre: data.nombre, 
-          telefono1: data.telefono1, 
-          dni: data.dni || undefined, 
+          nombre: data.nombre,
+          telefono1: data.telefono1,
+          dni: data.dni || undefined,
           email: data.email || undefined,
-          fechaAlta: getISOFechaPeru(data.fechaAlta), 
-          origen: data.origen, 
-          tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO' 
+          fechaAlta: getISOFechaPeru(data.fechaAlta),
+          origen: data.origen,
+          tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
       } as any);
 
-      const nuevoId = (resp as any).data?.id || (resp as any).id; 
+      const nuevoId = (resp as any).data?.id || (resp as any).id;
 
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
         await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: `Registro inicial. ${data.observaciones || ''}` });
@@ -193,7 +196,7 @@ export default function ClientesPage() {
       if (data.modoInteres === 'REQUERIMIENTO' && nuevoId) {
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : data.reqZonas;
           let detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
-          
+         
           if (data.reqTipo === 'COMPRA') {
               detallePedido += `\n Pago: ${data.reqFormaPago}.`;
               if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
@@ -203,49 +206,54 @@ export default function ClientesPage() {
           const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
           const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
 
-          await createRequerimiento({ 
-              clienteId: nuevoId, 
-              fecha: new Date().toISOString(), 
-              pedido: detallePedido, 
-              prioridad: prioridadFinal, 
+          await createRequerimiento({
+              clienteId: nuevoId,
+              fecha: new Date().toISOString(),
+              pedido: detallePedido,
+              prioridad: prioridadFinal,
               estado: estadoFinal,
-              usuarioId: user?.id 
+              usuarioId: user?.id
           });
       }
 
       await fetchClientes(); await fetchIntereses();
       try { const reqs = await getRequerimientos(); setRequerimientos(reqs || []); } catch(e){}
-      try { const segs = await getSeguimientos(); setSeguimientos(segs || []); } catch(e){} 
+      try { const segs = await getSeguimientos(); setSeguimientos(segs || []); } catch(e){}
 
       setModalOpen(false); reset();
-      alert('✅ Registrado Exitosamente');
-      if (data.fechaAlta === today) setFilterDate(today); else setFilterDate(data.fechaAlta); 
+      toast.success('Registrado Exitosamente', { id: loadingToast });
+      if (data.fechaAlta === today) setFilterDate(today); else setFilterDate(data.fechaAlta);
 
-    } catch (error) { console.error(error); alert('❌ Error al registrar'); } 
+    } catch (error) { 
+        console.error(error); 
+        toast.error('Error al registrar', { id: loadingToast }); 
+    }
     finally { setIsSubmitting(false); }
   };
 
-  // 2. ELIMINACIÓN ARREGLADA (Sin Number cast)
-  const handleEliminar = async (id: string) => { 
-      if(!confirm('⚠️ ¿Eliminar?')) return; 
-      try { 
+  // 2. ELIMINACIÓN CON TOAST
+  const handleEliminar = async (id: string) => {
+      if(!confirm('⚠️ ¿Eliminar?')) return;
+      const loadingToast = toast.loading("Eliminando cliente...");
+      try {
           await eliminarCliente(id);
-          fetchClientes(); 
-      } catch (e) { 
-          alert('❌ Error al eliminar'); 
-      } 
+          fetchClientes();
+          toast.success('Cliente eliminado correctamente', { id: loadingToast });
+      } catch (e) {
+          toast.error('Error al eliminar', { id: loadingToast });
+      }
   };
 
   const handleViewDetail = (c: any) => { setSelectedCliente(c); setDetailOpen(true); };
   const handleOpenAgendarVisita = (c: any) => { const interes = intereses.find(i => i.clienteId === c.id); const propiedadId = interes ? interes.propiedadId : ''; router.push(`/visitas?clienteId=${c.id}&clienteNombre=${encodeURIComponent(c.nombre)}&propiedadId=${propiedadId}`); };
-  
+ 
   const handleGoToSeguimiento = () => { router.push('/seguimiento'); };
-  const handleGoToRequerimientos = () => { router.push('/requerimientos'); }; 
+  const handleGoToRequerimientos = () => { router.push('/requerimientos'); };
 
   // 3. HANDLERS PARA EL NUEVO MODAL DE REQUERIMIENTO COMPLETO
-  const handleOpenReq = (cliente: any) => { 
-      setClienteReq(cliente); 
-      setReqOpen(true); 
+  const handleOpenReq = (cliente: any) => {
+      setClienteReq(cliente);
+      setReqOpen(true);
       setZonasSelected([]); // Limpiamos zonas
       setZonasQuery('');
       resetReq({ // Valores por defecto
@@ -255,13 +263,14 @@ export default function ClientesPage() {
       });
   };
 
-  const onSubmitReq = async (data: any) => { 
-      if (!clienteReq) return; 
-      try { 
+  const onSubmitReq = async (data: any) => {
+      if (!clienteReq) return;
+      const loadingToast = toast.loading("Guardando requerimiento...");
+      try {
           // Construcción del pedido detallado
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : '';
           let detallePedido = `Busca: ${data.reqTipo} en ${zonasFinales || 'Zonas varias'}. Área: ${data.reqAreaMin || 0} - ${data.reqAreaMax || 'Max'} m². Presupuesto: ${data.reqPresupuestoMin || 0} - ${data.reqPresupuestoMax || 'Max'}. Notas: ${data.reqComentarios || ''}`;
-          
+         
           if (data.reqTipo === 'COMPRA') {
               detallePedido += `\n Pago: ${data.reqFormaPago}.`;
               if (data.reqFormaPago !== 'CONTADO') detallePedido += ` Banco: ${data.reqBanco || 'Por definir'}`;
@@ -270,45 +279,46 @@ export default function ClientesPage() {
           const estadoFinal = data.reqPrioridad === 'DESCARTADO' ? 'DESCARTADO' : 'PENDIENTE';
           const prioridadFinal = data.reqPrioridad === 'DESCARTADO' ? 'NORMAL' : data.reqPrioridad;
 
-          await createRequerimiento({ 
-              clienteId: clienteReq.id, 
-              fecha: new Date().toISOString(), 
-              pedido: detallePedido, 
-              prioridad: prioridadFinal, 
+          await createRequerimiento({
+              clienteId: clienteReq.id,
+              fecha: new Date().toISOString(),
+              pedido: detallePedido,
+              prioridad: prioridadFinal,
               estado: estadoFinal, // Estado correcto
-              usuarioId: user?.id 
-          }); 
+              usuarioId: user?.id
+          });
 
-          alert('✅ Requerimiento guardado'); 
-          setReqOpen(false); 
-          resetReq(); 
-          
+          toast.success('Requerimiento guardado', { id: loadingToast });
+          setReqOpen(false);
+          resetReq();
+         
           // Refrescar
-          try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){} 
-      } catch (error) { 
-          alert('❌ Error al guardar requerimiento'); 
-      } 
+          try{ const reqs = await getRequerimientos(); setRequerimientos(reqs); }catch(e){}
+      } catch (error) {
+          toast.error('Error al guardar requerimiento', { id: loadingToast });
+      }
   };
 
   const handleOpenSeguimientoModal = (cliente: any) => { setClienteSeguimiento(cliente); setSeguimientoOpen(true); resetSeg(); };
-  const onSubmitSeguimiento = async (data: any) => { 
-      if (!clienteSeguimiento) return; 
-      try { 
-          await createSeguimiento({ 
-              clienteId: clienteSeguimiento.id, 
-              usuarioId: user?.id, 
-              fecha: new Date().toISOString(), 
-              comentario: data.comentario, 
-              fechaProxima: getISOFechaPeru(data.fechaProxima), 
-              estado: data.estado 
-          }); 
-          alert('✅ Seguimiento registrado'); 
-          setSeguimientoOpen(false); 
-          resetSeg(); 
-          try{ const segs = await getSeguimientos(); setSeguimientos(segs); }catch(e){} 
-      } catch (error) { alert('❌ Error'); } 
+  const onSubmitSeguimiento = async (data: any) => {
+      if (!clienteSeguimiento) return;
+      const loadingToast = toast.loading("Guardando seguimiento...");
+      try {
+          await createSeguimiento({
+              clienteId: clienteSeguimiento.id,
+              usuarioId: user?.id,
+              fecha: new Date().toISOString(),
+              comentario: data.comentario,
+              fechaProxima: getISOFechaPeru(data.fechaProxima),
+              estado: data.estado
+          });
+          toast.success('Seguimiento registrado', { id: loadingToast });
+          setSeguimientoOpen(false);
+          resetSeg();
+          try{ const segs = await getSeguimientos(); setSeguimientos(segs); }catch(e){}
+      } catch (error) { toast.error('Error al registrar seguimiento', { id: loadingToast }); }
   };
-  
+ 
   const handleNumberInput = (e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
 
   const clientesFiltrados = useMemo(() => {
@@ -322,9 +332,10 @@ export default function ClientesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans text-gray-800 flex flex-col">
       <Navbar />
-      
+      <Toaster position="top-right" reverseOrder={false} />
+     
       <div className="flex flex-1 relative">
-          <SidebarAtencion /> 
+          <SidebarAtencion />
 
           <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-8 rounded-2xl shadow-lg border border-indigo-100 backdrop-blur-sm bg-white/80">
@@ -334,7 +345,7 @@ export default function ClientesPage() {
                 <button onClick={handleOpenModal} className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg flex items-center gap-2 transform hover:scale-105 transition-all"><FaUserPlus className="text-lg"/> Nuevo</button>
             </div>
             </div>
-            
+           
             <div className="flex flex-col xl:flex-row items-center justify-between mb-8 bg-white p-6 rounded-2xl shadow-lg border border-gray-100 gap-6 transition-all">
                 <div className="flex items-center gap-5 w-full xl:w-auto">
                     <div className={`p-4 rounded-2xl shadow-sm ${searchTerm ? 'bg-orange-100 text-orange-600' : 'bg-indigo-100 text-indigo-600'}`}>{searchTerm ? <FaHistory className="text-2xl"/> : <FaCalendarAlt className="text-2xl"/>}</div>
@@ -352,8 +363,8 @@ export default function ClientesPage() {
                 </div>
             </div>
 
-            {loading ? <div className="text-center py-20 font-bold text-gray-400">Cargando...</div> : 
-            clientesFiltrados.length === 0 ? <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200"><p className="text-gray-400 font-bold">No hay registros</p></div> : 
+            {loading ? <div className="text-center py-20 font-bold text-gray-400">Cargando...</div> :
+            clientesFiltrados.length === 0 ? <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200"><p className="text-gray-400 font-bold">No hay registros</p></div> :
             <div className="overflow-x-auto pb-10">
                 <table className="table w-full border-separate border-spacing-y-3">
                     <thead><tr className="text-gray-500 text-xs font-black uppercase tracking-wider pl-4"><th className="bg-transparent border-none py-4">Nivel</th><th className="bg-transparent border-none py-4">Nombre</th><th className="bg-transparent border-none py-4">Contacto</th><th className="bg-transparent border-none py-4">Interés</th><th className="bg-transparent border-none text-center py-4">Acciones</th></tr></thead>
@@ -363,9 +374,9 @@ export default function ClientesPage() {
                             const reqC = requerimientos.find(r => r.clienteId === c.id);
                             const segC = seguimientos.find(s => s.clienteId === c.id);
                             const propC = interesC?.Propiedad;
-                            
+                           
                             const hasRealReq = reqC && reqC.id;
-                            const hasRealSeg = segC && segC.id; 
+                            const hasRealSeg = segC && segC.id;
 
                             // --- LÓGICA DE ESTADO ---
                             let statusLabel = 'INTERESADO';
@@ -408,7 +419,7 @@ export default function ClientesPage() {
 
                                     <td className="border-y border-gray-100 font-bold text-gray-800">{c.nombre}</td>
                                     <td className="border-y border-gray-100 text-sm font-semibold text-gray-600"><FaPhone className="inline mr-1 text-indigo-400"/> {c.telefono1}</td>
-                                    
+                                   
                                     <td className="border-y border-gray-100">
                                         {propC ? (
                                             <div className="text-xs flex flex-col gap-1">
@@ -470,7 +481,7 @@ export default function ClientesPage() {
                                     <div className="animate-fade-in space-y-4">
                                             <div className="form-control relative"><label className="label font-bold text-slate-700">Propiedad de Interés</label><div className="relative"><FaSearch className="absolute left-3 top-3.5 text-slate-400"/><input type="text" className="w-full pl-10 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" placeholder="Buscar propiedad..." value={propSearch} onChange={(e) => { setPropSearch(e.target.value); setShowPropSuggestions(true); if(!e.target.value) setValue('propiedadId', ''); }}/><input type="hidden" {...register('propiedadId')} />
                                             {showPropSuggestions && propSearch && filteredProps.length > 0 && (<div className="absolute z-50 w-full bg-white border-2 border-indigo-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto">{filteredProps.map(p => (<div key={p.id} onClick={() => handleSelectPropiedad(p)} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 flex flex-col"><span className="font-bold text-slate-800">{p.tipo} - {p.ubicacion}</span><span className="text-xs text-slate-500">{p.direccion}</span></div>))}</div>)}</div></div>
-                                            
+                                           
                                             {propiedadSeleccionada && (
                                                 <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 relative shadow-md">
                                                     <div className="flex justify-between items-center mb-4">
@@ -498,7 +509,7 @@ export default function ClientesPage() {
                                     <div className="animate-fade-in space-y-4 border border-amber-200 bg-amber-50/30 p-5 rounded-xl">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="form-control"><label className="label font-bold text-slate-700">Tipo Operación</label><select {...register('reqTipo')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl"><option value="COMPRA">Compra</option><option value="ALQUILER">Alquiler</option></select></div>
-                                                
+                                               
                                                 <div className="form-control">
                                                     <label className="label font-bold text-slate-700">Prioridad</label>
                                                     <select {...register('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl">
@@ -597,10 +608,10 @@ export default function ClientesPage() {
                     </div>
                 </div>
             )}
-            
+           
             {/* OTROS MODALES */}
             {isDetailOpen && selectedCliente && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in"><div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl"><button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 absolute right-6 top-6"><FaTimes/></button><h2 className="text-2xl font-bold text-indigo-900 mb-4">{selectedCliente.nombre}</h2><div className="grid grid-cols-2 gap-4 text-sm"><p><strong>Celular:</strong> {selectedCliente.telefono1}</p><p><strong>Canal:</strong> {selectedCliente.origen || '---'}</p><p><strong>Email:</strong> {selectedCliente.email || '---'}</p></div></div></div>)}
-            
+           
             {/* 3. MODAL DE REQUERIMIENTO COMPLETO (REEMPLAZADO) */}
             {isReqOpen && clienteReq && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -613,11 +624,11 @@ export default function ClientesPage() {
                             </div>
                             <button onClick={()=>setReqOpen(false)} className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-all"><FaTimes/></button>
                         </div>
-                        
+                       
                         {/* Body Scrollable */}
                         <div className="p-8 overflow-y-auto bg-slate-50">
                             <form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-6">
-                                
+                               
                                 {/* Tipo y Prioridad */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="form-control">
