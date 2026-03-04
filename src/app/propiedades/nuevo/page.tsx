@@ -49,7 +49,6 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
-// --- COMPONENTE CHECKBOX MODIFICADO PARA MULTIPLES PDFS ---
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFiles = pdfFiles[name] || []; 
@@ -70,7 +69,6 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
             <div className="animate-in fade-in slide-in-from-top-1 flex flex-col gap-2">
                 <div className={`flex flex-col gap-2 px-4 py-3 border border-dashed rounded-lg transition-colors ${selectedFiles.length > 0 ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-blue-300 hover:bg-blue-50'}`}>
                     
-                    {/* Lista de archivos ya subidos */}
                     {selectedFiles.map((file: File, idx: number) => (
                         <div key={idx} className="flex justify-between items-center bg-white p-2 rounded border border-emerald-100 shadow-sm">
                             <span className="text-[10px] font-bold uppercase truncate max-w-[120px] text-emerald-700 flex items-center gap-1">
@@ -82,7 +80,6 @@ const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileR
                         </div>
                     ))}
 
-                    {/* Botón para subir */}
                     <label className="flex items-center justify-center gap-2 cursor-pointer w-full py-1.5 mt-1 border border-blue-200 border-dashed rounded bg-blue-50/50 hover:bg-blue-100 transition-colors">
                         <FaPlus className="text-blue-600 text-xs"/> <FaFileUpload className="text-blue-500 text-xs"/>
                         <span className="text-[10px] font-bold uppercase text-blue-600">Agregar PDF</span>
@@ -259,7 +256,6 @@ export default function NuevaPropiedadPage() {
 
         if (esProyecto) {
             formData.append('tipologias', JSON.stringify(data.tipologias));
-            if(data.fechaEntrega) formData.append('fechaEntrega', data.fechaEntrega); 
         }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
