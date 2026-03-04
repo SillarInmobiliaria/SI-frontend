@@ -195,9 +195,9 @@ export default function PropiedadDetallePage() {
   const linksDisponibles = [propiedad.link1, propiedad.link2, propiedad.link3, propiedad.link4, propiedad.link5].filter(Boolean);
   const propietarios = propiedad.Propietarios ?? propiedad.propietarios ?? [];
   
-  const esTerreno = propiedad.tipo?.toLowerCase().includes('terreno');
-  const esProyecto = propiedad.tipo === 'Proyecto';
-  const esDepartamento = propiedad.tipo === 'Departamento' || propiedad.tipo === 'Duplex';
+  const esTerreno = propiedad.tipo && String(propiedad.tipo).toLowerCase().includes('terreno');
+  const esProyecto = propiedad.tipo && String(propiedad.tipo).toLowerCase().includes('proyecto');
+  const esDepartamento = propiedad.tipo && (String(propiedad.tipo).toLowerCase().includes('departamento') || String(propiedad.tipo).toLowerCase().includes('duplex'));
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -275,7 +275,7 @@ export default function PropiedadDetallePage() {
                                                 <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaTools size={20}/></div>
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 font-black uppercase">Ejecución</p>
-                                                    <p className="font-black text-indigo-900">{propiedad.fechaEntrega || 'No especificado'}</p>
+                                                    <p className="font-black text-indigo-900">{propiedad.tiempoEjecucion || 'No especificado'}</p>
                                                 </div>
                                             </div>
                                             <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4">
@@ -551,6 +551,25 @@ export default function PropiedadDetallePage() {
                     <div className="flex items-center gap-4 mb-4">
                         <div className="avatar placeholder"><div className="bg-indigo-600 text-white rounded-2xl w-14 h-14 flex items-center justify-center text-xl font-black">{propiedad.asesor?.charAt(0) || 'S'}</div></div>
                         <div><p className="font-black text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
+                    </div>
+
+                    {propietarios.length > 1 && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
+                            <div className="space-y-2">
+                                {propietarios.slice(1).map((p: any) => (
+                                    <p key={p.id} className="font-black text-gray-800 text-sm flex items-center gap-2">
+                                        <FaUserTie className="text-gray-400" />
+                                        {p.nombre}
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-8 text-center border-t border-gray-50 pt-6">
+                        <p className="text-[10px] text-gray-400 font-black uppercase">Ref: PROP-{propiedad.id.slice(0,6).toUpperCase()}</p>
+                        <p className="text-[10px] text-gray-300 mt-1 font-black">Registrado: {new Date(propiedad.createdAt).toLocaleDateString()}</p>
                     </div>
                 </div>
             </div>
