@@ -120,7 +120,7 @@ export default function NuevaPropiedadPage() {
         monedaMantenimiento: 'PEN',
         monedaVigilancia: 'PEN',
         modalidad: 'Venta', 
-        tipo: 'Casa', 
+        tipo: '',
         tieneMantenimiento: 'no',
         tieneVigilancia: 'no',
         exclusiva: 'no',
@@ -154,7 +154,7 @@ export default function NuevaPropiedadPage() {
   const [previewGallery, setPreviewGallery] = useState<string[]>([]);
 
   const modalidadActual = watch('modalidad', 'Venta');
-  const tipoInmueble = watch('tipo', 'Casa');
+  const tipoInmueble = watch('tipo', '');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
   const tieneVigilancia = watch('tieneVigilancia', 'no');
 
@@ -248,6 +248,8 @@ export default function NuevaPropiedadPage() {
 
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
+    if (!data.tipo) return alert('⚠️ Por favor, ingresa o selecciona un Tipo de Propiedad.');
+    
     setIsSubmitting(true);
     try {
         const formData = new FormData();
@@ -298,7 +300,7 @@ export default function NuevaPropiedadPage() {
         await createPropiedad(formData);
         alert('✅ Propiedad Publicada con éxito');
         router.push('/propiedades');
-    } catch (e) { alert('❌ Error al publicar.'); } finally { setIsSubmitting(false); }
+    } catch (e) { alert('❌ Error al publicar. Revisa la consola.'); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -392,13 +394,14 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
                         <input 
                             list="tipos-propiedad" 
                             {...register('tipo', {required:true})} 
                             className="input input-bordered w-full bg-white font-semibold text-sm" 
-                            placeholder="Ej: Casa, Proyecto Departamentos..."
+                            placeholder="Buscar tipo..."
                             autoComplete="off"
                         />
                         <datalist id="tipos-propiedad">
@@ -407,6 +410,7 @@ export default function NuevaPropiedadPage() {
                             ))}
                         </datalist>
                     </div>
+
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
                         <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-sm">
                             <option value="Venta">Venta</option>
