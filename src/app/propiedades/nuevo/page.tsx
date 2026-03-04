@@ -44,8 +44,8 @@ interface FormInputs {
 
 const distritosArequipa = [
     "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
-    "Chiguata", "Jacobo Hunter", "José Luis Bustamante y Rivero", "La Joya", "Mariano Melgar", 
-    "Miraflores", "Mollebaya", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
+    "Chiguata", "Chivay", "Cusco", "Ilo", "Jacobo Hunter", "José Luis Bustamante y Rivero", "Juliaca", "La Joya", "Lima", "Mariano Melgar", 
+    "Miraflores", "Mollebaya", "Mollendo", "Moquegua", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
