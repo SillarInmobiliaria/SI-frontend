@@ -96,6 +96,9 @@ export default function ClientesPage() {
   const [zonasSelected, setZonasSelected] = useState<string[]>([]);
   const [showZonasSuggestions, setShowZonasSuggestions] = useState(false);
 
+  // Estado para Tipologías de Interés en Proyectos
+  const [tipologiasInteres, setTipologiasInteres] = useState<string[]>([]);
+
   // Formularios
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>({
       defaultValues: { modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' }
@@ -150,7 +153,12 @@ export default function ClientesPage() {
       return DISTRITOS_SUGERIDOS.filter(d => d.toLowerCase().includes(search) && !zonasSelected.includes(d));
   }, [zonasQuery, zonasSelected]);
 
-  const handleSelectPropiedad = (prop: any) => { setValue('propiedadId', prop.id); setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); setShowPropSuggestions(false); };
+  const handleSelectPropiedad = (prop: any) => { 
+      setValue('propiedadId', prop.id); 
+      setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); 
+      setShowPropSuggestions(false); 
+      setTipologiasInteres([]); // Limpiamos las tipologías al cambiar de propiedad
+  };
  
   const handleAddZona = (zona: string) => {
       const nuevasZonas = [...zonasSelected, zona];
@@ -168,9 +176,17 @@ export default function ClientesPage() {
  
   const handleOpenModal = () => {
       setModalOpen(true);
-      setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery('');
+      setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery(''); setTipologiasInteres([]);
       reset({ modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
       setShowFullProperty(false);
+  };
+
+  const handleToggleTipologia = (tipologiaNombre: string) => {
+      if (tipologiasInteres.includes(tipologiaNombre)) {
+          setTipologiasInteres(prev => prev.filter(t => t !== tipologiaNombre));
+      } else {
+          setTipologiasInteres(prev => [...prev, tipologiaNombre]);
+      }
   };
 
   const onSubmitCliente = async (data: FormClienteCompleto) => {
@@ -187,11 +203,16 @@ export default function ClientesPage() {
           tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
       } as any);
 
-      // --- CORRECCIÓN: DEFINICIÓN DE NUEVOID ---
       const nuevoId = (resp as any).data?.id || (resp as any).id;
 
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
-        await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: `Registro inicial. ${data.observaciones || ''}` });
+        let notaInteres = `Registro inicial. ${data.observaciones || ''}`;
+        
+        if (tipologiasInteres.length > 0) {
+            notaInteres += `\nInteresado en tipologías: ${tipologiasInteres.join(', ')}.`;
+        }
+
+        await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
       }
 
       if (data.modoInteres === 'REQUERIMIENTO' && nuevoId) {
@@ -494,6 +515,29 @@ export default function ClientesPage() {
                                                         <span className="font-bold text-gray-500 text-sm">$ Precio:</span>
                                                         <span className="text-xl font-black text-green-600">{propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                                     </div>
+
+                                                    {/* CHECKBOXES DE TIPOLOGÍAS PARA PROYECTOS */}
+                                                    {propiedadSeleccionada.tipo?.toLowerCase().includes('proyecto') && tipologiasParseadas && tipologiasParseadas.length > 0 && (
+                                                        <div className="mt-4 pt-4 border-t border-blue-200">
+                                                            <p className="text-xs font-bold text-blue-800 uppercase tracking-widest mb-3">¿En qué tipologías está interesado?</p>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                {tipologiasParseadas.map((t: any, idx: number) => (
+                                                                    <label key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-blue-100 cursor-pointer hover:bg-blue-50 transition-all">
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            className="checkbox checkbox-sm checkbox-primary"
+                                                                            checked={tipologiasInteres.includes(t.nombre)}
+                                                                            onChange={() => handleToggleTipologia(t.nombre)}
+                                                                        />
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-sm font-bold text-blue-900">{t.nombre}</span>
+                                                                            <span className="text-[10px] font-bold text-gray-500">{t.areaConstruida} m² | {propiedadSeleccionada.moneda} {Number(t.precio).toLocaleString()}</span>
+                                                                        </div>
+                                                                    </label>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                     </div>
