@@ -19,9 +19,10 @@ import {
   FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaHistory, FaInfoCircle, FaBullhorn,
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
   FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave,
-  FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight
+  FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight, FaKey, FaTools
 } from 'react-icons/fa';
 
+// 1. URL CORREGIDA
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
@@ -75,6 +76,7 @@ export default function ClientesPage() {
   const [filterDate, setFilterDate] = useState(today);
   const [filterType, setFilterType] = useState<'TODOS' | 'PROSPECTO' | 'CLIENTE'>('TODOS');
 
+  // Modales
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false);
@@ -89,10 +91,12 @@ export default function ClientesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Multi-select Zonas
   const [zonasQuery, setZonasQuery] = useState('');
   const [zonasSelected, setZonasSelected] = useState<string[]>([]);
   const [showZonasSuggestions, setShowZonasSuggestions] = useState(false);
 
+  // Formularios
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>({
       defaultValues: { modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' }
   });
@@ -103,11 +107,15 @@ export default function ClientesPage() {
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
+ 
+  // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
  
+  // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
 
+  // CARGA DE DATOS
   useEffect(() => {
     const loadData = async () => {
         await Promise.all([fetchClientes(), fetchPropiedades(), fetchIntereses()]);
@@ -147,7 +155,7 @@ export default function ClientesPage() {
   const handleAddZona = (zona: string) => {
       const nuevasZonas = [...zonasSelected, zona];
       setZonasSelected(nuevasZonas);
-      setValue('reqZonas', nuevasZonas.join(', '));
+      setValue('reqZonas', nuevasZonas.join(', ')); // Para el form principal
       setZonasQuery('');
       setShowZonasSuggestions(false);
   };
@@ -311,8 +319,10 @@ export default function ClientesPage() {
       return filtrados;
   }, [clientes, searchTerm, filterDate, filterType]);
 
+  // LÓGICA PARA OCULTAR CUARTOS Y BAÑOS EN TERRENOS Y PROYECTOS EN EL MODAL DE FICHA
   const esTerrenoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('terreno');
   const esProyectoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('proyecto');
+  const tipologiasParseadas = typeof propiedadSeleccionada?.tipologias === 'string' ? JSON.parse(propiedadSeleccionada.tipologias) : propiedadSeleccionada?.tipologias;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans text-gray-800 flex flex-col">
@@ -434,6 +444,7 @@ export default function ClientesPage() {
             </div>
             }
 
+            {/* MODAL NUEVO REGISTRO */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto relative">
@@ -569,10 +580,11 @@ export default function ClientesPage() {
                                     <div className="flex items-center justify-center h-full text-gray-300"><FaImages className="text-6xl"/></div>
                                 )}
                                 <div className="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm text-indigo-900 px-6 py-3 rounded-2xl font-black shadow-2xl text-lg">
-                                    {propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE')}
+                                    {propiedadSeleccionada.moneda} {propiedadSeleccionada.precio ? Number(propiedadSeleccionada.precio).toLocaleString('es-PE') : 'Consultar'}
                                 </div>
                             </div>
 
+                            {/* FILTRO INTELIGENTE PARA DORMITORIOS, BAÑOS Y COCHERAS */}
                             {!esTerrenoFicha && !esProyectoFicha && (
                                 <div className="grid grid-cols-3 gap-4 animate-fade-in">
                                     <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl text-center border-2 border-indigo-100 shadow-sm">
@@ -593,9 +605,58 @@ export default function ClientesPage() {
                                 </div>
                             )}
 
+                            {/* SI ES TERRENO, MOSTRAR MENSAJE */}
                             {esTerrenoFicha && (
                                 <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-100 text-center animate-fade-in">
                                     <span className="font-black text-emerald-800 uppercase tracking-widest text-xs">Propiedad tipo Terreno</span>
+                                </div>
+                            )}
+
+                            {/* SI ES PROYECTO, MOSTRAR DETALLES Y TIPOLOGIAS */}
+                            {esProyectoFicha && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 shadow-sm">
+                                        <h3 className="text-lg font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-widest"><FaBuilding className="text-indigo-600"/> Detalles del Proyecto</h3>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4 shadow-sm">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaCalendarAlt size={20}/></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase">Inicio de Obra</p>
+                                                    <p className="font-black text-indigo-900">{propiedadSeleccionada.fechaInicioProyecto || 'Por definir'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4 shadow-sm">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaTools size={20}/></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase">Ejecución</p>
+                                                    <p className="font-black text-indigo-900">{propiedadSeleccionada.tiempoEjecucion || 'No especificado'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center gap-4 shadow-sm">
+                                                <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600"><FaKey size={20}/></div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase">Fecha Entrega</p>
+                                                    <p className="font-black text-indigo-900">{propiedadSeleccionada.fechaEntrega || 'No especificado'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {tipologiasParseadas && tipologiasParseadas.length > 0 && (
+                                            <div className="space-y-3">
+                                                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2">Tipologías Disponibles</p>
+                                                {tipologiasParseadas.map((t: any, i: number) => (
+                                                    <div key={i} className="flex justify-between items-center bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm">
+                                                        <span className="font-black text-indigo-900 text-sm">{t.nombre}</span>
+                                                        <div className="flex gap-6 items-center">
+                                                            <span className="text-xs text-gray-400 font-black">{t.areaConstruida} m²</span>
+                                                            <span className="font-black text-indigo-600 text-lg">{propiedadSeleccionada.moneda === 'USD' ? '$' : 'S/'} {Number(t.precio).toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
