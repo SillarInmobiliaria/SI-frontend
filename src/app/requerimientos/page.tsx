@@ -6,13 +6,13 @@ import { getRequerimientos, updateEstadoRequerimiento } from '../../services/api
 import { 
     FaClipboardList, FaCheck, FaTrash, FaExclamationCircle, FaFilter, 
     FaClock, FaSpinner, FaCheckCircle, FaBan, FaPhone, 
-    FaMapMarkerAlt, FaRulerCombined, FaDollarSign, FaMoneyBillWave 
+    FaMapMarkerAlt, FaRulerCombined, FaDollarSign, FaMoneyBillWave, FaTimes 
 } from 'react-icons/fa';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function RequerimientosPage() {
   const [reqs, setReqs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  // CORRECCIÓN: El estado inicial ahora es PENDIENTE (antes era ABIERTO)
   const [filtro, setFiltro] = useState('PENDIENTE');
 
   useEffect(() => {
@@ -23,29 +23,34 @@ export default function RequerimientosPage() {
     setLoading(true);
     try {
       const data = await getRequerimientos();
-      // Ordenamos para ver los nuevos primero
       const sorted = data.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setReqs(sorted);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error(e); 
+        toast.error("Error al cargar requerimientos");
+    }
     finally { setLoading(false); }
   };
 
   const cambiarEstado = async (id: string, nuevoEstado: string) => {
     if(!confirm(`¿Marcar como ${nuevoEstado}?`)) return;
+
+    const loadingToast = toast.loading(`Cambiando estado a ${nuevoEstado}...`);
     try {
       await updateEstadoRequerimiento(id, nuevoEstado);
       cargar();
-    } catch (e) { alert('Error al actualizar'); }
+      toast.success(`Requerimiento marcado como ${nuevoEstado}`, { id: loadingToast });
+    } catch (e) { 
+        toast.error('Error al actualizar estado', { id: loadingToast }); 
+    }
   };
 
   const filtrados = reqs.filter(r => filtro === 'TODOS' ? true : r.estado === filtro);
   
-  // CORRECCIÓN: Contamos PENDIENTE en lugar de ABIERTO
   const totalPendientes = reqs.filter(r => r.estado === 'PENDIENTE').length;
   const totalAtendidos = reqs.filter(r => r.estado === 'ATENDIDO').length;
   const totalDescartados = reqs.filter(r => r.estado === 'DESCARTADO').length;
 
-  // Función para parsear detalles
   const renderDetalle = (texto: string) => {
       if (texto && texto.includes('\n')) {
           return (
@@ -65,6 +70,8 @@ export default function RequerimientosPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 font-sans flex flex-col">
       <Navbar />
+      {/* 2. AGREGAMOS EL TOASTER */}
+      <Toaster position="top-right" reverseOrder={false} />
       
       <div className="flex flex-1 relative">
           <SidebarAtencion /> 
@@ -165,8 +172,8 @@ export default function RequerimientosPage() {
                 {filtrados.map((r) => (
                     <div key={r.id} className={`card bg-white shadow-xl border-l-[6px] hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] ${
                     r.prioridad === 'URGENTE' 
-                        ? 'border-red-500 ring-2 ring-red-200' 
-                        : 'border-indigo-400'
+                    ? 'border-red-500 ring-2 ring-red-200' 
+                    : 'border-indigo-400'
                     }`}>
                     <div className="card-body p-6">
                         {/* HEADER DE LA TARJETA */}
