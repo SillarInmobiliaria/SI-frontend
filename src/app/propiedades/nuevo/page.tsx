@@ -49,6 +49,14 @@ const distritosArequipa = [
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
 ];
 
+// --- LISTA PARA EL AUTOCOMPLETADO DE TIPO ---
+const tiposPropiedad = [
+    "Casa", "Departamento", "Duplex", "Terreno Urbano", "Terreno Agrícola", 
+    "Terreno Industrial", "Local Comercial", "Local Industrial", "Oficina",
+    "Proyecto Casas", "Proyecto Departamentos", "Proyecto Duplex", 
+    "Proyecto Terrenos", "Proyecto Locales"
+];
+
 const CustomDocCheckbox = ({ label, name, register, watch, onFileChange, onFileRemove, pdfFiles, notasDocs, setNotasDocs }: any) => {
     const isChecked = watch(name);
     const selectedFiles = pdfFiles[name] || []; 
@@ -150,10 +158,9 @@ export default function NuevaPropiedadPage() {
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
   const tieneVigilancia = watch('tieneVigilancia', 'no');
 
-  const esProyecto = tipoInmueble === 'Proyecto';
-  const mostrarDistribucion = !tipoInmueble.toLowerCase().includes('terreno') && !esProyecto;
-
-  const esDepartamento = tipoInmueble === 'Departamento' || tipoInmueble === 'Duplex';
+  const esProyecto = tipoInmueble?.toLowerCase().includes('proyecto');
+  const mostrarDistribucion = !tipoInmueble?.toLowerCase().includes('terreno') && !esProyecto;
+  const esDepartamento = tipoInmueble?.toLowerCase().includes('departamento') || tipoInmueble?.toLowerCase().includes('duplex');
 
   useEffect(() => {
     fetchPropietarios();
@@ -241,6 +248,8 @@ export default function NuevaPropiedadPage() {
 
   const onSubmit = async (data: FormInputs) => {
     if (propietariosSeleccionados.length === 0) return alert('⚠️ Agrega un propietario.');
+    if (!data.tipo) return alert('⚠️ Escribe o selecciona un Tipo de Propiedad.');
+
     setIsSubmitting(true);
     try {
         const formData = new FormData();
@@ -256,6 +265,7 @@ export default function NuevaPropiedadPage() {
 
         if (esProyecto) {
             formData.append('tipologias', JSON.stringify(data.tipologias));
+            if(data.fechaEntrega) formData.append('fechaEntrega', data.fechaEntrega); 
         }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
@@ -385,20 +395,24 @@ export default function NuevaPropiedadPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
-                        <select {...register('tipo', {required:true})} className="select select-bordered w-full bg-white">
-                            <option value="Casa">Casa</option>
-                            <option value="Departamento">Departamento</option>
-                            <option value="Duplex">Duplex</option>
-                            <option value="Terreno Urbano">Terreno Urbano</option>
-                            <option value="Terreno Agricola">Terreno Agrícola</option>
-                            <option value="Terreno Industrial">Terreno Industrial</option>
-                            <option value="Local">Local Comercial</option>
-                            <option value="Local Industrial">Local Industrial</option>
-                            <option value="Oficina">Oficina</option>
-                            <option value="Proyecto">Proyecto</option>
-                        </select>
+                    
+                    {/* CAMBIADO A INPUT CON DATALIST PARA AUTOCOMPLETADO INTELIGENTE */}
+                    <div className="form-control">
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
+                        <input 
+                            list="tipos-propiedad" 
+                            {...register('tipo', {required:true})} 
+                            className="input input-bordered w-full bg-white" 
+                            placeholder="Ej: Casa, Proyecto Departamentos..."
+                            autoComplete="off"
+                        />
+                        <datalist id="tipos-propiedad">
+                            {tiposPropiedad.map((t, index) => (
+                                <option key={index} value={t} />
+                            ))}
+                        </datalist>
                     </div>
+
                     <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase">MODALIDAD *</label>
                         <select {...register('modalidad', {required:true})} className="select select-bordered w-full bg-white text-sm">
                             <option value="Venta">Venta</option>
@@ -449,7 +463,6 @@ export default function NuevaPropiedadPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide"><FaCalendarAlt className="mr-1"/> Fecha de Inicio</label><input type="date" {...register('fechaInicioProyecto')} className="input input-bordered w-full bg-white"/></div>
                             <div className="form-control"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Tiempo Ejecución</label><input type="text" {...register('tiempoEjecucion')} placeholder="Ej: 18 meses" className="input input-bordered w-full bg-white"/></div>
-                            
                             <div className="form-control">
                                 <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">
                                     <FaKey className="mr-1"/> Fecha Entrega
