@@ -12,6 +12,7 @@ import {
   FaUserTie, FaHome, FaSpinner, FaCheckCircle, FaIdCard, 
   FaMapMarkerAlt, FaEnvelope, FaTimes, FaStickyNote, FaBan, FaCalendarAlt, FaPassport, FaGlobeAmericas
 } from 'react-icons/fa';
+import toast, { Toaster } from 'react-hot-toast';
 
 const DAYS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -89,7 +90,9 @@ export default function CalendarPage() {
 
   const handleSaveVisita = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDay || !preSelectedClienteId) return alert("Error: Falta día o cliente.");
+    if (!selectedDay || !preSelectedClienteId) return toast.error("Error: Falta día o cliente.");
+    
+    const loadingToast = toast.loading("Agendando visita...");
     try {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth(); 
@@ -108,11 +111,11 @@ export default function CalendarPage() {
         propiedadId: formData.propiedadId,
         comentariosPrevios: formData.comentarios
       });
-      alert('✅ Visita Agendada');
+      toast.success('Visita Agendada', { id: loadingToast });
       setIsModalOpen(false);
       fetchDatos(); 
       router.replace('/visitas'); 
-    } catch (error) { alert('❌ Error al agendar'); }
+    } catch (error) { toast.error('Error al agendar', { id: loadingToast }); }
   };
 
   const openFinalizeModal = () => {
@@ -134,9 +137,10 @@ export default function CalendarPage() {
       if (!selectedVisita) return;
       
       if (completionData.tipoDocumento === 'DNI' && completionData.dni.length !== 8) {
-          return alert("⚠️ El DNI debe tener exactamente 8 dígitos.");
+          return toast.error("El DNI debe tener exactamente 8 dígitos.");
       }
 
+      const loadingToast = toast.loading("Finalizando visita...");
       try {
           await updateVisita(selectedVisita.id, {
               estado: 'COMPLETADA',
@@ -146,21 +150,23 @@ export default function CalendarPage() {
               direccion: completionData.direccion,
               ocupacion: completionData.ocupacion
           });
-          alert('✅ Cliente Registrado y Visita Finalizada');
+          toast.success('Cliente Registrado y Visita Finalizada', { id: loadingToast });
           setIsCompleteModalOpen(false);
           fetchDatos();
-      } catch (error) { alert('❌ Error al finalizar'); }
+      } catch (error) { toast.error('Error al finalizar', { id: loadingToast }); }
   };
 
   const handleCancelarVisita = async () => {
-      if (!selectedVisita || !motivoCancelacion.trim()) return alert("⚠️ Debes escribir un motivo.");
+      if (!selectedVisita || !motivoCancelacion.trim()) return toast.error("Debes escribir un motivo.");
+      
+      const loadingToast = toast.loading("Cancelando visita...");
       try {
           await cancelVisita(selectedVisita.id, motivoCancelacion);
-          alert('Visita Cancelada.');
+          toast.success('Visita Cancelada', { id: loadingToast });
           setIsCancelModalOpen(false);
           setIsDetailOpen(false);
           fetchDatos();
-      } catch (error) { alert('Error al cancelar'); }
+      } catch (error) { toast.error('Error al cancelar', { id: loadingToast }); }
   };
 
   const openRescheduleModal = () => {
@@ -185,6 +191,8 @@ export default function CalendarPage() {
   const handleReprogramarVisita = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedVisita || !rescheduleData.fecha || !rescheduleData.hora) return;
+      
+      const loadingToast = toast.loading("Reprogramando visita...");
       try {
           const [anio, mes, dia] = rescheduleData.fecha.split('-').map(Number);
           const [hora, minuto] = rescheduleData.hora.split(':').map(Number);
@@ -197,10 +205,10 @@ export default function CalendarPage() {
               fechaProgramada: nuevaFechaISO,
               comentariosPrevios: selectedVisita.comentariosPrevios + ` [Reprogramada el ${new Date().toLocaleDateString()}]`
           });
-          alert('✅ Visita Reprogramada Correctamente');
+          toast.success('Visita Reprogramada Correctamente', { id: loadingToast });
           setIsRescheduleModalOpen(false);
           fetchDatos();
-      } catch (error) { alert('❌ Error al reprogramar'); }
+      } catch (error) { toast.error('Error al reprogramar', { id: loadingToast }); }
   };
 
   // Función para manejar input de documentos
@@ -268,6 +276,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans text-slate-800 flex flex-col">
       <Navbar />
+      <Toaster position="top-right" reverseOrder={false} />
       
       <div className="flex flex-1 relative">
           <SidebarAtencion /> 
@@ -479,6 +488,7 @@ export default function CalendarPage() {
                     </div>
                 </div>
             )}
+
           </main>
       </div>
     </div>
