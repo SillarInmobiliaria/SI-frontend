@@ -144,6 +144,7 @@ export default function NuevaPropiedadPage() {
   const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
+  const [agentesDB, setAgentesDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
 
@@ -179,6 +180,12 @@ export default function NuevaPropiedadPage() {
             const resAsesores = await fetch(`${API_BASE_URL}/usuarios`, { headers: { 'Authorization': `Bearer ${token}` } });
             const dataAsesores = await resAsesores.json();
             setAsesoresDB(dataAsesores);
+
+            const resAgentes = await fetch(`${API_BASE_URL}/agentes`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (resAgentes.ok) {
+                const dataAgentes = await resAgentes.json();
+                setAgentesDB(dataAgentes);
+            }
         } catch (error) { console.error(error); }
     };
     fetchData();
@@ -650,11 +657,12 @@ export default function NuevaPropiedadPage() {
                                 />
                                 <input type="hidden" {...register('agenteExterno')} />
                             </div>
+                            
                             {mostrarSugerenciasAgente && busquedaAgente.length > 0 && (
                                 <div className="absolute top-full left-0 w-full bg-white border border-purple-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
-                                    {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase())).map((asesor) => (
-                                        <div key={asesor.id} className="p-3 hover:bg-purple-100 cursor-pointer border-b border-purple-50 flex flex-col" onClick={() => seleccionarAgenteExterno(asesor)}>
-                                            <span className="font-bold text-purple-900 text-xs uppercase">{asesor.nombre}</span>
+                                    {agentesDB.filter(a => a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase())).map((agente) => (
+                                        <div key={agente.id} className="p-3 hover:bg-purple-100 cursor-pointer border-b border-purple-50 flex flex-col" onClick={() => seleccionarAgenteExterno(agente)}>
+                                            <span className="font-bold text-purple-900 text-xs uppercase">{agente.nombre}</span>
                                         </div>
                                     ))}
                                 </div>
