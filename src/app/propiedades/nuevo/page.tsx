@@ -46,7 +46,7 @@ interface FormInputs {
 }
 
 const distritosArequipa = [
-    "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
+    "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Chivay", "Cusco", "Ilo", "Jacobo Hunter", "José Luis Bustamante y Rivero", "Juliaca", "La Joya", "Lima", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Mollendo", "Moquegua", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
