@@ -129,7 +129,7 @@ export default function EditarPropiedadPage() {
   const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
-  const [agentesDB, setAgentesDB] = useState<any[]>([]);
+  const [agentesDB, setAgentesDB] = useState<any[]>([]); // ESTADO DE AGENTES EXTERNOS
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
@@ -350,6 +350,11 @@ export default function EditarPropiedadPage() {
         // SOLO SE AGREGA LA TIPOLOGÍA. FECHA ENTREGA YA SE ENVIÓ EN EL BUCLE AUTOMÁTICO
         if (esProyecto) {
             formData.append('tipologias', JSON.stringify(data.tipologias));
+            // Aseguramos que si se cambia a Proyecto en edición, se limpien las partidas y mantenimientos
+            formData.delete('partidaCochera');
+            formData.delete('partidaDeposito');
+            formData.set('mantenimiento', '0');
+            formData.set('vigilancia', '0');
         }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
@@ -357,18 +362,20 @@ export default function EditarPropiedadPage() {
         formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
         formData.set('propiedadCompartida', data.propiedadCompartida === 'si' ? 'true' : 'false');
 
-        if (data.tieneMantenimiento === 'no' || (modalidadActual !== 'Alquiler' && !esDepartamento)) {
-            formData.set('mantenimiento', '0');
-        } else {
-            formData.set('mantenimiento', String(data.mantenimiento));
-            formData.set('monedaMantenimiento', data.monedaMantenimiento);
-        }
+        if (!esProyecto) {
+            if (data.tieneMantenimiento === 'no' || (modalidadActual !== 'Alquiler' && !esDepartamento)) {
+                formData.set('mantenimiento', '0');
+            } else {
+                formData.set('mantenimiento', String(data.mantenimiento));
+                formData.set('monedaMantenimiento', data.monedaMantenimiento);
+            }
 
-        if (data.tieneVigilancia === 'no' || esProyecto) {
-            formData.set('vigilancia', '0');
-        } else {
-            formData.set('vigilancia', String(data.vigilancia));
-            formData.set('monedaVigilancia', data.monedaVigilancia);
+            if (data.tieneVigilancia === 'no') {
+                formData.set('vigilancia', '0');
+            } else {
+                formData.set('vigilancia', String(data.vigilancia));
+                formData.set('monedaVigilancia', data.monedaVigilancia);
+            }
         }
 
         formData.set('observaciones', JSON.stringify(notasDocs));
@@ -499,20 +506,20 @@ export default function EditarPropiedadPage() {
             </div>
 
             {/* 2. DATOS INMUEBLE */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="bg-white rounded-xl shadow-sm border p-8 border-gray-100">
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaHome className="text-indigo-500"/> 2. DATOS INMUEBLE</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">TIPO *</label>
                         <input 
-                            list="tipos-propiedad" 
+                            list="tipos-propiedad-edit" 
                             {...register('tipo', {required:true})} 
                             className="input input-bordered w-full bg-white font-semibold text-sm" 
                             placeholder="Buscar tipo..."
                             autoComplete="off"
                         />
-                        <datalist id="tipos-propiedad">
+                        <datalist id="tipos-propiedad-edit">
                             {tiposPropiedad.map((t, index) => (
                                 <option key={index} value={t} />
                             ))}
@@ -531,20 +538,20 @@ export default function EditarPropiedadPage() {
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">DISTRITO *</label>
                         <div className="flex items-center">
                             <FaSearch className="absolute left-3 text-gray-400 z-10 text-xs"/>
-                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" placeholder="Buscar distrito..." value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
+                            <input type="text" className="input input-bordered w-full bg-white pl-9 text-sm" value={busquedaUbicacion} onChange={(e) => { setBusquedaUbicacion(e.target.value); setMostrarSugerenciasUbi(true); }} onFocus={() => setMostrarSugerenciasUbi(true)}/>
                         </div>
                         {mostrarSugerenciasUbi && busquedaUbicacion.length > 0 && (
-                            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
+                            <div className="absolute top-full left-0 w-full bg-white border z-50 max-h-48 overflow-y-auto mt-1 rounded-b-lg shadow-xl">
                                 {distritosArequipa.filter(d => d.toLowerCase().includes(busquedaUbicacion.toLowerCase())).map((d, i) => (
-                                    <div key={i} className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 font-bold text-slate-700 text-xs uppercase" onClick={() => seleccionarDistrito(d)}>{d}</div>
+                                    <div key={i} className="p-3 hover:bg-indigo-50 cursor-pointer text-xs uppercase font-bold" onClick={() => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); }}>{d}</div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-
+                
                 <div className="form-control mb-6"><label className="label font-bold text-gray-600 text-[10px] uppercase tracking-wide">Dirección Exacta</label><input {...register('direccion')} className="input input-bordered w-full bg-white"/></div>
-
+                
                 {esProyecto ? (
                     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
                         <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 shadow-inner">
@@ -600,7 +607,7 @@ export default function EditarPropiedadPage() {
                         </div>
                     )}
                     
-                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
+                    {!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento) && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
                                 <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
@@ -640,7 +647,7 @@ export default function EditarPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className={`form-control ${(modalidadActual === 'Alquiler' || esDepartamento) ? 'md:col-span-1' : 'md:col-span-3'}`}>
+                    <div className={`form-control ${(!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento)) ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
                             Partida Registral (Principal)
                         </label>
@@ -650,7 +657,7 @@ export default function EditarPropiedadPage() {
                         />
                     </div>
 
-                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
+                    {!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento) && (
                         <>
                             <div className="form-control">
                                 <label className="label font-bold text-gray-600 text-[10px] uppercase">
@@ -718,7 +725,6 @@ export default function EditarPropiedadPage() {
                         </div>
                     </div>
 
-                    {/* NUEVO BLOQUE: PROPIEDAD COMPARTIDA */}
                     <div className="form-control bg-purple-50 p-4 rounded-xl border border-purple-100">
                         <label className="label font-bold text-purple-900 text-[10px] uppercase mb-1">¿Propiedad Compartida?</label>
                         <div className="flex gap-4">
@@ -747,6 +753,7 @@ export default function EditarPropiedadPage() {
                                 />
                                 <input type="hidden" {...register('agenteExterno')} />
                             </div>
+                            
                             {mostrarSugerenciasAgente && busquedaAgente.length > 0 && (
                                 <div className="absolute top-full left-0 w-full bg-white border border-purple-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
                                     {agentesDB.filter(a => a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase())).map((agente) => (
@@ -825,22 +832,38 @@ export default function EditarPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2 tracking-wide"><FaImages className="text-yellow-500"/> 7. MULTIMEDIA Y MAPA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 font-bold uppercase tracking-tight">
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Foto Portada</label>
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Cambiar Foto Portada</label>
                         <input type="file" accept="image/*" onChange={handleMainPhotoChange} className="file-input file-input-bordered file-input-primary w-full bg-white shadow-sm h-10" />
+                        
+                        {/* Muestra foto antigua o nueva */}
+                        {existingMainPhoto && !previewMain && (
+                            <div className="relative mt-4">
+                                <img src={existingMainPhoto.startsWith('http') ? existingMainPhoto : `${BACKEND_URL}${existingMainPhoto}`} alt="Portada Antigua" className="h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>
+                                <button type="button" onClick={() => setExistingMainPhoto(null)} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all"><FaTimes/></button>
+                            </div>
+                        )}
                         {previewMain && (
                             <div className="relative mt-4">
-                                <img src={previewMain} alt="Portada" className="h-48 w-full object-cover rounded-2xl border-4 border-white shadow-xl"/>
+                                <img src={previewMain} alt="Portada Nueva" className="h-48 w-full object-cover rounded-2xl border-4 border-emerald-400 shadow-xl"/>
                                 <button type="button" onClick={() => {setFotoPrincipalFile(null); setPreviewMain(null);}} className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-all"><FaTimes/></button>
                             </div>
                         )}
                     </div>
+                    
                     <div className="form-control">
-                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Galería (Máx 30)</label>
+                        <label className="label font-bold text-gray-600 text-[10px] uppercase tracking-widest">Agregar Fotos Galería</label>
                         <input type="file" multiple accept="image/*" onChange={handleGalleryChange} className="file-input file-input-bordered w-full bg-white shadow-sm h-10" />
+                        
                         <div className="mt-4 flex flex-wrap gap-3">
+                            {existingGallery.map((src, i) => (
+                                <div key={`old-${i}`} className="relative group">
+                                    <img src={src.startsWith('http') ? src : `${BACKEND_URL}${src}`} className="h-20 w-20 object-cover rounded-xl border border-white shadow flex-shrink-0"/>
+                                    <button type="button" onClick={() => removerFotoGaleriaAntigua(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><FaTimes className="text-[10px]"/></button>
+                                </div>
+                            ))}
                             {previewGallery.map((src, i) => (
-                                <div key={i} className="relative group">
-                                    <img src={src} className="h-20 w-20 object-cover rounded-xl border border-white shadow flex-shrink-0"/>
+                                <div key={`new-${i}`} className="relative group">
+                                    <img src={src} className="h-20 w-20 object-cover rounded-xl border-2 border-emerald-400 shadow flex-shrink-0"/>
                                     <button type="button" onClick={() => removerFotoGaleriaNueva(i)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><FaTimes className="text-[10px]"/></button>
                                 </div>
                             ))}
@@ -855,7 +878,7 @@ export default function EditarPropiedadPage() {
 
             <div className="flex justify-end pt-10">
                 <button type="submit" disabled={isSubmitting} className="btn btn-primary bg-indigo-600 border-none px-16 py-4 h-auto text-xl font-black uppercase tracking-widest shadow-2xl hover:shadow-indigo-400 hover:-translate-y-2 transition-all active:scale-95">
-                    {isSubmitting ? <span className="flex items-center gap-3"><span className="loading loading-spinner"></span> GUARDANDO...</span> : <span className="flex items-center gap-3"><FaSave/> PUBLICAR</span>}
+                    {isSubmitting ? <span className="flex items-center gap-2"><span className="loading loading-spinner"></span> GUARDANDO...</span> : <><FaSave className="mr-2"/> GUARDAR CAMBIOS</>}
                 </button>
             </div>
         </form>
