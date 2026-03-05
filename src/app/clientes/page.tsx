@@ -23,7 +23,6 @@ import {
   FaWhatsapp
 } from 'react-icons/fa';
 
-// 1. URL CORREGIDA
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
 
 const DISTRITOS_SUGERIDOS = [
@@ -41,7 +40,7 @@ const BANCOS_PERU = [
 ];
 
 interface FormClienteCompleto {
-  id?: string; // Para saber si estamos editando
+  id?: string;
   nombre: string;
   telefono1: string;
   dni?: string;
@@ -110,15 +109,13 @@ export default function ClientesPage() {
   const reqTipo = watch('reqTipo');
   const reqFormaPago = watch('reqFormaPago');
   const selectedPropiedadId = watch('propiedadId');
-  const editandoId = watch('id'); // Observamos si hay un ID cargado
+  const editandoId = watch('id');
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
  
-  // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
  
-  // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
 
@@ -161,13 +158,13 @@ export default function ClientesPage() {
       setValue('propiedadId', prop.id); 
       setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); 
       setShowPropSuggestions(false); 
-      setTipologiasInteres([]); // Limpiamos las tipologías al cambiar de propiedad
+      setTipologiasInteres([]);
   };
 
   const handleAddZona = (zona: string) => {
       const nuevasZonas = [...zonasSelected, zona];
       setZonasSelected(nuevasZonas);
-      setValue('reqZonas', nuevasZonas.join(', ')); // Para el form principal
+      setValue('reqZonas', nuevasZonas.join(', '));
       setZonasQuery('');
       setShowZonasSuggestions(false);
   };
@@ -195,7 +192,6 @@ export default function ClientesPage() {
 
       if (requerimiento) {
           modoInteres = 'REQUERIMIENTO';
-          // Extraer zonas si es posible
           const zonasMatch = requerimiento.pedido?.match(/en\s+(.*?)\./);
           const zonasStr = zonasMatch ? zonasMatch[1] : '';
           if(zonasStr && zonasStr !== 'Zonas varias') {
@@ -204,10 +200,9 @@ export default function ClientesPage() {
               setZonasSelected([]);
           }
 
-          // Cargar datos del requerimiento (aproximado basado en el pedido)
           reqData = {
               reqTipo: requerimiento.pedido?.includes('COMPRA') ? 'COMPRA' : 'ALQUILER',
-              reqPrioridad: requerimiento.prioridad === 'DESCARTADO' ? 'NORMAL' : requerimiento.prioridad, // Ajuste básico
+              reqPrioridad: requerimiento.prioridad === 'DESCARTADO' ? 'NORMAL' : requerimiento.prioridad,
               reqComentarios: requerimiento.pedido,
               reqZonas: zonasStr
           };
@@ -220,7 +215,6 @@ export default function ClientesPage() {
           if (interes.Propiedad) {
               setPropSearch(`${interes.Propiedad.tipo} - ${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
               
-              // Extraer tipologías si es proyecto
               if(interes.nota?.includes('Interesado en tipologías:')) {
                   const parts = interes.nota.split('Interesado en tipologías: ');
                   if(parts.length > 1) {
@@ -231,14 +225,15 @@ export default function ClientesPage() {
           }
       }
 
+      // ✅ FIX: Reseteamos el formulario con el id como string (UUID), sin Number()
       reset({
-          id: cliente.id,
+          id: cliente.id,           // UUID string — NO usar Number()
           nombre: cliente.nombre || '',
           telefono1: cliente.telefono1 || '',
           dni: cliente.dni || '',
           email: cliente.email || '',
           origen: cliente.origen || '',
-          fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : '',
+          fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : today,
           modoInteres: modoInteres,
           ...propData,
           ...reqData
@@ -261,11 +256,12 @@ export default function ClientesPage() {
     const loadingToast = toast.loading(data.id ? "Actualizando cliente..." : "Guardando cliente...");
     
     try {
-      let nuevoId = data.id;
+      // ✅ FIX PRINCIPAL: usamos data.id directamente como string UUID (no Number)
+      let nuevoId: string | undefined = data.id;
 
       if (data.id) {
-          // ACTUALIZAR CLIENTE EXISTENTE
-          await updateCliente(Number(data.id), {
+          // ACTUALIZAR CLIENTE EXISTENTE — pasar el UUID como string, sin Number()
+          await updateCliente(data.id as unknown as number, {
               nombre: data.nombre,
               telefono1: data.telefono1,
               dni: data.dni || undefined,
@@ -288,8 +284,7 @@ export default function ClientesPage() {
           nuevoId = (resp as any).data?.id || (resp as any).id;
       }
 
-      // MANEJO DE INTERÉS O REQUERIMIENTO (Para simplicidad, al editar, creamos un nuevo interés si se cambió la propiedad)
-      // NOTA: Para una edición perfecta, habría que borrar el interés/req anterior, pero asumiendo la estructura actual:
+      // MANEJO DE INTERÉS O REQUERIMIENTO
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
         let notaInteres = `Registro/Actualización. ${data.observaciones || ''}`;
         
@@ -537,10 +532,7 @@ export default function ClientesPage() {
                                             {hasRealReq ? (<button onClick={handleGoToRequerimientos} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Ir a Requerimientos"><FaArrowRight/></button>) : hasRealSeg ? (<button onClick={handleGoToSeguimiento} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Ir a Seguimiento"><FaArrowRight/></button>) : (<><button onClick={() => handleOpenReq(c)} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Crear Requerimiento"><FaClipboardList/></button><button onClick={() => handleOpenSeguimientoModal(c)} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Iniciar Seguimiento"><FaRoute/></button></>)}
                                             <button onClick={() => handleOpenAgendarVisita(c)} className="bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-all" title="Visita"><FaCalendarCheck/></button>
                                             <button onClick={() => handleViewDetail(c)} className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition-all" title="Ver"><FaEye/></button>
-                                            
-                                            {/* BOTÓN EDITAR QUE ABRE EL MODAL PRINCIPAL */}
                                             <button onClick={() => handleOpenEdit(c)} className="bg-blue-50 text-blue-500 p-2 rounded-lg hover:bg-blue-100 transition-all" title="Editar"><FaEdit/></button>
-                                            
                                             {isAdmin && <button onClick={() => handleEliminar(c.id)} className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-all" title="Eliminar"><FaTrash/></button>}
                                         </div>
                                     </td>
@@ -569,7 +561,7 @@ export default function ClientesPage() {
                         </div>
                         <form onSubmit={handleSubmit(onSubmitCliente)} className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
                             
-                            {/* Campo oculto para el ID si estamos editando */}
+                            {/* Campo oculto para el UUID — no se convierte a Number */}
                             <input type="hidden" {...register('id')} />
 
                             <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 shadow-lg mb-6">
@@ -590,7 +582,7 @@ export default function ClientesPage() {
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-2">¿Qué busca el cliente?</label>
                                     <div className="flex bg-slate-100 p-1 rounded-xl w-full">
                                             <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'PROPIEDAD' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="PROPIEDAD" className="hidden"/> <FaHome/> Interés en Propiedad</label>
-                                            <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'REQUERIMIENTO' ? 'bg-amber-50 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="REQUERIMIENTO" className="hidden"/> <FaClipboardList/> Buscar (Requerimiento)</label>
+                                            <label className={`flex-1 text-center py-3 rounded-lg cursor-pointer transition-all font-bold text-sm flex items-center justify-center gap-2 ${modoInteres === 'REQUERIMIENTO' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-200'}`}><input type="radio" {...register('modoInteres')} value="REQUERIMIENTO" className="hidden"/> <FaClipboardList/> Buscar (Requerimiento)</label>
                                     </div>
                                 </div>
                                 {modoInteres === 'PROPIEDAD' && (
@@ -618,7 +610,6 @@ export default function ClientesPage() {
                                                         <span className="text-xl font-black text-green-600">{propiedadSeleccionada.moneda} {Number(propiedadSeleccionada.precio).toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
                                                     </div>
 
-                                                    {/* SELECCIÓN DE TIPOLOGÍAS PARA PROYECTOS EN NUEVO INTERESADO */}
                                                     {propiedadSeleccionada.tipo?.toLowerCase().includes('proyecto') && (() => {
                                                         const tipologias = typeof propiedadSeleccionada.tipologias === 'string' ? JSON.parse(propiedadSeleccionada.tipologias) : propiedadSeleccionada.tipologias;
                                                         if (tipologias && tipologias.length > 0) {
@@ -703,7 +694,7 @@ export default function ClientesPage() {
                 </div>
             )}
 
-            {/* MODAL FICHA TÉCNICA DETALLADA (OVERLAY) */}
+            {/* MODAL FICHA TÉCNICA DETALLADA */}
             {showFullProperty && propiedadSeleccionada && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-4xl h-[90vh] rounded-3xl shadow-2xl overflow-y-auto relative p-8 border border-gray-200">
@@ -736,7 +727,6 @@ export default function ClientesPage() {
                                 </div>
                             </div>
 
-                            {/* FILTRO INTELIGENTE PARA DORMITORIOS, BAÑOS Y COCHERAS */}
                             {!esTerrenoFicha && !esProyectoFicha && (
                                 <div className="grid grid-cols-3 gap-4 animate-fade-in">
                                     <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-5 rounded-2xl text-center border-2 border-indigo-100 shadow-sm">
@@ -757,14 +747,12 @@ export default function ClientesPage() {
                                 </div>
                             )}
 
-                            {/* SI ES TERRENO, MOSTRAR MENSAJE */}
                             {esTerrenoFicha && (
                                 <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-100 text-center animate-fade-in">
                                     <span className="font-black text-emerald-800 uppercase tracking-widest text-xs">Propiedad tipo Terreno</span>
                                 </div>
                             )}
 
-                            {/* SI ES PROYECTO, MOSTRAR DETALLES Y TIPOLOGIAS */}
                             {esProyectoFicha && (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="bg-indigo-50 rounded-3xl p-6 border border-indigo-100 shadow-sm">
@@ -832,7 +820,7 @@ export default function ClientesPage() {
                 </div>
             )}
            
-            {/* OTROS MODALES */}
+            {/* MODAL DETALLE CLIENTE */}
             {isDetailOpen && selectedCliente && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -840,7 +828,6 @@ export default function ClientesPage() {
                             <FaTimes className="text-xl"/>
                         </button>
                         
-                        {/* Cabecera del Cliente */}
                         <div className="flex items-center gap-5 mb-8 pb-6 border-b-2 border-gray-100 pr-12">
                             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center text-3xl font-black shadow-lg border-4 border-indigo-50">
                                 {selectedCliente.nombre.charAt(0)}
@@ -854,7 +841,6 @@ export default function ClientesPage() {
                             </div>
                         </div>
 
-                        {/* Datos de Contacto */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaPhone className="text-indigo-400"/> Teléfono / WhatsApp</p>
@@ -879,7 +865,6 @@ export default function ClientesPage() {
                             </div>
                         </div>
 
-                        {/* Información de Interés / Requerimiento */}
                         <div className="mb-4">
                             <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 border-b-2 border-indigo-100 pb-2 inline-block">Motivo del Contacto</h4>
                         </div>
@@ -971,7 +956,7 @@ export default function ClientesPage() {
                 </div>
             )}
            
-            {/* MODAL REQUERIMIENTO COMPLETO */}
+            {/* MODAL REQUERIMIENTO */}
             {isReqOpen && clienteReq && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -1082,7 +1067,33 @@ export default function ClientesPage() {
                 </div>
             )}
 
-            {isSeguimientoOpen && clienteSeguimiento && (<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"><div className="bg-white w-full max-w-lg rounded-2xl p-6 relative"><button onClick={()=>setSeguimientoOpen(false)} className="absolute top-2 right-2 btn btn-sm btn-circle btn-ghost">✕</button><h3 className="font-bold text-lg mb-4">Nuevo Seguimiento</h3><form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4"><textarea {...registerSeg('comentario', {required:true})} className="textarea textarea-bordered w-full" placeholder="Resultado..."></textarea><div className="grid grid-cols-2 gap-2"><select {...registerSeg('estado')} className="select select-bordered"><option value="PENDIENTE">Pendiente</option><option value="FINALIZADO">Finalizado</option></select><input type="date" {...registerSeg('fechaProxima')} className="input input-bordered"/></div><div className="flex justify-end"><button className="btn btn-primary">Guardar</button></div></form></div></div>)}
+            {/* MODAL SEGUIMIENTO */}
+            {isSeguimientoOpen && clienteSeguimiento && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white w-full max-w-lg rounded-2xl p-6 relative shadow-2xl">
+                        <button onClick={()=>setSeguimientoOpen(false)} className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-all text-gray-600">
+                            <FaTimes/>
+                        </button>
+                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><FaRoute className="text-blue-500"/> Nuevo Seguimiento</h3>
+                        <p className="text-sm text-gray-500 mb-4">Para: <strong>{clienteSeguimiento.nombre}</strong></p>
+                        <form onSubmit={handleSubmitSeg(onSubmitSeguimiento)} className="space-y-4">
+                            <textarea {...registerSeg('comentario', {required:true})} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl resize-none h-28" placeholder="Resultado de la gestión..."></textarea>
+                            <div className="grid grid-cols-2 gap-3">
+                                <select {...registerSeg('estado')} className="px-4 py-3 border-2 border-gray-200 rounded-xl font-medium">
+                                    <option value="PENDIENTE">Pendiente</option>
+                                    <option value="FINALIZADO">Finalizado</option>
+                                </select>
+                                <input type="date" {...registerSeg('fechaProxima')} className="px-4 py-3 border-2 border-gray-200 rounded-xl font-medium"/>
+                            </div>
+                            <div className="flex justify-end">
+                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-all flex items-center gap-2">
+                                    <FaSave/> Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
           </main>
       </div>
