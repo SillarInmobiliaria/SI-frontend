@@ -40,10 +40,13 @@ interface FormInputs {
   tiempoEjecucion: string;
   fechaEntrega: string;
   tipologias: { precio: string; areaConstruida: string; nombre: string; }[];
+  propiedadCompartida: string;
+  agenteExterno: string;
+  porcentajeAgenteExterno: string;
 }
 
 const distritosArequipa = [
-    "Alto Selva Alegre", "Arequipa (Centro)", "Camaná", "Cayma", "Cerro Colorado", "Characato", 
+    "Arequipa", "Alto Selva Alegre", "Cayma", "Cerro Colorado", "Characato", 
     "Chiguata", "Chivay", "Cusco", "Ilo", "Jacobo Hunter", "José Luis Bustamante y Rivero", "Juliaca", "La Joya", "Lima", "Mariano Melgar", 
     "Miraflores", "Mollebaya", "Mollendo", "Moquegua", "Paucarpata", "Quequeña", "Sabandía", "Sachaca", 
     "Socabaya", "Tiabaya", "Trujillo", "Uchumayo", "Vítor", "Yanahuara", "Yura"
@@ -126,6 +129,7 @@ export default function NuevaPropiedadPage() {
         exclusiva: 'no',
         renovable: 'no',
         incluyeIgv: 'no',
+        propiedadCompartida: 'no',
         tipologias: [{ precio: '', areaConstruida: '', nombre: '' }]
     }
   });
@@ -142,6 +146,10 @@ export default function NuevaPropiedadPage() {
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
+
+  const [busquedaAgente, setBusquedaAgente] = useState('');
+  const [mostrarSugerenciasAgente, setMostrarSugerenciasAgente] = useState(false);
+
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
   const [mostrarSugerenciasUbi, setMostrarSugerenciasUbi] = useState(false);
   
@@ -157,6 +165,7 @@ export default function NuevaPropiedadPage() {
   const tipoInmueble = watch('tipo', '');
   const tieneMantenimiento = watch('tieneMantenimiento', 'no');
   const tieneVigilancia = watch('tieneVigilancia', 'no');
+  const propiedadCompartida = watch('propiedadCompartida', 'no');
 
   const esProyecto = tipoInmueble && String(tipoInmueble).toLowerCase().includes('proyecto');
   const mostrarDistribucion = tipoInmueble && !String(tipoInmueble).toLowerCase().includes('terreno') && !esProyecto;
@@ -237,6 +246,8 @@ export default function NuevaPropiedadPage() {
   const removerFotoGaleria = (idx: number) => { setGaleriaFiles(galeriaFiles.filter((_, i) => i !== idx)); setPreviewGallery(previewGallery.filter((_, i) => i !== idx)); };
   const seleccionarDistrito = (d: string) => { setBusquedaUbicacion(d); setValue('ubicacion', d); setMostrarSugerenciasUbi(false); };
   const seleccionarAsesor = (a: any) => { setBusquedaAsesor(a.nombre); setValue('asesor', a.nombre); setMostrarSugerenciasAsesor(false); };
+  
+  const seleccionarAgenteExterno = (a: any) => { setBusquedaAgente(a.nombre); setValue('agenteExterno', a.nombre); setMostrarSugerenciasAgente(false); };
 
   const seleccionarPropietario = (propObj: any) => {
       if (!propietariosSeleccionados.find(p => p.id === propObj.id)) {
@@ -254,7 +265,7 @@ export default function NuevaPropiedadPage() {
     try {
         const formData = new FormData();
         const docs = ['testimonio', 'hr', 'pu', 'impuestoPredial', 'arbitrios', 'copiaLiteral', 'cri', 'reciboAguaLuz', 'planos', 'certificadoParametros', 'certificadoZonificacion', 'otros'];
-        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'tieneVigilancia', 'incluyeIgv', 'observaciones', 'tipologias', ...docs];
+        const excluded = ['fotoPrincipal', 'galeria', 'tieneMantenimiento', 'tieneVigilancia', 'incluyeIgv', 'observaciones', 'tipologias', 'propiedadCompartida', ...docs];
         
         Object.keys(data).forEach(key => {
             const k = key as keyof FormInputs;
@@ -594,7 +605,7 @@ export default function NuevaPropiedadPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="form-control">
                         <label className="label font-bold text-gray-600 flex items-center gap-2 text-[10px] uppercase"><FaPercent className="text-blue-500" /> Comisión {modalidadActual === 'Alquiler' ? '(meses)' : '(%)'}</label>
                         <div className="relative">
@@ -609,7 +620,55 @@ export default function NuevaPropiedadPage() {
                             <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('incluyeIgv')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold">No</span></label>
                         </div>
                     </div>
+
+                    {/* NUEVO BLOQUE: PROPIEDAD COMPARTIDA */}
+                    <div className="form-control bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <label className="label font-bold text-purple-900 text-[10px] uppercase mb-1">¿Propiedad Compartida?</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="si" {...register('propiedadCompartida')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold text-purple-800">Sí</span></label>
+                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="no" {...register('propiedadCompartida')} className="radio radio-primary radio-sm" /><span className="text-xs font-bold text-purple-800">No</span></label>
+                        </div>
+                    </div>
                 </div>
+
+                {propiedadCompartida === 'si' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-purple-50 p-6 rounded-2xl border border-purple-200 animate-in fade-in zoom-in-95">
+                        <div className="form-control relative">
+                            <label className="label font-bold text-purple-900 text-[10px] uppercase">Seleccionar Agente Externo</label>
+                            <div className="flex items-center">
+                                <FaSearch className="absolute left-3 text-purple-400 z-10 text-xs"/>
+                                <input 
+                                    type="text" 
+                                    className="input input-bordered border-purple-200 w-full bg-white pl-9 text-sm" 
+                                    placeholder="Buscar agente..." 
+                                    value={busquedaAgente} 
+                                    onChange={(e) => { 
+                                        setBusquedaAgente(e.target.value); 
+                                        setMostrarSugerenciasAgente(true); 
+                                    }} 
+                                    onFocus={() => setMostrarSugerenciasAgente(true)}
+                                />
+                                <input type="hidden" {...register('agenteExterno')} />
+                            </div>
+                            {mostrarSugerenciasAgente && busquedaAgente.length > 0 && (
+                                <div className="absolute top-full left-0 w-full bg-white border border-purple-200 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto mt-1">
+                                    {asesoresDB.filter(a => a.nombre.toLowerCase().includes(busquedaAgente.toLowerCase())).map((asesor) => (
+                                        <div key={asesor.id} className="p-3 hover:bg-purple-100 cursor-pointer border-b border-purple-50 flex flex-col" onClick={() => seleccionarAgenteExterno(asesor)}>
+                                            <span className="font-bold text-purple-900 text-xs uppercase">{asesor.nombre}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="form-control">
+                            <label className="label font-bold text-purple-900 text-[10px] uppercase">Porcentaje Agente Externo (%)</label>
+                            <div className="relative">
+                                <input type="number" step="0.1" {...register('porcentajeAgenteExterno')} className="input input-bordered border-purple-200 w-full bg-white font-bold" placeholder="Ej: 50"/>
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 font-black text-[10px] uppercase">%</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 shadow-inner">
                     <label className="label font-bold text-gray-700 mb-4 border-b pb-2 text-[10px] uppercase tracking-widest">Documentación en Regla</label>
