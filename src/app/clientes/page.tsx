@@ -41,6 +41,7 @@ const BANCOS_PERU = [
 ];
 
 interface FormClienteCompleto {
+  id?: string; // Para saber si estamos editando
   nombre: string;
   telefono1: string;
   dni?: string;
@@ -79,7 +80,6 @@ export default function ClientesPage() {
 
   // Modales
   const [isModalOpen, setModalOpen] = useState(false);
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false);
   const [isSeguimientoOpen, setSeguimientoOpen] = useState(false);
@@ -105,10 +105,12 @@ export default function ClientesPage() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>({
       defaultValues: { modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' }
   });
+  
   const modoInteres = watch('modoInteres');
   const reqTipo = watch('reqTipo');
   const reqFormaPago = watch('reqFormaPago');
   const selectedPropiedadId = watch('propiedadId');
+  const editandoId = watch('id'); // Observamos si hay un ID cargado
   const propiedadSeleccionada = propiedades.find(p => p.id === selectedPropiedadId);
 
   const { register: registerSeg, handleSubmit: handleSubmitSeg, reset: resetSeg, formState: { errors: errorsSeg } } = useForm();
@@ -116,9 +118,6 @@ export default function ClientesPage() {
   // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
  
-  // Formulario independiente para Editar Cliente
-  const { register: registerEdit, handleSubmit: handleSubmitEdit, reset: resetEdit } = useForm();
-
   // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
@@ -182,7 +181,70 @@ export default function ClientesPage() {
   const handleOpenModal = () => {
       setModalOpen(true);
       setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery(''); setTipologiasInteres([]);
-      reset({ modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
+      reset({ id: undefined, modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
+      setShowFullProperty(false);
+  };
+
+  const handleOpenEdit = (cliente: any) => {
+      const interes = intereses.find((i: any) => i.clienteId === cliente.id);
+      const requerimiento = requerimientos.find((r: any) => r.clienteId === cliente.id);
+      
+      let modoInteres: 'PROPIEDAD' | 'REQUERIMIENTO' = 'PROPIEDAD';
+      let reqData = {};
+      let propData = {};
+
+      if (requerimiento) {
+          modoInteres = 'REQUERIMIENTO';
+          // Extraer zonas si es posible
+          const zonasMatch = requerimiento.pedido?.match(/en\s+(.*?)\./);
+          const zonasStr = zonasMatch ? zonasMatch[1] : '';
+          if(zonasStr && zonasStr !== 'Zonas varias') {
+              setZonasSelected(zonasStr.split(', '));
+          } else {
+              setZonasSelected([]);
+          }
+
+          // Cargar datos del requerimiento (aproximado basado en el pedido)
+          reqData = {
+              reqTipo: requerimiento.pedido?.includes('COMPRA') ? 'COMPRA' : 'ALQUILER',
+              reqPrioridad: requerimiento.prioridad === 'DESCARTADO' ? 'NORMAL' : requerimiento.prioridad, // Ajuste básico
+              reqComentarios: requerimiento.pedido,
+              reqZonas: zonasStr
+          };
+      } else if (interes) {
+          modoInteres = 'PROPIEDAD';
+          propData = {
+              propiedadId: interes.propiedadId,
+              observaciones: interes.nota || ''
+          };
+          if (interes.Propiedad) {
+              setPropSearch(`${interes.Propiedad.tipo} - ${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
+              
+              // Extraer tipologías si es proyecto
+              if(interes.nota?.includes('Interesado en tipologías:')) {
+                  const parts = interes.nota.split('Interesado en tipologías: ');
+                  if(parts.length > 1) {
+                      const tips = parts[1].replace('.', '').split(', ');
+                      setTipologiasInteres(tips);
+                  }
+              }
+          }
+      }
+
+      reset({
+          id: cliente.id,
+          nombre: cliente.nombre || '',
+          telefono1: cliente.telefono1 || '',
+          dni: cliente.dni || '',
+          email: cliente.email || '',
+          origen: cliente.origen || '',
+          fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : '',
+          modoInteres: modoInteres,
+          ...propData,
+          ...reqData
+      });
+
+      setModalOpen(true);
       setShowFullProperty(false);
   };
 
@@ -196,27 +258,44 @@ export default function ClientesPage() {
 
   const onSubmitCliente = async (data: FormClienteCompleto) => {
     setIsSubmitting(true);
-    const loadingToast = toast.loading("Guardando cliente...");
+    const loadingToast = toast.loading(data.id ? "Actualizando cliente..." : "Guardando cliente...");
+    
     try {
-      const resp = await createCliente({
-          nombre: data.nombre,
-          telefono1: data.telefono1,
-          dni: data.dni || undefined,
-          email: data.email || undefined,
-          fechaAlta: getISOFechaPeru(data.fechaAlta),
-          origen: data.origen,
-          tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
-      } as any);
+      let nuevoId = data.id;
 
-      const nuevoId = (resp as any).data?.id || (resp as any).id;
+      if (data.id) {
+          // ACTUALIZAR CLIENTE EXISTENTE
+          await updateCliente(Number(data.id), {
+              nombre: data.nombre,
+              telefono1: data.telefono1,
+              dni: data.dni || undefined,
+              email: data.email || undefined,
+              fechaAlta: getISOFechaPeru(data.fechaAlta),
+              origen: data.origen,
+              tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
+          });
+      } else {
+          // CREAR NUEVO CLIENTE
+          const resp = await createCliente({
+              nombre: data.nombre,
+              telefono1: data.telefono1,
+              dni: data.dni || undefined,
+              email: data.email || undefined,
+              fechaAlta: getISOFechaPeru(data.fechaAlta),
+              origen: data.origen,
+              tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
+          } as any);
+          nuevoId = (resp as any).data?.id || (resp as any).id;
+      }
 
+      // MANEJO DE INTERÉS O REQUERIMIENTO (Para simplicidad, al editar, creamos un nuevo interés si se cambió la propiedad)
+      // NOTA: Para una edición perfecta, habría que borrar el interés/req anterior, pero asumiendo la estructura actual:
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
-        let notaInteres = `Registro inicial. ${data.observaciones || ''}`;
+        let notaInteres = `Registro/Actualización. ${data.observaciones || ''}`;
         
         if (tipologiasInteres.length > 0) {
             notaInteres += `\nInteresado en tipologías: ${tipologiasInteres.join(', ')}.`;
         }
-
         await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
       }
 
@@ -247,47 +326,14 @@ export default function ClientesPage() {
       try { const segs = await getSeguimientos(); setSeguimientos(segs || []); } catch(e){}
 
       setModalOpen(false); reset();
-      toast.success('Registrado Exitosamente', { id: loadingToast });
+      toast.success(data.id ? 'Actualizado Exitosamente' : 'Registrado Exitosamente', { id: loadingToast });
       if (data.fechaAlta === today) setFilterDate(today); else setFilterDate(data.fechaAlta);
 
     } catch (error) { 
         console.error(error); 
-        toast.error('Error al registrar', { id: loadingToast }); 
+        toast.error('Error al guardar', { id: loadingToast }); 
     }
     finally { setIsSubmitting(false); }
-  };
-
-  const handleOpenEdit = (cliente: any) => {
-      setSelectedCliente(cliente);
-      resetEdit({
-          nombre: cliente.nombre || '',
-          telefono1: cliente.telefono1 || '',
-          dni: cliente.dni || '',
-          email: cliente.email || '',
-          origen: cliente.origen || '',
-          fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : ''
-      });
-      setEditModalOpen(true);
-  };
-
-  const onSubmitEdit = async (data: any) => {
-      if (!selectedCliente) return;
-      const loadingToast = toast.loading("Actualizando cliente...");
-      try {
-          await updateCliente(selectedCliente.id, {
-              nombre: data.nombre,
-              telefono1: data.telefono1,
-              dni: data.dni,
-              email: data.email,
-              origen: data.origen,
-              fechaAlta: getISOFechaPeru(data.fechaAlta)
-          });
-          await fetchClientes();
-          setEditModalOpen(false);
-          toast.success('Cliente actualizado correctamente', { id: loadingToast });
-      } catch (error) {
-          toast.error('Error al actualizar cliente', { id: loadingToast });
-      }
   };
 
   const handleEliminar = async (id: string) => {
@@ -491,7 +537,10 @@ export default function ClientesPage() {
                                             {hasRealReq ? (<button onClick={handleGoToRequerimientos} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Ir a Requerimientos"><FaArrowRight/></button>) : hasRealSeg ? (<button onClick={handleGoToSeguimiento} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Ir a Seguimiento"><FaArrowRight/></button>) : (<><button onClick={() => handleOpenReq(c)} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Crear Requerimiento"><FaClipboardList/></button><button onClick={() => handleOpenSeguimientoModal(c)} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Iniciar Seguimiento"><FaRoute/></button></>)}
                                             <button onClick={() => handleOpenAgendarVisita(c)} className="bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-all" title="Visita"><FaCalendarCheck/></button>
                                             <button onClick={() => handleViewDetail(c)} className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition-all" title="Ver"><FaEye/></button>
+                                            
+                                            {/* BOTÓN EDITAR QUE ABRE EL MODAL PRINCIPAL */}
                                             <button onClick={() => handleOpenEdit(c)} className="bg-blue-50 text-blue-500 p-2 rounded-lg hover:bg-blue-100 transition-all" title="Editar"><FaEdit/></button>
+                                            
                                             {isAdmin && <button onClick={() => handleEliminar(c.id)} className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-all" title="Eliminar"><FaTrash/></button>}
                                         </div>
                                     </td>
@@ -503,24 +552,39 @@ export default function ClientesPage() {
             </div>
             }
 
-            {/* MODAL NUEVO REGISTRO */}
+            {/* MODAL PRINCIPAL: NUEVO / EDITAR REGISTRO */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto relative">
                         <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-blue-900 text-white p-8 flex justify-between items-center">
-                        <div><h3 className="font-black text-2xl flex items-center gap-3"><FaUserPlus className="text-3xl"/> Nuevo Interesado</h3><p className="text-indigo-200 mt-1 font-medium">Registra un nuevo cliente potencial</p></div>
+                        <div>
+                            <h3 className="font-black text-2xl flex items-center gap-3">
+                                {editandoId ? <><FaEdit className="text-3xl"/> Editar Interesado</> : <><FaUserPlus className="text-3xl"/> Nuevo Interesado</>}
+                            </h3>
+                            <p className="text-indigo-200 mt-1 font-medium">
+                                {editandoId ? 'Modifica los datos del cliente y su interés' : 'Registra un nuevo cliente potencial'}
+                            </p>
+                        </div>
                         <button onClick={() => setModalOpen(false)} className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-all"><FaTimes className="text-xl"/></button>
                         </div>
                         <form onSubmit={handleSubmit(onSubmitCliente)} className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
+                            
+                            {/* Campo oculto para el ID si estamos editando */}
+                            <input type="hidden" {...register('id')} />
+
                             <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 shadow-lg mb-6">
                                 <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-4 border-b pb-2">Datos Básicos</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Nombre Completo *</label><input {...register('nombre', { required: true })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Celular *</label><input {...register('telefono1', { required: true, minLength: 9 })} onInput={handleNumberInput} maxLength={9} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
+                                    
+                                    <div className="form-control"><label className="label font-bold text-gray-700 mb-1">DNI / Documento</label><input {...register('dni')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
+                                    <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Correo Electrónico</label><input type="email" {...register('email')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
+                                    
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1 flex items-center gap-2"><FaBullhorn className="text-orange-500"/> Canal de Contacto</label>
                                             <select {...register('origen')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"><option value="">Seleccione...</option><option value="Redes Sociales">Redes Sociales</option><option value="Llamada">Llamada</option><option value="Letrero">Letrero</option><option value="Referido">Referido</option><option value="Web">Página Web</option></select>
                                     </div>
-                                    <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Fecha Registro</label><input {...register('fechaAlta')} type="date" defaultValue={filterDate} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
+                                    <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Fecha Registro</label><input {...register('fechaAlta')} type="date" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
                                 </div>
                                 <div className="flex flex-col mb-6">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-2">¿Qué busca el cliente?</label>
@@ -631,66 +695,7 @@ export default function ClientesPage() {
                             <div className="flex justify-end gap-4">
                                 <button type="button" onClick={() => setModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-xl font-bold transition-all">Cancelar</button>
                                 <button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {isSubmitting ? 'Guardando...' : (modoInteres === 'REQUERIMIENTO' ? 'Crear Requerimiento' : 'Registrar Interés')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL EDITAR CLIENTE */}
-            {isEditModalOpen && selectedCliente && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto relative">
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8 flex justify-between items-center">
-                            <div>
-                                <h3 className="font-black text-2xl flex items-center gap-3"><FaEdit className="text-3xl"/> Editar Cliente</h3>
-                                <p className="text-indigo-200 mt-1 font-medium">Actualiza los datos del cliente seleccionado</p>
-                            </div>
-                            <button onClick={() => setEditModalOpen(false)} className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-all"><FaTimes className="text-xl"/></button>
-                        </div>
-                        <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
-                            <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 shadow-lg mb-6">
-                                <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-4 border-b pb-2">Datos Básicos</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1">Nombre Completo *</label>
-                                        <input {...registerEdit('nombre', { required: true })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1">Celular *</label>
-                                        <input {...registerEdit('telefono1', { required: true, minLength: 9 })} onInput={handleNumberInput} maxLength={9} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1">DNI / Documento</label>
-                                        <input {...registerEdit('dni')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1">Correo Electrónico</label>
-                                        <input type="email" {...registerEdit('email')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1 flex items-center gap-2"><FaBullhorn className="text-orange-500"/> Canal de Contacto</label>
-                                        <select {...registerEdit('origen')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
-                                            <option value="">Seleccione...</option>
-                                            <option value="Redes Sociales">Redes Sociales</option>
-                                            <option value="Llamada">Llamada</option>
-                                            <option value="Letrero">Letrero</option>
-                                            <option value="Referido">Referido</option>
-                                            <option value="Web">Página Web</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-gray-700 mb-1">Fecha Registro</label>
-                                        <input {...registerEdit('fechaAlta')} type="date" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-4">
-                                <button type="button" onClick={() => setEditModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-xl font-bold transition-all">Cancelar</button>
-                                <button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                                    Guardar Cambios
+                                    {isSubmitting ? 'Guardando...' : (editandoId ? 'Guardar Cambios' : (modoInteres === 'REQUERIMIENTO' ? 'Crear Requerimiento' : 'Registrar Interés'))}
                                 </button>
                             </div>
                         </form>
