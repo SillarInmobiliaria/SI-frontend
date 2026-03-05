@@ -47,6 +47,7 @@ interface FormClienteCompleto {
   email?: string;
   direccion?: string;
   origen?: string;
+  detalles?: string;
   fechaAlta: string;
   modoInteres: 'PROPIEDAD' | 'REQUERIMIENTO';
   propiedadId?: string;
@@ -225,14 +226,14 @@ export default function ClientesPage() {
           }
       }
 
-      // ✅ FIX: Reseteamos el formulario con el id como string (UUID), sin Number()
       reset({
-          id: cliente.id,           // UUID string — NO usar Number()
+          id: cliente.id,
           nombre: cliente.nombre || '',
           telefono1: cliente.telefono1 || '',
           dni: cliente.dni || '',
           email: cliente.email || '',
           origen: cliente.origen || '',
+          detalles: cliente.detalles || '',
           fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : today,
           modoInteres: modoInteres,
           ...propData,
@@ -256,11 +257,9 @@ export default function ClientesPage() {
     const loadingToast = toast.loading(data.id ? "Actualizando cliente..." : "Guardando cliente...");
     
     try {
-      // ✅ FIX PRINCIPAL: usamos data.id directamente como string UUID (no Number)
       let nuevoId: string | undefined = data.id;
 
       if (data.id) {
-          // ACTUALIZAR CLIENTE EXISTENTE — pasar el UUID como string, sin Number()
           await updateCliente(data.id as unknown as number, {
               nombre: data.nombre,
               telefono1: data.telefono1,
@@ -577,6 +576,10 @@ export default function ClientesPage() {
                                             <select {...register('origen')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"><option value="">Seleccione...</option><option value="Redes Sociales">Redes Sociales</option><option value="Llamada">Llamada</option><option value="Letrero">Letrero</option><option value="Referido">Referido</option><option value="Web">Página Web</option></select>
                                     </div>
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Fecha Registro</label><input {...register('fechaAlta')} type="date" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
+                                </div>
+                                <div className="form-control mb-6">
+                                    <label className="label font-bold text-gray-700 mb-1">Detalles Adicionales</label>
+                                    <textarea {...register('detalles')} rows={3} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all" placeholder="Notas adicionales sobre el cliente..."></textarea>
                                 </div>
                                 <div className="flex flex-col mb-6">
                                     <label className="text-xs font-bold text-slate-400 uppercase mb-2">¿Qué busca el cliente?</label>
