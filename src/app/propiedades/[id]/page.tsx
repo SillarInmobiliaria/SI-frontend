@@ -553,6 +553,22 @@ export default function PropiedadDetallePage() {
                         <div><p className="font-black text-gray-800 text-lg leading-tight uppercase tracking-tighter">{propiedad.asesor || 'Sillar Asesor'}</p><p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Agente Encargado</p></div>
                     </div>
 
+                    {propiedad.propiedadCompartida && propiedad.agenteExterno && (
+                        <div className="mt-4 flex items-center gap-4 p-4 bg-purple-50 border border-purple-100 rounded-2xl animate-fade-in">
+                            <div className="avatar placeholder"><div className="bg-purple-600 text-white rounded-2xl w-12 h-12 flex items-center justify-center text-lg font-black">{propiedad.agenteExterno.charAt(0)}</div></div>
+                            <div className="flex-1">
+                                <p className="font-black text-purple-900 text-sm leading-tight uppercase tracking-tighter">{propiedad.agenteExterno}</p>
+                                <p className="text-[9px] text-purple-500 font-black uppercase tracking-widest mt-0.5">Agente Externo</p>
+                            </div>
+                            {propiedad.porcentajeAgenteExterno && (
+                                <div className="text-right">
+                                    <span className="text-lg font-black text-purple-700">{propiedad.porcentajeAgenteExterno}%</span>
+                                    <p className="text-[8px] font-black text-purple-400 uppercase tracking-widest">Comisión</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {propietarios.length > 1 && (
                         <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">Otros Propietarios</p>
