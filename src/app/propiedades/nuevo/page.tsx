@@ -286,15 +286,18 @@ export default function NuevaPropiedadPage() {
         }
 
         formData.set('incluyeIgv', data.incluyeIgv === 'si' ? 'true' : 'false');
+        formData.set('exclusiva', data.exclusiva === 'si' ? 'true' : 'false');
+        formData.set('renovable', data.renovable === 'si' ? 'true' : 'false');
+        formData.set('propiedadCompartida', data.propiedadCompartida === 'si' ? 'true' : 'false');
         
-        if (data.tieneMantenimiento === 'si') { 
+        if (data.tieneMantenimiento === 'si' && !esProyecto) { 
             formData.set('mantenimiento', String(data.mantenimiento)); 
             formData.set('monedaMantenimiento', data.monedaMantenimiento); 
         } else {
             formData.set('mantenimiento', '0');
         }
 
-        if (data.tieneVigilancia === 'si') { 
+        if (data.tieneVigilancia === 'si' && !esProyecto) { 
             formData.set('vigilancia', String(data.vigilancia)); 
             formData.set('monedaVigilancia', data.monedaVigilancia); 
         } else {
@@ -510,7 +513,7 @@ export default function NuevaPropiedadPage() {
                         </div>
                     )}
                     
-                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
+                    {!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento) && (
                         <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
                             <div className="form-control">
                                 <label className="label font-bold text-blue-800 text-[10px] uppercase"><FaTools className="mr-1"/> ¿Mantenimiento Edificio/Condominio?</label>
@@ -550,7 +553,7 @@ export default function NuevaPropiedadPage() {
                 <h3 className="text-sm font-bold text-gray-500 uppercase mb-6 flex items-center gap-2 border-b pb-2"><FaGavel className="text-blue-500"/> 4. DATOS LEGALES</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className={`form-control ${(modalidadActual === 'Alquiler' || esDepartamento) ? 'md:col-span-1' : 'md:col-span-3'}`}>
+                    <div className={`form-control ${(!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento)) ? 'md:col-span-1' : 'md:col-span-3'}`}>
                         <label className="label font-bold text-gray-600 text-[10px] uppercase">
                             Partida Registral (Principal)
                         </label>
@@ -560,7 +563,7 @@ export default function NuevaPropiedadPage() {
                         />
                     </div>
 
-                    {(modalidadActual === 'Alquiler' || esDepartamento) && (
+                    {!esProyecto && (modalidadActual === 'Alquiler' || esDepartamento) && (
                         <>
                             <div className="form-control">
                                 <label className="label font-bold text-gray-600 text-[10px] uppercase">
@@ -628,7 +631,6 @@ export default function NuevaPropiedadPage() {
                         </div>
                     </div>
 
-                    {/* NUEVO BLOQUE: PROPIEDAD COMPARTIDA */}
                     <div className="form-control bg-purple-50 p-4 rounded-xl border border-purple-100">
                         <label className="label font-bold text-purple-900 text-[10px] uppercase mb-1">¿Propiedad Compartida?</label>
                         <div className="flex gap-4">
