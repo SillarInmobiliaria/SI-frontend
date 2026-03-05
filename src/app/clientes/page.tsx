@@ -7,7 +7,7 @@ import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import {
-    createCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento,
+    createCliente, updateCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento,
     getRequerimientos
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -19,7 +19,7 @@ import {
   FaCalendarAlt, FaUndo, FaTrash, FaUserTie, FaHistory, FaInfoCircle, FaBullhorn,
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
   FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave,
-  FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight, FaKey, FaTools, FaWhatsapp, FaEdit
+  FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight, FaKey, FaTools, FaEdit
 } from 'react-icons/fa';
 
 // 1. URL CORREGIDA
@@ -78,6 +78,7 @@ export default function ClientesPage() {
 
   // Modales
   const [isModalOpen, setModalOpen] = useState(false);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isDetailOpen, setDetailOpen] = useState(false);
   const [showFullProperty, setShowFullProperty] = useState(false);
   const [isSeguimientoOpen, setSeguimientoOpen] = useState(false);
@@ -114,6 +115,9 @@ export default function ClientesPage() {
   // Formulario independiente para el Modal de Requerimiento
   const { register: registerReq, handleSubmit: handleSubmitReq, reset: resetReq, watch: watchReq } = useForm();
  
+  // Formulario independiente para Editar Cliente
+  const { register: registerEdit, handleSubmit: handleSubmitEdit, reset: resetEdit } = useForm();
+
   // Necesitamos observar estos valores también en el modal secundario para mostrar campos condicionales
   const reqTipoModal = watchReq('reqTipo');
   const reqFormaPagoModal = watchReq('reqFormaPago');
@@ -250,6 +254,39 @@ export default function ClientesPage() {
         toast.error('Error al registrar', { id: loadingToast }); 
     }
     finally { setIsSubmitting(false); }
+  };
+
+  const handleOpenEdit = (cliente: any) => {
+      setSelectedCliente(cliente);
+      resetEdit({
+          nombre: cliente.nombre || '',
+          telefono1: cliente.telefono1 || '',
+          dni: cliente.dni || '',
+          email: cliente.email || '',
+          origen: cliente.origen || '',
+          fechaAlta: cliente.fechaAlta ? cliente.fechaAlta.split('T')[0] : ''
+      });
+      setEditModalOpen(true);
+  };
+
+  const onSubmitEdit = async (data: any) => {
+      if (!selectedCliente) return;
+      const loadingToast = toast.loading("Actualizando cliente...");
+      try {
+          await updateCliente(selectedCliente.id, {
+              nombre: data.nombre,
+              telefono1: data.telefono1,
+              dni: data.dni,
+              email: data.email,
+              origen: data.origen,
+              fechaAlta: getISOFechaPeru(data.fechaAlta)
+          });
+          await fetchClientes();
+          setEditModalOpen(false);
+          toast.success('Cliente actualizado correctamente', { id: loadingToast });
+      } catch (error) {
+          toast.error('Error al actualizar cliente', { id: loadingToast });
+      }
   };
 
   const handleEliminar = async (id: string) => {
@@ -453,6 +490,7 @@ export default function ClientesPage() {
                                             {hasRealReq ? (<button onClick={handleGoToRequerimientos} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Ir a Requerimientos"><FaArrowRight/></button>) : hasRealSeg ? (<button onClick={handleGoToSeguimiento} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Ir a Seguimiento"><FaArrowRight/></button>) : (<><button onClick={() => handleOpenReq(c)} className="bg-orange-100 text-orange-600 p-2 rounded-lg hover:bg-orange-200 transition-all" title="Crear Requerimiento"><FaClipboardList/></button><button onClick={() => handleOpenSeguimientoModal(c)} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-all" title="Iniciar Seguimiento"><FaRoute/></button></>)}
                                             <button onClick={() => handleOpenAgendarVisita(c)} className="bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200 transition-all" title="Visita"><FaCalendarCheck/></button>
                                             <button onClick={() => handleViewDetail(c)} className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition-all" title="Ver"><FaEye/></button>
+                                            <button onClick={() => handleOpenEdit(c)} className="bg-blue-50 text-blue-500 p-2 rounded-lg hover:bg-blue-100 transition-all" title="Editar"><FaEdit/></button>
                                             {isAdmin && <button onClick={() => handleEliminar(c.id)} className="bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-100 transition-all" title="Eliminar"><FaTrash/></button>}
                                         </div>
                                     </td>
@@ -600,6 +638,65 @@ export default function ClientesPage() {
                 </div>
             )}
 
+            {/* MODAL EDITAR CLIENTE */}
+            {isEditModalOpen && selectedCliente && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto relative">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8 flex justify-between items-center">
+                            <div>
+                                <h3 className="font-black text-2xl flex items-center gap-3"><FaEdit className="text-3xl"/> Editar Cliente</h3>
+                                <p className="text-indigo-200 mt-1 font-medium">Actualiza los datos del cliente seleccionado</p>
+                            </div>
+                            <button onClick={() => setEditModalOpen(false)} className="bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-all"><FaTimes className="text-xl"/></button>
+                        </div>
+                        <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
+                            <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 shadow-lg mb-6">
+                                <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-4 border-b pb-2">Datos Básicos</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1">Nombre Completo *</label>
+                                        <input {...registerEdit('nombre', { required: true })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1">Celular *</label>
+                                        <input {...registerEdit('telefono1', { required: true, minLength: 9 })} onInput={handleNumberInput} maxLength={9} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1">DNI / Documento</label>
+                                        <input {...registerEdit('dni')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1">Correo Electrónico</label>
+                                        <input type="email" {...registerEdit('email')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1 flex items-center gap-2"><FaBullhorn className="text-orange-500"/> Canal de Contacto</label>
+                                        <select {...registerEdit('origen')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+                                            <option value="">Seleccione...</option>
+                                            <option value="Redes Sociales">Redes Sociales</option>
+                                            <option value="Llamada">Llamada</option>
+                                            <option value="Letrero">Letrero</option>
+                                            <option value="Referido">Referido</option>
+                                            <option value="Web">Página Web</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label font-bold text-gray-700 mb-1">Fecha Registro</label>
+                                        <input {...registerEdit('fechaAlta')} type="date" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-4">
+                                <button type="button" onClick={() => setEditModalOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-xl font-bold transition-all">Cancelar</button>
+                                <button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                                    Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* MODAL FICHA TÉCNICA DETALLADA (OVERLAY) */}
             {showFullProperty && propiedadSeleccionada && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
@@ -724,267 +821,6 @@ export default function ClientesPage() {
                         </div>
                         <div className="pt-8 border-t-2 border-gray-100 mt-8 flex justify-end">
                             <button type="button" onClick={() => setShowFullProperty(false)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-bold w-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105">Volver al Registro</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-           
-            {/* MODAL FICHA DEL CLIENTE */}
-            {isDetailOpen && selectedCliente && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <div className="flex justify-end gap-2 absolute right-6 top-6">
-                            {isAdmin && (
-                                <button 
-                                    onClick={() => router.push(`/clientes/editar/${selectedCliente.id}`)} 
-                                    className="bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-full p-3 transition-all"
-                                    title="Editar Cliente"
-                                >
-                                    <FaEdit className="text-xl"/>
-                                </button>
-                            )}
-                            <button onClick={()=>setDetailOpen(false)} className="bg-gray-100 hover:bg-gray-200 rounded-full p-3 transition-all text-gray-600 hover:text-red-500">
-                                <FaTimes className="text-xl"/>
-                            </button>
-                        </div>
-                        
-                        {/* Cabecera del Cliente */}
-                        <div className="flex items-center gap-5 mb-8 pb-6 border-b-2 border-gray-100 pr-20">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center text-3xl font-black shadow-lg border-4 border-indigo-50">
-                                {selectedCliente.nombre.charAt(0)}
-                            </div>
-                            <div className="flex-1">
-                                <h2 className="text-3xl font-black text-gray-800 tracking-tight">{selectedCliente.nombre}</h2>
-                                <p className="text-sm font-bold text-gray-500 flex items-center gap-3 mt-2">
-                                    <span className="badge badge-lg bg-indigo-100 text-indigo-700 border-none px-4 shadow-sm">{selectedCliente.tipo}</span>
-                                    {selectedCliente.origen && <span className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100"><FaBullhorn/> {selectedCliente.origen}</span>}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Datos de Contacto */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaPhone className="text-indigo-400"/> Teléfono / WhatsApp</p>
-                                <div className="flex items-center justify-between">
-                                    <p className="font-black text-gray-800 text-lg">{selectedCliente.telefono1}</p>
-                                    <a href={`https://wa.me/51${selectedCliente.telefono1}`} target="_blank" rel="noreferrer" className="bg-green-100 text-green-600 p-2 rounded-full hover:bg-green-500 hover:text-white transition-colors" title="Abrir WhatsApp">
-                                        <FaWhatsapp size={20}/>
-                                    </a>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaEnvelope className="text-indigo-400"/> Correo Electrónico</p>
-                                <p className="font-bold text-gray-800 truncate" title={selectedCliente.email}>{selectedCliente.email || 'No registrado'}</p>
-                            </div>
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaIdCard className="text-indigo-400"/> Documento de Identidad</p>
-                                <p className="font-bold text-gray-800">{selectedCliente.dni || 'No registrado'}</p>
-                            </div>
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaCalendarAlt className="text-indigo-400"/> Fecha de Registro</p>
-                                <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '---'}</p>
-                            </div>
-                        </div>
-
-                        {/* Información de Interés / Requerimiento */}
-                        <div className="mb-4">
-                            <h4 className="text-sm font-black text-indigo-900 uppercase tracking-widest mb-4 border-b-2 border-indigo-100 pb-2 inline-block">Motivo del Contacto</h4>
-                        </div>
-                        
-                        {(() => {
-                            const interes = intereses.find((i: any) => i.clienteId === selectedCliente.id);
-                            const requerimiento = requerimientos.find((r: any) => r.clienteId === selectedCliente.id);
-
-                            if (interes && interes.Propiedad) {
-                                return (
-                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border-2 border-blue-100 shadow-sm relative overflow-hidden">
-                                        <div className="absolute -right-6 -top-6 text-blue-100 opacity-50 pointer-events-none">
-                                            <FaHome size={120}/>
-                                        </div>
-                                        <div className="relative z-10">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><FaHome size={20}/></div>
-                                                <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Interesado en Propiedad</p>
-                                            </div>
-                                            
-                                            <h5 className="font-black text-gray-800 text-xl mb-1">{interes.Propiedad.tipo} en {interes.Propiedad.ubicacion}</h5>
-                                            <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mb-4">
-                                                <FaMapMarkerAlt className="text-red-400"/> {interes.Propiedad.direccion}
-                                            </p>
-                                            
-                                            <div className="flex gap-4 mb-6">
-                                                <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-50 flex items-center gap-2">
-                                                    <FaDollarSign className="text-green-500"/>
-                                                    <span className="font-black text-gray-800 text-lg">{interes.Propiedad.moneda} {Number(interes.Propiedad.precio).toLocaleString()}</span>
-                                                </div>
-                                                {interes.Propiedad.area && (
-                                                    <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-50 flex items-center gap-2">
-                                                        <FaRulerCombined className="text-blue-500"/>
-                                                        <span className="font-black text-gray-800 text-lg">{interes.Propiedad.area} m²</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {interes.nota && (
-                                                <div className="bg-white/80 p-4 rounded-xl border border-blue-100">
-                                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2"><FaClipboardList/> Notas del Asesor / Tipologías</p>
-                                                    <p className="text-sm font-medium text-gray-700 whitespace-pre-line leading-relaxed">{interes.nota}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            }
-
-                            if (requerimiento) {
-                                return (
-                                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-3xl border-2 border-amber-200 shadow-sm relative overflow-hidden">
-                                        <div className="absolute -right-6 -top-6 text-amber-200 opacity-30 pointer-events-none">
-                                            <FaSearch size={120}/>
-                                        </div>
-                                        <div className="relative z-10">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md"><FaSearch size={20}/></div>
-                                                    <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Requerimiento de Búsqueda</p>
-                                                </div>
-                                                <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-wider shadow-sm border ${
-                                                    requerimiento.prioridad === 'URGENTE' ? 'bg-red-100 text-red-600 border-red-200 animate-pulse' : 
-                                                    requerimiento.prioridad === 'DESCARTADO' ? 'bg-gray-100 text-gray-600 border-gray-200' :
-                                                    'bg-amber-100 text-amber-600 border-amber-200'
-                                                }`}>
-                                                    {requerimiento.prioridad}
-                                                </span>
-                                            </div>
-                                            
-                                            <div className="bg-white/80 p-5 rounded-xl border border-amber-100">
-                                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-2"><FaClipboardList/> Detalles de la Búsqueda</p>
-                                                <p className="text-sm font-medium text-gray-800 whitespace-pre-line leading-relaxed">{requerimiento.pedido}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div className="bg-gray-50 p-10 rounded-3xl border-2 border-dashed border-gray-200 text-center flex flex-col items-center justify-center">
-                                    <FaInfoCircle className="text-gray-300 text-5xl mb-3"/>
-                                    <p className="text-sm font-bold text-gray-500">Este cliente aún no tiene un interés o requerimiento específico registrado.</p>
-                                </div>
-                            );
-                        })()}
-
-                    </div>
-                </div>
-            )}
-           
-            {/* MODAL REQUERIMIENTO COMPLETO */}
-            {isReqOpen && clienteReq && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                        <div className="bg-amber-500 p-6 text-white flex justify-between items-center">
-                            <div>
-                                <h3 className="font-black text-xl flex items-center gap-2"><FaClipboardList/> Nuevo Requerimiento</h3>
-                                <p className="text-amber-100 text-sm">Para el cliente: <strong>{clienteReq.nombre}</strong></p>
-                            </div>
-                            <button onClick={()=>setReqOpen(false)} className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-all"><FaTimes/></button>
-                        </div>
-                       
-                        <div className="p-8 overflow-y-auto bg-slate-50">
-                            <form onSubmit={handleSubmitReq(onSubmitReq)} className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="form-control">
-                                        <label className="label font-bold text-slate-700">Tipo Operación</label>
-                                        <select {...registerReq('reqTipo')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
-                                            <option value="COMPRA">Compra</option>
-                                            <option value="ALQUILER">Alquiler</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-slate-700">Prioridad</label>
-                                        <select {...registerReq('reqPrioridad')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
-                                            <option value="NORMAL">Normal</option>
-                                            <option value="URGENTE">Urgente</option>
-                                            <option value="DESCARTADO">Descartado</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-control relative">
-                                    <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaCity className="text-slate-400"/> Zonas / Distritos</label>
-                                    <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white flex flex-wrap gap-2 items-center min-h-[50px]">
-                                        {zonasSelected.map(z => (
-                                            <span key={z} className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded-lg flex items-center gap-1">
-                                                {z} <FaTimes className="cursor-pointer hover:text-red-500" onClick={() => handleRemoveZona(z)}/>
-                                            </span>
-                                        ))}
-                                        <input 
-                                            className="flex-1 outline-none min-w-[150px] bg-transparent text-sm" 
-                                            placeholder={zonasSelected.length > 0 ? "Añadir otro..." : "Escribe zona (ej. Yanahuara)..."} 
-                                            value={zonasQuery} 
-                                            onChange={(e) => { setZonasQuery(e.target.value); setShowZonasSuggestions(true); }}
-                                        />
-                                    </div>
-                                    {showZonasSuggestions && zonasQuery && filteredDistritos.length > 0 && (
-                                        <div className="absolute z-50 w-full bg-white border-2 border-amber-200 rounded-xl shadow-xl mt-1 max-h-40 overflow-y-auto">
-                                            {filteredDistritos.map(d => (
-                                                <div key={d} onClick={() => handleAddZona(d)} className="p-2 hover:bg-amber-50 cursor-pointer text-sm font-medium text-slate-700 flex items-center gap-2">
-                                                    <FaPlus className="text-amber-500 text-xs"/> {d}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="form-control">
-                                        <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaRulerCombined className="text-slate-400"/> Área (m²)</label>
-                                        <div className="flex gap-2 items-center">
-                                            <input {...registerReq('reqAreaMin')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Min"/>
-                                            <span className="text-slate-400">-</span>
-                                            <input {...registerReq('reqAreaMax')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Max"/>
-                                        </div>
-                                    </div>
-                                    <div className="form-control">
-                                        <label className="label font-bold text-slate-700 flex gap-2 items-center"><FaDollarSign className="text-slate-400"/> Presupuesto</label>
-                                        <div className="flex gap-2 items-center">
-                                            <input {...registerReq('reqPresupuestoMin')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Min"/>
-                                            <span className="text-slate-400">-</span>
-                                            <input {...registerReq('reqPresupuestoMax')} className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-center bg-white" placeholder="Max"/>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {reqTipoModal === 'COMPRA' && (
-                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                                         <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2"><FaMoneyBillWave className="text-green-500"/> Forma de Pago</h5>
-                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="form-control">
-                                                <select {...registerReq('reqFormaPago')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
-                                                    <option value="FINANCIADO">Financiamiento Bancario</option>
-                                                    <option value="CONTADO">Recursos Propios (Contado)</option>
-                                                    <option value="MIXTO">Mixto (Banco + Contado)</option>
-                                                </select>
-                                            </div>
-                                            {(reqFormaPagoModal === 'FINANCIADO' || reqFormaPagoModal === 'MIXTO') && (
-                                                 <div className="form-control animate-fade-in-right relative"><FaUniversity className="absolute left-4 top-4 text-green-600 pointer-events-none"/><select {...registerReq('reqBanco')} className="w-full pl-10 pr-4 py-3 border-2 border-green-200 bg-green-50/50 rounded-xl font-medium text-green-900"><option value="">Selecciona un Banco...</option>{BANCOS_PERU.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
-                                            )}
-                                         </div>
-                                    </div>
-                                )}
-
-                                <div className="form-control">
-                                    <label className="label font-bold text-slate-700">Comentarios Adicionales</label>
-                                    <textarea {...registerReq('reqComentarios')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl h-24 resize-none bg-white" placeholder="Ej: Que tenga jardín, cochera doble..."></textarea>
-                                </div>
-
-                                <div className="pt-4 flex justify-end">
-                                    <button type="submit" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
-                                        <FaSave/> Guardar Requerimiento
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
