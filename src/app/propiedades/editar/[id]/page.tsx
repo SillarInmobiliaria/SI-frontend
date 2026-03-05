@@ -129,7 +129,7 @@ export default function EditarPropiedadPage() {
   const [mostrarSugerenciasProp, setMostrarSugerenciasProp] = useState(false);
   
   const [asesoresDB, setAsesoresDB] = useState<any[]>([]);
-  const [agentesDB, setAgentesDB] = useState<any[]>([]); // ESTADO DE AGENTES EXTERNOS
+  const [agentesDB, setAgentesDB] = useState<any[]>([]);
   const [busquedaAsesor, setBusquedaAsesor] = useState('');
   const [mostrarSugerenciasAsesor, setMostrarSugerenciasAsesor] = useState(false);
   const [busquedaUbicacion, setBusquedaUbicacion] = useState('');
