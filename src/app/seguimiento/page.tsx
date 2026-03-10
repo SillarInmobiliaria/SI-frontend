@@ -115,12 +115,20 @@ export default function SeguimientoPage() {
   const handleAddZona = (zona: string) => { const nuevasZonas = [...zonasSelected, zona]; setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); setZonasQuery(''); setShowZonasSuggestions(false); };
   const handleRemoveZona = (zona: string) => { const nuevasZonas = zonasSelected.filter(z => z !== zona); setZonasSelected(nuevasZonas); setValue('reqZonas', nuevasZonas.join(', ')); };
 
-  // --- LÓGICA FILTRADO ---
+  // --- LÓGICA FILTRADO MEJORADA ---
   const dataFiltrada = useMemo(() => {
     const filtradosBasicos = seguimientos.filter(s => {
       const texto = searchTerm.toLowerCase();
-      const coincideTexto = s.Cliente?.nombre?.toLowerCase().includes(texto) || s.comentario?.toLowerCase().includes(texto);
+      
+      // Buscamos coincidencia en nombre, comentario O teléfono
+      const nombreCliente = s.Cliente?.nombre?.toLowerCase() || '';
+      const comentario = s.comentario?.toLowerCase() || '';
+      const telefonoCliente = s.Cliente?.telefono1?.toLowerCase() || '';
+
+      const coincideTexto = nombreCliente.includes(texto) || comentario.includes(texto) || telefonoCliente.includes(texto);
+      
       if (searchTerm !== '' && !coincideTexto) return false;
+      
       const mesRegistro = new Date(s.fecha).getUTCMonth(); 
       const anioRegistro = new Date(s.fecha).getUTCFullYear();
       return mesRegistro === Number(filtroMes) && anioRegistro === Number(filtroAnio);
@@ -292,7 +300,10 @@ export default function SeguimientoPage() {
 
             {/* BARRA HERRAMIENTAS */}
             <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-5 mb-6 flex flex-col xl:flex-row justify-between items-center gap-5 sticky top-4 z-20 backdrop-blur-xl bg-white/90">
-                <div className="relative w-full xl:w-96"><FaSearch className="absolute left-4 top-3.5 text-slate-400"/><input type="text" placeholder="Buscar cliente..." className="input input-bordered w-full pl-11 rounded-xl bg-slate-50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/></div>
+                <div className="relative w-full xl:w-96">
+                    <FaSearch className="absolute left-4 top-3.5 text-slate-400"/>
+                    <input type="text" placeholder="Buscar por nombre o celular..." className="input input-bordered w-full pl-11 rounded-xl bg-slate-50" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+                </div>
                 <div className="flex gap-4 items-center">
                     <div className="flex items-center gap-2 bg-slate-100 p-2 rounded-xl"><FaCalendarAlt className="text-slate-400 ml-2"/><select value={filtroMes} onChange={(e) => setFiltroMes(Number(e.target.value))} className="bg-transparent font-bold text-sm outline-none">{meses.map((m, i) => <option key={i} value={i}>{m}</option>)}</select><select value={filtroAnio} onChange={(e) => setFiltroAnio(Number(e.target.value))} className="bg-transparent font-bold text-sm outline-none"><option value={2025}>2025</option><option value={2026}>2026</option></select></div>
                     <div className="join shadow-sm border border-slate-200 rounded-xl">{['TODOS', 'PENDIENTE', 'FINALIZADO'].map(st => (<button key={st} onClick={() => setFiltroEstado(st)} className={`join-item btn btn-sm font-bold ${filtroEstado === st ? 'bg-slate-800 text-white' : 'bg-white text-slate-500'}`}>{st === 'PENDIENTE' ? 'Pendientes' : st === 'FINALIZADO' ? 'Listos' : 'Todos'}</button>))}</div>
