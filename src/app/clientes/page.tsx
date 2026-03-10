@@ -179,7 +179,7 @@ export default function ClientesPage() {
   const handleOpenModal = () => {
       setModalOpen(true);
       setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery(''); setTipologiasInteres([]);
-      reset({ id: undefined, modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO' });
+      reset({ id: undefined, modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO', fechaAlta: today });
       setShowFullProperty(false);
   };
 
@@ -267,17 +267,19 @@ export default function ClientesPage() {
       let nuevoId: string | undefined = data.id;
 
       if (data.id) {
-          await updateCliente(data.id as unknown as number, {
+          // CORRECCIÓN: El ID se envía como string (UUID), no como número. Y forzamos PROSPECTO.
+          await updateCliente(data.id as any, {
               nombre: data.nombre,
               telefono1: data.telefono1,
               dni: data.dni || undefined,
               email: data.email || undefined,
               fechaAlta: getISOFechaPeru(data.fechaAlta),
               origen: data.origen,
-              detalles: data.detalles || undefined
+              detalles: data.detalles || undefined,
+              tipo: 'PROSPECTO' 
           });
       } else {
-          // CREAR NUEVO CLIENTE
+          // CREAR NUEVO CLIENTE (Forzado como PROSPECTO)
           const resp = await createCliente({
               nombre: data.nombre,
               telefono1: data.telefono1,
@@ -285,7 +287,8 @@ export default function ClientesPage() {
               email: data.email || undefined,
               fechaAlta: getISOFechaPeru(data.fechaAlta),
               origen: data.origen,
-              detalles: data.detalles || undefined
+              detalles: data.detalles || undefined,
+              tipo: 'PROSPECTO'
           } as any);
           nuevoId = (resp as any).data?.id || (resp as any).id;
       }
@@ -507,7 +510,7 @@ export default function ClientesPage() {
                                     <td className="rounded-l-2xl border-y border-l border-gray-100 py-4 pl-4">
                                         <div className="flex items-center gap-3">
                                             <div className={`w-10 h-10 rounded-full text-white font-bold flex items-center justify-center shadow-lg ${avatarColor}`}>
-                                                {c.nombre.charAt(0)}
+                                                {c.nombre.charAt(0).toUpperCase()}
                                             </div>
                                             <div className={`text-xs font-bold px-3 py-1 rounded-full ${statusColor}`}>
                                                 {statusLabel}
@@ -567,7 +570,6 @@ export default function ClientesPage() {
                         </div>
                         <form onSubmit={handleSubmit(onSubmitCliente)} className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
                             
-                            {/* Campo oculto para el UUID — no se convierte a Number */}
                             <input type="hidden" {...register('id')} />
 
                             <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 shadow-lg mb-6">
@@ -575,10 +577,10 @@ export default function ClientesPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Nombre Completo *</label><input {...register('nombre', { required: true })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Celular *</label><input {...register('telefono1', { required: true, minLength: 9 })} onInput={handleNumberInput} maxLength={9} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
-                                    
+                                   
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">DNI / Documento</label><input {...register('dni')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1">Correo Electrónico</label><input type="email" {...register('email')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"/></div>
-                                    
+                                   
                                     <div className="form-control"><label className="label font-bold text-gray-700 mb-1 flex items-center gap-2"><FaBullhorn className="text-orange-500"/> Canal de Contacto</label>
                                             <select {...register('origen')} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"><option value="">Seleccione...</option><option value="Redes Sociales">Redes Sociales</option><option value="Llamada">Llamada</option><option value="Letrero">Letrero</option><option value="Referido">Referido</option><option value="Urbania">Urbania</option><option value="Web">Página Web</option></select>
                                     </div>
@@ -845,7 +847,7 @@ export default function ClientesPage() {
                             <div className="flex-1">
                                 <h2 className="text-3xl font-black text-gray-800 tracking-tight">{selectedCliente.nombre}</h2>
                                 <p className="text-sm font-bold text-gray-500 flex items-center gap-3 mt-2">
-                                    <span className="badge badge-lg bg-indigo-100 text-indigo-700 border-none px-4 shadow-sm">{selectedCliente.tipo}</span>
+                                    <span className={`badge badge-lg border-none px-4 shadow-sm ${selectedCliente.tipo === 'CLIENTE' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{selectedCliente.tipo}</span>
                                     {selectedCliente.origen && <span className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100"><FaBullhorn/> {selectedCliente.origen}</span>}
                                 </p>
                             </div>
@@ -865,15 +867,17 @@ export default function ClientesPage() {
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaEnvelope className="text-indigo-400"/> Correo Electrónico</p>
                                 <p className="font-bold text-gray-800 truncate" title={selectedCliente.email}>{selectedCliente.email || 'No registrado'}</p>
                             </div>
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaBullhorn className="text-orange-400"/> Canal de Contacto</p>
-                                <p className="font-bold text-gray-800">{selectedCliente.origen || 'No registrado'}</p>
+                            
+                            <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 hover:shadow-md transition-shadow">
+                                <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaBullhorn className="text-orange-500"/> Canal de Contacto</p>
+                                <p className="font-black text-orange-800 text-lg">{selectedCliente.origen || 'No registrado'}</p>
                             </div>
+
                             <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaIdCard className="text-indigo-400"/> Documento de Identidad</p>
                                 <p className="font-bold text-gray-800">{selectedCliente.dni || 'No registrado'}</p>
                             </div>
-                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
+                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow md:col-span-2">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaCalendarAlt className="text-indigo-400"/> Fecha de Registro</p>
                                 <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '---'}</p>
                             </div>
