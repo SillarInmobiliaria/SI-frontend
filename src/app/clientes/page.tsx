@@ -256,6 +256,13 @@ export default function ClientesPage() {
     setIsSubmitting(true);
     const loadingToast = toast.loading(data.id ? "Actualizando cliente..." : "Guardando cliente...");
     
+    if (!data.nombre?.trim() || !data.telefono1?.trim()) {
+      toast.dismiss(loadingToast);
+      toast.error('Nombre y celular son requeridos');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       let nuevoId: string | undefined = data.id;
 
@@ -267,7 +274,7 @@ export default function ClientesPage() {
               email: data.email || undefined,
               fechaAlta: getISOFechaPeru(data.fechaAlta),
               origen: data.origen,
-              tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
+              detalles: data.detalles || undefined
           });
       } else {
           // CREAR NUEVO CLIENTE
@@ -278,7 +285,7 @@ export default function ClientesPage() {
               email: data.email || undefined,
               fechaAlta: getISOFechaPeru(data.fechaAlta),
               origen: data.origen,
-              tipo: (data.dni && data.email) ? 'CLIENTE' : 'PROSPECTO'
+              detalles: data.detalles || undefined
           } as any);
           nuevoId = (resp as any).data?.id || (resp as any).id;
       }
