@@ -333,11 +333,13 @@ export default function CalendarPage() {
                         </div>
                         
                         <div className="p-7 space-y-6">
+                            {/* SECCIÓN PROPIEDAD */}
                             <div className="flex gap-4 items-center">
                                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FaHome size={20}/></div>
                                 <div><h4 className="text-xs font-bold text-slate-400 uppercase">Propiedad</h4><p className="font-bold text-slate-800">{selectedVisita.propiedad.tipo} - {selectedVisita.propiedad.ubicacion}</p></div>
                             </div>
                             
+                            {/* SECCIÓN CLIENTE */}
                             <div className="flex gap-4 items-center">
                                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600"><FaUserTie size={20}/></div>
                                 <div className="flex-1 flex justify-between items-center">
@@ -345,26 +347,41 @@ export default function CalendarPage() {
                                         <h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4>
                                         <p className="font-bold text-slate-800">{selectedVisita.cliente.nombre}</p>
                                     </div>
-                                    {(selectedVisita.cliente as any).origen && (
+                                    {(selectedVisita.cliente as any).origen ? (
                                         <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100 text-xs font-bold shadow-sm">
                                             <FaBullhorn/> {(selectedVisita.cliente as any).origen}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1 rounded-lg border border-gray-200 text-[10px] font-bold">
+                                            Sin origen registrado
                                         </div>
                                     )}
                                 </div>
                             </div>
 
+                            {/* NOTAS DEL ASESOR (CREACIÓN DEL CLIENTE) */}
                             {(selectedVisita.cliente as any).detalles && (
                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-sm text-blue-900 shadow-inner">
-                                    <p className="font-black mb-1 flex items-center gap-2"><FaClipboardList className="text-blue-500"/> Notas del Asesor:</p>
+                                    <p className="font-black mb-1 flex items-center gap-2"><FaClipboardList className="text-blue-500"/> Notas del Asesor (Registro):</p>
                                     <p className="whitespace-pre-wrap">{(selectedVisita.cliente as any).detalles}</p>
                                 </div>
                             )}
                             
+                            {/* NOTAS DE LA VISITA */}
                             <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-sm text-slate-700 shadow-inner">
-                                <p className="font-black mb-1 flex items-center gap-2"><FaStickyNote className="text-yellow-500"/> Notas de la Visita:</p>
-                                "{selectedVisita.comentariosPrevios || 'Sin notas'}"
+                                <p className="font-black mb-1 flex items-center gap-2"><FaStickyNote className="text-yellow-500"/> Notas previas a la Visita:</p>
+                                <p className="italic">"{selectedVisita.comentariosPrevios || 'Sin notas'}"</p>
                             </div>
 
+                            {/* NUEVO: RESULTADO DE LA VISITA */}
+                            {(selectedVisita as any).resultadoSeguimiento && (
+                                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-sm text-emerald-900 shadow-inner">
+                                    <p className="font-black mb-1 flex items-center gap-2"><FaCheckCircle className="text-emerald-500"/> Resultado de la Visita:</p>
+                                    <p className="whitespace-pre-wrap">{(selectedVisita as any).resultadoSeguimiento}</p>
+                                </div>
+                            )}
+
+                            {/* BOTONES DE ACCIÓN */}
                             {selectedVisita.estado === 'PENDIENTE' && (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     {(() => {
