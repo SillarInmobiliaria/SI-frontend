@@ -156,10 +156,11 @@ export default function ClientesPage() {
   }, [zonasQuery, zonasSelected]);
 
   const handleSelectPropiedad = (prop: any) => { 
-      setValue('propiedadId', prop.id); 
-      setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); 
-      setShowPropSuggestions(false); 
-      setTipologiasInteres([]);
+    console.log("Propiedad seleccionada ID:", prop.id);
+    setValue('propiedadId', prop.id, { shouldValidate: true, shouldDirty: true }); 
+    setPropSearch(`${prop.tipo} - ${prop.ubicacion} (${prop.direccion || ''})`); 
+    setShowPropSuggestions(false); 
+    setTipologiasInteres([]);
   };
 
   const handleAddZona = (zona: string) => {
@@ -267,7 +268,6 @@ export default function ClientesPage() {
       let nuevoId: string | undefined = data.id;
 
       if (data.id) {
-          // CORRECCIÓN: El ID se envía como string (UUID), no como número. Y forzamos PROSPECTO.
           await updateCliente(data.id as any, {
               nombre: data.nombre,
               telefono1: data.telefono1,
