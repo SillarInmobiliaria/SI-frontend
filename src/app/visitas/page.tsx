@@ -10,7 +10,7 @@ import { Visita, Propiedad, Cliente } from '../../types';
 import { 
   FaChevronLeft, FaChevronRight, FaCalendarPlus, FaClock, 
   FaUserTie, FaHome, FaSpinner, FaCheckCircle, FaIdCard, 
-  FaMapMarkerAlt, FaEnvelope, FaTimes, FaStickyNote, FaBan, FaCalendarAlt, FaPassport, FaGlobeAmericas
+  FaMapMarkerAlt, FaEnvelope, FaTimes, FaStickyNote, FaBan, FaCalendarAlt, FaPassport, FaGlobeAmericas, FaBullhorn, FaClipboardList
 } from 'react-icons/fa';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -101,7 +101,6 @@ export default function CalendarPage() {
       const [hora, minuto] = formData.hora.split(':').map(Number);
 
       // --- CORRECCIÓN DE HORA (FIX) ---
-      // Creamos la fecha usando UTC explícitamente para evitar que la conversión a ISOString reste 5 horas (Perú) y cambie de día
       const fechaUTC = new Date(Date.UTC(year, month, day, hora, minuto));
       const fechaISO = fechaUTC.toISOString(); 
 
@@ -171,12 +170,8 @@ export default function CalendarPage() {
 
   const openRescheduleModal = () => {
       if (!selectedVisita) return;
-      // Convertimos a Date local para extraer YMD
-      // Nota: Al leer del backend, la fecha viene en ISO. 
-      // Para editarla correctamente en el input type="date", necesitamos YYYY-MM-DD local
       const fechaObj = new Date(selectedVisita.fechaProgramada);
       
-      // Ajuste simple para visualización local en el input
       const offsetMs = fechaObj.getTimezoneOffset() * 60000;
       const localDate = new Date(fechaObj.getTime() - offsetMs);
       
@@ -197,7 +192,6 @@ export default function CalendarPage() {
           const [anio, mes, dia] = rescheduleData.fecha.split('-').map(Number);
           const [hora, minuto] = rescheduleData.hora.split(':').map(Number);
           
-          // Misma corrección de UTC para reprogramar
           const nuevaFechaUTC = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto));
           const nuevaFechaISO = nuevaFechaUTC.toISOString();
 
@@ -211,7 +205,6 @@ export default function CalendarPage() {
       } catch (error) { toast.error('Error al reprogramar', { id: loadingToast }); }
   };
 
-  // Función para manejar input de documentos
   const handleDocumentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value;
       const tipo = completionData.tipoDocumento;
@@ -251,8 +244,6 @@ export default function CalendarPage() {
           </div>
           <div className="flex flex-col gap-1.5 mt-1 overflow-y-auto max-h-[100px] scrollbar-hide">
             {visitsForDay.map(v => {
-               // Ajuste visual de la hora en la tarjeta (UTC a Local visualmente)
-               // Como guardamos en UTC "fake" (19:00 UTC para que sea 19:00 en la fecha), al leerlo directamete .getUTCHours() daría la hora correcta.
                const fechaObj = new Date(v.fechaProgramada);
                const horaVisual = `${String(fechaObj.getUTCHours()).padStart(2, '0')}:${String(fechaObj.getUTCMinutes()).padStart(2, '0')}`;
 
@@ -342,16 +333,44 @@ export default function CalendarPage() {
                         </div>
                         
                         <div className="p-7 space-y-6">
-                            <div className="flex gap-4 items-center"><div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FaHome size={20}/></div><div><h4 className="text-xs font-bold text-slate-400 uppercase">Propiedad</h4><p className="font-bold text-slate-800">{selectedVisita.propiedad.tipo} - {selectedVisita.propiedad.ubicacion}</p></div></div>
-                            <div className="flex gap-4 items-center"><div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600"><FaUserTie size={20}/></div><div><h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4><p className="font-bold text-slate-800">{selectedVisita.cliente.nombre}</p></div></div>
-                            <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-sm text-slate-700"><p className="font-bold mb-1">Notas:</p>"{selectedVisita.comentariosPrevios || 'Sin notas'}"</div>
+                            <div className="flex gap-4 items-center">
+                                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FaHome size={20}/></div>
+                                <div><h4 className="text-xs font-bold text-slate-400 uppercase">Propiedad</h4><p className="font-bold text-slate-800">{selectedVisita.propiedad.tipo} - {selectedVisita.propiedad.ubicacion}</p></div>
+                            </div>
+                            
+                            <div className="flex gap-4 items-center">
+                                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600"><FaUserTie size={20}/></div>
+                                <div className="flex-1 flex justify-between items-center">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4>
+                                        <p className="font-bold text-slate-800">{selectedVisita.cliente.nombre}</p>
+                                    </div>
+                                    {(selectedVisita.cliente as any).origen && (
+                                        <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100 text-xs font-bold shadow-sm">
+                                            <FaBullhorn/> {(selectedVisita.cliente as any).origen}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {(selectedVisita.cliente as any).detalles && (
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-sm text-blue-900 shadow-inner">
+                                    <p className="font-black mb-1 flex items-center gap-2"><FaClipboardList className="text-blue-500"/> Notas del Asesor:</p>
+                                    <p className="whitespace-pre-wrap">{(selectedVisita.cliente as any).detalles}</p>
+                                </div>
+                            )}
+                            
+                            <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-sm text-slate-700 shadow-inner">
+                                <p className="font-black mb-1 flex items-center gap-2"><FaStickyNote className="text-yellow-500"/> Notas de la Visita:</p>
+                                "{selectedVisita.comentariosPrevios || 'Sin notas'}"
+                            </div>
 
                             {selectedVisita.estado === 'PENDIENTE' && (
                                 <div className="grid grid-cols-2 gap-4 pt-2">
                                     {(() => {
                                         const fechaVisita = new Date(selectedVisita.fechaProgramada);
                                         const ahora = new Date();
-                                        const yaPasoLaHora = ahora >= fechaVisita; // Si ya pasó la hora
+                                        const yaPasoLaHora = ahora >= fechaVisita; 
 
                                         if (yaPasoLaHora) {
                                             return (
