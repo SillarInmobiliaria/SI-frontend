@@ -859,6 +859,10 @@ export default function ClientesPage() {
                                 <p className="font-bold text-gray-800 truncate" title={selectedCliente.email}>{selectedCliente.email || 'No registrado'}</p>
                             </div>
                             <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaBullhorn className="text-orange-400"/> Canal de Contacto</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.origen || 'No registrado'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaIdCard className="text-indigo-400"/> Documento de Identidad</p>
                                 <p className="font-bold text-gray-800">{selectedCliente.dni || 'No registrado'}</p>
                             </div>
