@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { 
-    getVisitas, createVisita, updateVisita, cancelVisita, getPropiedades, getClientes 
+    getVisitas, createVisita, updateVisita, cancelVisita, getPropiedades, getClientes, getIntereses
 } from '../../services/api'; 
 import { Visita, Propiedad, Cliente } from '../../types';
 import { 
@@ -45,7 +45,8 @@ export default function CalendarPage() {
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null); 
   
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]); 
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [intereses, setIntereses] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({ hora: '09:00', propiedadId: preSelectedPropiedadId || '', comentarios: '' });
   const [rescheduleData, setRescheduleData] = useState({ fecha: '', hora: '' });
@@ -67,10 +68,11 @@ export default function CalendarPage() {
 
   const fetchDatos = async () => {
     try {
-      const [v, p, c] = await Promise.all([getVisitas(), getPropiedades(), getClientes()]);
+      const [v, p, c, ints] = await Promise.all([getVisitas(), getPropiedades(), getClientes(), getIntereses()]);
       setVisitas(v);
       setPropiedades(p);
       setClientes(c);
+      setIntereses(ints || []);
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
   };
@@ -360,9 +362,9 @@ export default function CalendarPage() {
                                             <h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4>
                                             <p className="font-bold text-slate-800 truncate max-w-[150px] sm:max-w-xs">{selectedVisita.cliente.nombre}</p>
                                         </div>
-                                        {(selectedVisita.cliente as any).origen ? (
+                                        {(clientes.find(c => c.id === selectedVisita.cliente.id) as any)?.origen ? (
                                             <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100 text-[10px] font-bold shadow-sm w-fit">
-                                                <FaBullhorn/> {(selectedVisita.cliente as any).origen}
+                                                <FaBullhorn/> {(clientes.find(c => c.id === selectedVisita.cliente.id) as any)?.origen}
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1 rounded-lg border border-gray-200 text-[10px] font-bold w-fit">
@@ -506,6 +508,31 @@ export default function CalendarPage() {
                             {selectedVisita.propiedad.tipo?.toLowerCase().includes('proyecto') && selectedVisita.propiedad.tipologias && (
                                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mt-2">
                                     <p className="text-xs font-black text-indigo-800 uppercase mb-3 flex items-center gap-2"><FaBuilding/> Tipologías Disponibles</p>
+        
+                                    {/* Tipologías que el cliente seleccionó */}
+                                    {(() => {
+                                        const interesCliente = intereses.find((i: any) => i.clienteId === selectedVisita.cliente.id && i.propiedadId === selectedVisita.propiedad.id);
+                                        const notaInteres = interesCliente?.nota || '';
+                                        let tipsSeleccionadas: string[] = [];
+                                        if (notaInteres.includes('Interesado en tipologías:')) {
+                                            const parts = notaInteres.split(/\n?Interesado en tipologías:/);
+                                            tipsSeleccionadas = parts[1]?.replace(/\.$/, '').trim().split(' | ').filter(Boolean) || [];
+                                        }
+                                        if (tipsSeleccionadas.length > 0) {
+                                            return (
+                                                <div className="mb-3 bg-blue-100 p-3 rounded-xl border border-blue-200">
+                                                    <p className="text-[10px] font-black text-blue-700 uppercase mb-2">✅ Tipologías de interés del cliente:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {tipsSeleccionadas.map((t, i) => (
+                                                            <span key={i} className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">{t}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+
                                     <div className="space-y-2">
                                         {(() => {
                                             let tips = [];
