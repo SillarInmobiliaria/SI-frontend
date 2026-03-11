@@ -510,7 +510,7 @@ export default function PropiedadDetallePage() {
                         <div className="flex items-baseline gap-1 text-indigo-900 mb-6"><span className="text-4xl font-black tracking-tighter uppercase">PROYECTO</span></div>
                     )}
                     
-                    {propietarios.length > 0 && (
+                    {isAdmin && propietarios.length > 0 && (
                         <div className="space-y-4 mb-6">
                             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${propietarios[0].tipoPersona === 'PJ' ? 'bg-indigo-600' : 'bg-blue-600'}`}>
