@@ -180,7 +180,6 @@ export default function ClientesPage() {
   };
  
   const handleOpenModal = () => {
-      // abrimos un cliente nuevo, borramos cualquier interés previamente almacenado
       setEditingInteresId(null);
       setModalOpen(true);
       setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery(''); setTipologiasInteres([]);
@@ -220,7 +219,7 @@ export default function ClientesPage() {
         if (notaLimpia.includes('Interesado en tipologías:')) {
             const parts = notaLimpia.split(/\n?Interesado en tipologías:/);
             notaLimpia = parts[0].trim();
-            const tips = parts[1]?.replace(/\.$/, '').trim().split(', ').filter(Boolean) || [];
+            const tips = parts[1]?.replace(/\.$/, '').trim().split(' | ').filter(Boolean) || [];
             setTipologiasInteres(tips);
         } else {
             setTipologiasInteres([]);
@@ -289,7 +288,7 @@ export default function ClientesPage() {
               tipo: 'PROSPECTO' 
           });
       } else {
-          // CREAR NUEVO CLIENTE (Forzado como PROSPECTO)
+          // CREAR NUEVO CLIENTE
           const resp = await createCliente({
               nombre: data.nombre,
               telefono1: data.telefono1,
@@ -305,10 +304,9 @@ export default function ClientesPage() {
 
       // MANEJO DE INTERÉS O REQUERIMIENTO
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
-        // construimos la nota sólo con el texto del asesor y las tipologías; NO agregamos el prefijo "Registro/Actualización"
         let notaInteres = data.observaciones?.trim() || '';
         if (tipologiasInteres.length > 0) {
-            notaInteres += (notaInteres ? '\n' : '') + `Interesado en tipologías: ${tipologiasInteres.join(', ')}.`;
+            notaInteres += (notaInteres ? '\n' : '') + `Interesado en tipologías: ${tipologiasInteres.join(' | ')}.`;
         }
 
         if (editingInteresId) {
