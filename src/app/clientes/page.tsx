@@ -20,7 +20,7 @@ import {
   FaHome, FaBuilding, FaMapMarkerAlt, FaDollarSign, FaRulerCombined, FaHammer, FaTimes,
   FaBed, FaBath, FaCar, FaImages, FaChevronDown, FaHandshake, FaRoute, FaCheckCircle, FaSave,
   FaClipboardList, FaEnvelope, FaIdCard, FaMoneyBillWave, FaCity, FaPlus, FaUniversity, FaTasks, FaArrowRight, FaKey, FaTools, FaEdit,
-  FaWhatsapp
+  FaWhatsapp, FaCommentDots
 } from 'react-icons/fa';
 
 const BACKEND_URL = 'https://sillar-backend.onrender.com';
@@ -881,6 +881,13 @@ export default function ClientesPage() {
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaCalendarAlt className="text-indigo-400"/> Fecha de Registro</p>
                                 <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '---'}</p>
                             </div>
+
+                            {selectedCliente.detalles && (
+                                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow md:col-span-2">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaCommentDots className="text-indigo-400"/> Comentarios</p>
+                                    <p className="font-bold text-gray-800 whitespace-pre-line">{selectedCliente.detalles}</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mb-4">
