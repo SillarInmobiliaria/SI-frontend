@@ -5,7 +5,8 @@ import { getCaptaciones, createCaptacion, importarCaptacionesMasivo, deleteCapta
 import { 
     FaHome, FaPlus, FaSearch, FaFileUpload, FaTrash, FaMapMarkerAlt, 
     FaDollarSign, FaPhone, FaUser, FaCalculator, FaCalendarAlt, FaTimes, 
-    FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter, FaPen, FaFileExcel
+    FaCheckCircle, FaChevronDown, FaChevronRight, FaFilter, FaPen, FaFileExcel,
+    FaEye, FaCommentDots, FaWhatsapp
 } from 'react-icons/fa';
 import { read, utils } from 'xlsx';
 
@@ -36,6 +37,7 @@ export default function CaptacionPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null); 
+  const [selectedCaptacion, setSelectedCaptacion] = useState<any>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sugerenciasDistrito, setSugerenciasDistrito] = useState<string[]>([]);
@@ -116,7 +118,6 @@ export default function CaptacionPage() {
       setSugerenciasDistrito([]);
   };
 
-  // --- IMPORTACIÓN INTELIGENTE (Corregida para ENUMs) ---
   const handleFileUpload = async (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -126,11 +127,8 @@ export default function CaptacionPage() {
         try {
             const wb = read(event.target.result, { type: 'binary' });
             const sheets = wb.SheetNames;
-            
             if (sheets.length) {
                 const allRows = utils.sheet_to_json(wb.Sheets[sheets[0]], { header: 1 }) as any[][];
-                
-                // 1. BUSCAR CABECERA
                 let headerRowIndex = -1;
                 for (let i = 0; i < Math.min(allRows.length, 25); i++) {
                     const rowStr = JSON.stringify(allRows[i]).toUpperCase();
@@ -145,7 +143,6 @@ export default function CaptacionPage() {
                     return;
                 }
 
-                // 2. MAPEAR COLUMNAS
                 const headers = allRows[headerRowIndex].map(h => String(h).toUpperCase().trim());
                 const getIdx = (keywords: string[]) => headers.findIndex(h => keywords.some(k => h.includes(k)));
 
@@ -168,7 +165,6 @@ export default function CaptacionPage() {
                 const idxSit = getIdx(["SITUACIÓN", "SITUACION"]);
                 const idxObs = getIdx(["OBS", "OBSERVACIONES"]);
 
-                // Auxiliares
                 const cleanNumber = (val: any) => {
                     if (!val) return 0;
                     if (typeof val === 'number') return val;
@@ -187,27 +183,20 @@ export default function CaptacionPage() {
                     return new Date().toISOString().split('T')[0];
                 };
 
-                // 3. PROCESAR FILAS
                 const dataRows = allRows.slice(headerRowIndex + 1);
                 const importados = dataRows.map((row) => {
                     if (!row[idxInmueble] && !row[idxPrecio]) return null;
-
-                    // --- LIMPIEZA DE ENUMS (AQUÍ ESTÁ LA SOLUCIÓN) ---
-                    
-                    // 1. Relación: Convertir "AGENTE INMOBILIARIO" -> "AGENTE"
-                    let relacionLimpia = 'PROPIETARIO'; // Default
+                    let relacionLimpia = 'PROPIETARIO';
                     const rawRel = String(row[idxRelacion] || '').toUpperCase();
                     if (rawRel.includes('AGENTE')) relacionLimpia = 'AGENTE';
                     else if (rawRel.includes('INMOBILIARIA')) relacionLimpia = 'INMOBILIARIA';
                     else if (rawRel.includes('CONSTRUCTORA')) relacionLimpia = 'CONSTRUCTORA';
 
-                    // 2. Operación
                     let operacionLimpia = 'VENTA';
                     const rawOp = String(row[idxTipo] || '').toUpperCase();
                     if (rawOp.includes('ALQUILER')) operacionLimpia = 'ALQUILER';
                     else if (rawOp.includes('ANTICRESIS')) operacionLimpia = 'ANTICRESIS';
 
-                    // 3. Inmueble
                     let tipoInmueble = 'CASA'; 
                     const rawTipo = String(row[idxInmueble] || '').toUpperCase();
                     if (rawTipo.includes('TERRENO')) tipoInmueble = 'TERRENO';
@@ -216,11 +205,9 @@ export default function CaptacionPage() {
                     else if (rawTipo.includes('DUPLEX')) tipoInmueble = 'DUPLEX';
                     else if (rawTipo.includes('DEPARTAMENTO') || rawTipo.includes('DPTO')) tipoInmueble = 'DEPARTAMENTO';
 
-                    // Limpieza de moneda
                     const rawPrecio = String(row[idxPrecio] || '');
                     const moneda = rawPrecio.includes('S/') || rawPrecio.includes('PEN') ? 'PEN' : 'USD';
 
-                    // Corrección Chivay (desfase de columnas)
                     let precioM2 = idxM2 !== -1 ? cleanNumber(row[idxM2]) : 0;
                     let caracteristicas = idxCarac !== -1 ? String(row[idxCarac] || '') : '';
                     
@@ -235,7 +222,7 @@ export default function CaptacionPage() {
                         fuente: String(row[idxFuente] || 'OTROS').toUpperCase().trim().slice(0, 50), 
                         inmueble: tipoInmueble, 
                         tipoOperacion: operacionLimpia,
-                        relacion: relacionLimpia, // Usamos la versión limpia
+                        relacion: relacionLimpia,
                         nombre: String(row[idxNombre] || 'Sin Nombre').slice(0, 100),
                         celular1: row[idxCel1] ? String(row[idxCel1]).replace(/\D/g, '').slice(0, 9) : '',
                         celular2: row[idxCel2] ? String(row[idxCel2]).replace(/\D/g, '').slice(0, 9) : '',
@@ -263,8 +250,7 @@ export default function CaptacionPage() {
                         } catch (e) { 
                             console.error(e);
                             alert('Hubo un error al guardar. Revisa la consola.'); 
-                        } 
-                        finally { setLoading(false); }
+                        } finally { setLoading(false); }
                     }
                 } else {
                     alert('⚠️ No se encontraron datos válidos.');
@@ -282,12 +268,10 @@ export default function CaptacionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsSubmitting(true);
-      
       const payload = { ...form };
       if (payload.antiguedad && !payload.antiguedad.toLowerCase().includes('año')) {
           payload.antiguedad = `${payload.antiguedad} años`;
       }
-
       try {
           if (editingId) {
               await updateCaptacion(editingId, payload);
@@ -366,19 +350,16 @@ export default function CaptacionPage() {
 
   const filtrados = useMemo(() => {
       const t = searchTerm.toLowerCase();
-      
       return captaciones.filter(c => {
         const matchesText = 
             c.nombre?.toLowerCase().includes(t) || 
             c.ubicacion?.toLowerCase().includes(t) ||
             c.celular1?.includes(t) ||
             c.distrito?.toLowerCase().includes(t);
-        
         const matchesDate = filterDate ? c.fechaCaptacion === filterDate : true;
         const matchesOperacion = filterOperacion === 'TODOS' ? true : c.tipoOperacion === filterOperacion;
         const matchesInmueble = filterInmueble === 'TODOS' ? true : c.inmueble === filterInmueble;
         const matchesDistrito = filterDistrito === 'TODOS' ? true : c.distrito === filterDistrito;
-
         return matchesText && matchesDate && matchesOperacion && matchesInmueble && matchesDistrito;
       });
   }, [captaciones, searchTerm, filterDate, filterOperacion, filterInmueble, filterDistrito]);
@@ -388,7 +369,6 @@ export default function CaptacionPage() {
       <Navbar />
       
       <div className="flex flex-1 relative">
-          
           <main className="flex-1 p-6 max-w-[100vw] overflow-x-hidden w-full">
             
             {/* HEADER Y FILTROS */}
@@ -407,7 +387,6 @@ export default function CaptacionPage() {
                     </div>
                 </div>
 
-                {/* BARRA DE FILTROS */}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <select className="select select-bordered select-sm w-full font-bold text-slate-600" value={filterOperacion} onChange={e => setFilterOperacion(e.target.value)}>
                         <option value="TODOS">Todas las Operaciones</option>
@@ -507,6 +486,10 @@ export default function CaptacionPage() {
                                     <td className="truncate max-w-[150px] text-xs text-left text-yellow-600 font-medium" title={item.observaciones}>{item.observaciones}</td>
                                     <td className="sticky right-0 bg-white group-hover:bg-slate-50 shadow-l">
                                         <div className="flex justify-center gap-1">
+                                            {/* BOTÓN VER DETALLE */}
+                                            <button onClick={() => setSelectedCaptacion(item)} className="btn btn-ghost btn-xs text-cyan-600 hover:text-cyan-800 hover:bg-cyan-100 tooltip tooltip-left" data-tip="Ver todo">
+                                                <FaEye/>
+                                            </button>
                                             {/* BOTÓN EDITAR */}
                                             <button onClick={() => handleEdit(item)} className="btn btn-ghost btn-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 tooltip tooltip-left" data-tip="Editar">
                                                 <FaPen/>
@@ -524,21 +507,93 @@ export default function CaptacionPage() {
                 </div>
             </div>
 
-            {/* MODAL (Reutilizado para Crear y Editar) */}
+            {/* MODAL DE VISTA DETALLADA (EL OJITO) */}
+            {selectedCaptacion && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-scaleIn max-h-[90vh] flex flex-col">
+                        <div className="bg-gradient-to-r from-cyan-600 to-blue-700 p-6 text-white flex justify-between items-center">
+                            <div>
+                                <h3 className="text-2xl font-black flex items-center gap-2 uppercase">
+                                    <FaHome/> {selectedCaptacion.inmueble} en {selectedCaptacion.distrito}
+                                </h3>
+                                <p className="text-cyan-100 font-medium">{selectedCaptacion.tipoOperacion} - {selectedCaptacion.moneda === 'PEN' ? 'S/. ' : '$ '} {Number(selectedCaptacion.precio).toLocaleString()}</p>
+                            </div>
+                            <button onClick={() => setSelectedCaptacion(null)} className="btn btn-sm btn-circle btn-ghost text-white text-xl">×</button>
+                        </div>
+
+                        <div className="p-8 overflow-y-auto space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1"><FaMapMarkerAlt/> Ubicación Exacta</p>
+                                    <p className="font-bold text-slate-700">{selectedCaptacion.ubicacion}</p>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1"><FaUser/> Contacto / Propietario</p>
+                                    <p className="font-bold text-slate-700">{selectedCaptacion.nombre}</p>
+                                    <p className="text-cyan-600 font-mono text-sm font-bold">{selectedCaptacion.celular1} {selectedCaptacion.celular2 && `/ ${selectedCaptacion.celular2}`}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-5 rounded-2xl border-2 border-cyan-50 shadow-sm">
+                                <p className="text-xs font-black text-cyan-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <FaCalculator/> Características Detalladas
+                                </p>
+                                <p className="text-slate-600 leading-relaxed whitespace-pre-line italic">
+                                    {selectedCaptacion.caracteristicas || "Sin características registradas."}
+                                </p>
+                            </div>
+
+                            <div className="bg-yellow-50 p-5 rounded-2xl border-2 border-yellow-100 shadow-sm">
+                                <p className="text-xs font-black text-yellow-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <FaCommentDots/> Observaciones y Notas Internas
+                                </p>
+                                <p className="text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                                    {selectedCaptacion.observaciones || "Sin observaciones registradas."}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">A.T.</p>
+                                    <p className="font-black text-slate-700">{selectedCaptacion.at || 0} m²</p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">A.C.</p>
+                                    <p className="font-black text-slate-700">{selectedCaptacion.ac || 0} m²</p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">$/m²</p>
+                                    <p className="font-black text-cyan-600">{selectedCaptacion.precioM2 || 0}</p>
+                                </div>
+                                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Antig.</p>
+                                    <p className="font-black text-slate-700">{selectedCaptacion.antiguedad || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <a href={`https://wa.me/51${selectedCaptacion.celular1}`} target="_blank" className="btn flex-1 bg-green-600 text-white border-none hover:bg-green-700 font-bold">
+                                <FaWhatsapp className="text-lg"/> WhatsApp
+                            </a>
+                            <button onClick={() => setSelectedCaptacion(null)} className="btn flex-1 btn-outline font-bold">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE FORMULARIO (Crear y Editar) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl p-0 my-10 animate-scaleIn overflow-hidden flex flex-col max-h-[90vh]">
-                        
                         <div className="bg-slate-800 p-6 flex justify-between items-center text-white">
                             <h2 className="text-2xl font-black flex items-center gap-2">
                                 <FaHome className="text-cyan-400"/> {editingId ? 'Editar Captación' : 'Nueva Captación'}
                             </h2>
                             <button onClick={() => setModalOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white"><FaTimes/></button>
                         </div>
-
                         <div className="p-8 overflow-y-auto flex-1">
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* PASO 1 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 1 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(1)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">1</span> Datos Básicos</h3>
@@ -554,8 +609,6 @@ export default function CaptacionPage() {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* PASO 2 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 2 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(2)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">2</span> Contacto</h3>
@@ -571,8 +624,6 @@ export default function CaptacionPage() {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* PASO 3 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 3 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(3)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">3</span> Detalles</h3>
@@ -599,8 +650,6 @@ export default function CaptacionPage() {
                                         </div>
                                     )}
                                 </div>
-
-                                {/* PASO 4 */}
                                 <div className={`border rounded-2xl transition-all duration-300 ${activeStep === 4 ? 'border-cyan-500 shadow-lg bg-white' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-slate-50 rounded-t-2xl border-b border-slate-100" onClick={() => setActiveStep(4)}>
                                         <h3 className="font-black text-slate-700 flex items-center gap-2"><span className="badge badge-neutral">4</span> Notas Finales</h3>
