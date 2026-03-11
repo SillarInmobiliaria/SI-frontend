@@ -79,8 +79,21 @@ export default function CarteraPage() {
     };
 
     const seleccionarSugerencia = (interesado: any) => {
-        setForm({ ...form, nombreCompleto: interesado.nombre, telefono: interesado.telefono || '', email: interesado.email || '' });
+        setForm({ 
+            ...form, 
+            nombreCompleto: interesado.nombre || '', 
+            telefono: interesado.telefono1 || interesado.telefono || '', 
+            telefono2: interesado.telefono2 || '',
+            documento: interesado.dni || '',
+            email: interesado.email || '',
+            direccion: interesado.direccion || '',
+            fechaNacimiento: interesado.fechaNacimiento || ''
+        });
         setMostrarSugerencias(false);
+        toast.success(`Datos de ${interesado.nombre} autocompletados.`, {
+            icon: '🪄',
+            style: { borderRadius: '10px', background: '#333', color: '#fff' }
+        });
     };
 
     const handleChange = (e: any) => {
@@ -135,7 +148,7 @@ export default function CarteraPage() {
                 toast.success("Actualizado correctamente", { id: loadingToast });
             } else {
                 await createClienteCartera(payload);
-                toast.success("Cliente guardado", { id: loadingToast });
+                toast.success("Cliente guardado en Cartera", { id: loadingToast });
             }
             setShowModal(false);
             cargarDatos();
@@ -144,7 +157,7 @@ export default function CarteraPage() {
     };
 
     const handleDelete = async (id: number) => {
-        if(!confirm('¿Estás seguro de eliminar este cliente?')) return;
+        if(!confirm('¿Estás seguro de eliminar este cliente formal?')) return;
         const loadingToast = toast.loading("Eliminando...");
         try {
             await deleteClienteCartera(id);
@@ -393,12 +406,12 @@ export default function CarteraPage() {
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
                                     {form.tipoPersona === 'PJ' ? 'Representante Legal (Nombre Completo) *' : 'Nombre Completo *'}
                                 </label>
-                                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700" value={form.nombreCompleto} onChange={handleNombreChange} required />
+                                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-bold text-slate-700" value={form.nombreCompleto} onChange={handleNombreChange} placeholder="Escribe para buscar prospectos..." required />
                                 {mostrarSugerencias && sugerencias.length > 0 && !editandoId && (
                                     <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 z-50 max-h-48 overflow-y-auto">
                                         {sugerencias.map((s: any) => (
                                             <li key={s.id} onClick={() => seleccionarSugerencia(s)} className="px-4 py-3 hover:bg-emerald-50 cursor-pointer border-b last:border-none flex justify-between items-center group font-bold text-slate-700 transition-colors">
-                                                <span>{s.nombre}</span> <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono group-hover:bg-emerald-100">{s.telefono}</span>
+                                                <span>{s.nombre}</span> <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono group-hover:bg-emerald-100">{s.telefono1 || s.telefono}</span>
                                             </li>
                                         ))}
                                     </ul>
