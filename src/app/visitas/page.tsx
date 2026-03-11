@@ -10,7 +10,8 @@ import { Visita, Propiedad, Cliente } from '../../types';
 import { 
   FaChevronLeft, FaChevronRight, FaCalendarPlus, FaClock, 
   FaUserTie, FaHome, FaSpinner, FaCheckCircle, FaIdCard, 
-  FaMapMarkerAlt, FaEnvelope, FaTimes, FaStickyNote, FaBan, FaCalendarAlt, FaPassport, FaGlobeAmericas, FaBullhorn, FaClipboardList
+  FaMapMarkerAlt, FaEnvelope, FaTimes, FaStickyNote, FaBan, FaCalendarAlt, FaPassport, FaGlobeAmericas, FaBullhorn, FaClipboardList,
+  FaEye, FaPhone, FaBuilding, FaRulerCombined, FaDollarSign // <-- Nuevos iconos para los modales
 } from 'react-icons/fa';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -35,6 +36,10 @@ export default function CalendarPage() {
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false); 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false); 
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  
+  // NUEVOS ESTADOS PARA LOS "OJITOS"
+  const [isPropiedadModalOpen, setIsPropiedadModalOpen] = useState(false);
+  const [isClienteModalOpen, setIsClienteModalOpen] = useState(false);
   
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null); 
@@ -100,7 +105,6 @@ export default function CalendarPage() {
       
       const [hora, minuto] = formData.hora.split(':').map(Number);
 
-      // --- CORRECCIÓN DE HORA (FIX) ---
       const fechaUTC = new Date(Date.UTC(year, month, day, hora, minuto));
       const fechaISO = fechaUTC.toISOString(); 
 
@@ -322,7 +326,7 @@ export default function CalendarPage() {
                 </div>
             )}
 
-            {/* MODAL 2: DETALLE DE VISITA */}
+            {/* MODAL 2: DETALLE DE VISITA PRINCIPAL */}
             {isDetailOpen && selectedVisita && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fadeIn">
                     <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scaleIn relative">
@@ -333,30 +337,43 @@ export default function CalendarPage() {
                         </div>
                         
                         <div className="p-7 space-y-6">
-                            {/* SECCIÓN PROPIEDAD */}
-                            <div className="flex gap-4 items-center">
-                                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FaHome size={20}/></div>
-                                <div><h4 className="text-xs font-bold text-slate-400 uppercase">Propiedad</h4><p className="font-bold text-slate-800">{selectedVisita.propiedad.tipo} - {selectedVisita.propiedad.ubicacion}</p></div>
+                            {/* SECCIÓN PROPIEDAD CON OJITO */}
+                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 hover:shadow-md transition-shadow">
+                                <div className="flex gap-4 items-center">
+                                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FaHome size={20}/></div>
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase">Propiedad</h4>
+                                        <p className="font-bold text-slate-800">{selectedVisita.propiedad.tipo} - {selectedVisita.propiedad.ubicacion}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setIsPropiedadModalOpen(true)} className="btn btn-circle btn-ghost text-blue-500 hover:bg-blue-100 tooltip tooltip-left" data-tip="Ver Inmueble">
+                                    <FaEye size={18}/>
+                                </button>
                             </div>
                             
-                            {/* SECCIÓN CLIENTE */}
-                            <div className="flex gap-4 items-center">
-                                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600"><FaUserTie size={20}/></div>
-                                <div className="flex-1 flex justify-between items-center">
-                                    <div>
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4>
-                                        <p className="font-bold text-slate-800">{selectedVisita.cliente.nombre}</p>
+                            {/* SECCIÓN CLIENTE CON OJITO */}
+                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 hover:shadow-md transition-shadow">
+                                <div className="flex gap-4 items-center w-full">
+                                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600"><FaUserTie size={20}/></div>
+                                    <div className="flex-1 flex flex-col md:flex-row md:justify-between md:items-center gap-1">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase">Cliente</h4>
+                                            <p className="font-bold text-slate-800 truncate max-w-[150px] sm:max-w-xs">{selectedVisita.cliente.nombre}</p>
+                                        </div>
+                                        {(selectedVisita.cliente as any).origen ? (
+                                            <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100 text-[10px] font-bold shadow-sm w-fit">
+                                                <FaBullhorn/> {(selectedVisita.cliente as any).origen}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1 rounded-lg border border-gray-200 text-[10px] font-bold w-fit">
+                                                Sin origen
+                                            </div>
+                                        )}
                                     </div>
-                                    {(selectedVisita.cliente as any).origen ? (
-                                        <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100 text-xs font-bold shadow-sm">
-                                            <FaBullhorn/> {(selectedVisita.cliente as any).origen}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1 rounded-lg border border-gray-200 text-[10px] font-bold">
-                                            Sin origen registrado
-                                        </div>
-                                    )}
                                 </div>
+                                <button onClick={() => setIsClienteModalOpen(true)} className="btn btn-circle btn-ghost text-green-600 hover:bg-green-100 tooltip tooltip-left ml-2" data-tip="Ver Cliente">
+                                    <FaEye size={18}/>
+                                </button>
                             </div>
 
                             {/* NOTAS DEL ASESOR (CREACIÓN DEL CLIENTE) */}
@@ -373,7 +390,7 @@ export default function CalendarPage() {
                                 <p className="italic">"{selectedVisita.comentariosPrevios || 'Sin notas'}"</p>
                             </div>
 
-                            {/* NUEVO: RESULTADO DE LA VISITA */}
+                            {/* RESULTADO DE LA VISITA */}
                             {(selectedVisita as any).resultadoSeguimiento && (
                                 <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-sm text-emerald-900 shadow-inner">
                                     <p className="font-black mb-1 flex items-center gap-2"><FaCheckCircle className="text-emerald-500"/> Resultado de la Visita:</p>
@@ -421,6 +438,110 @@ export default function CalendarPage() {
                 </div>
             )}
 
+            {/* MODAL DETALLE CLIENTE (OJITO) */}
+            {isClienteModalOpen && selectedVisita && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fadeIn">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative">
+                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white flex justify-between items-center">
+                            <h3 className="text-xl font-bold flex items-center gap-2"><FaUserTie/> Datos del Cliente</h3>
+                            <button onClick={() => setIsClienteModalOpen(false)} className="text-white hover:text-gray-200"><FaTimes size={20}/></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Nombre Completo</p>
+                                <p className="font-bold text-slate-800 text-lg">{selectedVisita.cliente.nombre}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaPhone/> Celular</p>
+                                    <p className="font-bold text-slate-700">{selectedVisita.cliente.telefono1 || 'No registrado'}</p>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaIdCard/> Documento</p>
+                                    <p className="font-bold text-slate-700">{selectedVisita.cliente.dni || 'No registrado'}</p>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaEnvelope/> Correo Electrónico</p>
+                                <p className="font-bold text-slate-700 truncate" title={selectedVisita.cliente.email}>{selectedVisita.cliente.email || 'No registrado'}</p>
+                            </div>
+                            {selectedVisita.cliente.direccion && (
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaMapMarkerAlt/> Dirección</p>
+                                    <p className="font-bold text-slate-700">{selectedVisita.cliente.direccion}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DETALLE PROPIEDAD (OJITO) */}
+            {isPropiedadModalOpen && selectedVisita && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fadeIn">
+                    <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex justify-between items-center">
+                            <h3 className="text-xl font-bold flex items-center gap-2"><FaBuilding/> Detalles del Inmueble</h3>
+                            <button onClick={() => setIsPropiedadModalOpen(false)} className="text-white hover:text-gray-200"><FaTimes size={20}/></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto space-y-4">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">Inmueble / Ubicación</p>
+                                <p className="font-bold text-slate-800 text-lg">{selectedVisita.propiedad.tipo} en {selectedVisita.propiedad.ubicacion}</p>
+                                <p className="text-sm text-slate-500 flex items-center gap-1 mt-1"><FaMapMarkerAlt className="text-red-400"/> {selectedVisita.propiedad.direccion}</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaDollarSign/> Precio</p>
+                                    <p className="font-black text-emerald-600 text-lg">{selectedVisita.propiedad.moneda} {Number(selectedVisita.propiedad.precio).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><FaRulerCombined/> Área Total</p>
+                                    <p className="font-bold text-slate-700 text-lg">{selectedVisita.propiedad.area} m²</p>
+                                </div>
+                            </div>
+
+                            {/* Mostrar Tipologías si es Proyecto */}
+                            {selectedVisita.propiedad.tipo?.toLowerCase().includes('proyecto') && selectedVisita.propiedad.tipologias && (
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mt-2">
+                                    <p className="text-xs font-black text-indigo-800 uppercase mb-3 flex items-center gap-2"><FaBuilding/> Tipologías Disponibles</p>
+                                    <div className="space-y-2">
+                                        {(() => {
+                                            let tips = [];
+                                            try {
+                                                tips = typeof selectedVisita.propiedad.tipologias === 'string' ? JSON.parse(selectedVisita.propiedad.tipologias) : selectedVisita.propiedad.tipologias;
+                                            } catch(e) {}
+                                            
+                                            if (tips && tips.length > 0) {
+                                                return tips.map((t: any, i: number) => (
+                                                    <div key={i} className="flex justify-between items-center bg-white p-2 rounded-lg border border-indigo-50 text-sm shadow-sm">
+                                                        <span className="font-bold text-slate-700">{t.nombre}</span>
+                                                        <div className="text-right">
+                                                            <span className="block text-[10px] text-slate-400 font-bold">{t.areaConstruida} m²</span>
+                                                            <span className="font-black text-indigo-600">{selectedVisita.propiedad.moneda === 'USD' ? '$' : 'S/'} {Number(t.precio).toLocaleString()}</span>
+                                                        </div>
+                                                    </div>
+                                                ));
+                                            }
+                                            return <p className="text-sm text-slate-500 italic">No hay tipologías registradas.</p>;
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Características generales si las tiene */}
+                            {selectedVisita.propiedad.descripcion && (
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Descripción / Características</p>
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedVisita.propiedad.descripcion}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* MODAL 5: REPROGRAMAR VISITA */}
             {isRescheduleModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
@@ -459,7 +580,7 @@ export default function CalendarPage() {
                 </div>
             )}
 
-            {/* MODAL 4: REGISTRO CLIENTE */}
+            {/* MODAL 4: REGISTRO CLIENTE (FINALIZAR VISITA) */}
             {isCompleteModalOpen && selectedVisita && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fadeIn">
                     <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-scaleIn max-h-[90vh] overflow-y-auto">
