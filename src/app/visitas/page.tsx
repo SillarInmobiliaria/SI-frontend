@@ -511,6 +511,8 @@ export default function CalendarPage() {
         
                                     {/* Tipologías que el cliente seleccionó */}
                                     {(() => {
+                                        console.log('INTERESES:', intereses);
+                                        console.log('Buscando clienteId:', selectedVisita.cliente.id, '| propiedadId:', selectedVisita.propiedad.id);
                                         const interesCliente = intereses.find((i: any) => i.clienteId === selectedVisita.cliente.id && i.propiedadId === selectedVisita.propiedad.id);
                                         const notaInteres = interesCliente?.nota || '';
                                         let tipsSeleccionadas: string[] = [];
