@@ -101,7 +101,8 @@ export default function DashboardPage() {
       color: "text-green-700",
       bgIcon: "bg-green-100",
       border: "border-green-600",
-      gradient: "from-green-600 to-emerald-700"
+      gradient: "from-green-600 to-emerald-700",
+      adminOnly: true
     },
     {
       title: "Usuarios",

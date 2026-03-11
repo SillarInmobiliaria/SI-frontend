@@ -29,7 +29,6 @@ export interface Propiedad {
   precio: number;
   moneda: string;
   
-  // 🟢 NUEVO CAMPO
   mantenimiento?: number;
 
   tipo: string;
