@@ -189,7 +189,6 @@ export default function ClientesPage() {
   };
 
   const handleOpenEdit = (cliente: any) => {
-      // empezamos borrando cualquier interés previo en el estado
       setEditingInteresId(null);
       const interes = intereses.find((i: any) => i.clienteId === cliente.id);
       const requerimiento = requerimientos.find((r: any) => r.clienteId === cliente.id);
@@ -219,9 +218,9 @@ export default function ClientesPage() {
 
         let notaLimpia = interes.nota || '';
         if (notaLimpia.includes('Interesado en tipologías:')) {
-            const parts = notaLimpia.split('\nInteresado en tipologías:');
+            const parts = notaLimpia.split(/\n?Interesado en tipologías:/);
             notaLimpia = parts[0].trim();
-            const tips = parts[1]?.replace(/\.$/, '').split(', ') || [];
+            const tips = parts[1]?.replace(/\.$/, '').trim().split(', ').filter(Boolean) || [];
             setTipologiasInteres(tips);
         } else {
             setTipologiasInteres([]);
