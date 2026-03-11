@@ -215,27 +215,28 @@ export default function ClientesPage() {
               reqZonas: zonasStr
           };
       } else if (interes) {
-          modoInteres = 'PROPIEDAD';
-          propData = {
-              propiedadId: interes.propiedadId,
-              observaciones: interes.nota || ''
-          };
-          // guardamos el id del interés para poder actualizarlo en el submit
-          setEditingInteresId(interes.id || null);
-          if (interes.Propiedad) {
-              // algunos registros no traen tipo, prevenimos mostrar "undefined"
-              const tipoTexto = interes.Propiedad.tipo ? `${interes.Propiedad.tipo} - ` : '';
-              setPropSearch(`${tipoTexto}${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
-              
-              if(interes.nota?.includes('Interesado en tipologías:')) {
-                  const parts = interes.nota.split('Interesado en tipologías: ');
-                  if(parts.length > 1) {
-                      const tips = parts[1].replace('.', '').split(', ');
-                      setTipologiasInteres(tips);
-                  }
-              }
-          }
-      }
+        modoInteres = 'PROPIEDAD';
+
+        let notaLimpia = interes.nota || '';
+        if (notaLimpia.includes('Interesado en tipologías:')) {
+            const parts = notaLimpia.split('\nInteresado en tipologías:');
+            notaLimpia = parts[0].trim();
+            const tips = parts[1]?.replace(/\.$/, '').split(', ') || [];
+            setTipologiasInteres(tips);
+        } else {
+            setTipologiasInteres([]);
+        }
+
+        propData = {
+            propiedadId: interes.propiedadId,
+            observaciones: notaLimpia
+        };
+        setEditingInteresId(interes.id || null);
+        if (interes.Propiedad) {
+            const tipoTexto = interes.Propiedad.tipo ? `${interes.Propiedad.tipo} - ` : '';
+            setPropSearch(`${tipoTexto}${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
+        }
+    }
 
       reset({
           id: cliente.id,
