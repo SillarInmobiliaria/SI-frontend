@@ -422,11 +422,27 @@ export default function ClientesPage() {
 
   const clientesFiltrados = useMemo(() => {
       let filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (c.dni && c.dni.includes(searchTerm)) || c.telefono1.includes(searchTerm));
+      if (searchTerm) {
+          filtrados = filtrados.filter(c => {
+              const interesC = intereses.find(i => i.clienteId === c.id);
+              const propC = interesC?.Propiedad;
+              const term = searchTerm.toLowerCase();
+              if (propC) {
+                  const oper = propC.operacion?.toLowerCase() || '';
+                  const tipo = propC.tipo?.toLowerCase() || '';
+                  const ubic = propC.ubicacion?.toLowerCase() || '';
+                  if (oper.includes(term) || tipo.includes(term) || ubic.includes(term)) {
+                      return true;
+                  }
+              }
+              return false;
+          }).concat(filtrados.filter(c => !filtrados.includes(c)));
+      }
       if (searchTerm === '') { filtrados = filtrados.filter(c => { const fechaRaw = c.fechaAlta || c.createdAt || ''; return fechaRaw.split('T')[0] === filterDate; }); }
       if (filterType !== 'TODOS') filtrados = filtrados.filter(c => c.tipo === filterType);
       filtrados.sort((a, b) => new Date(b.fechaAlta || b.createdAt || new Date().toISOString()).getTime() - new Date(a.fechaAlta || a.createdAt || new Date().toISOString()).getTime());
       return filtrados;
-  }, [clientes, searchTerm, filterDate, filterType]);
+  }, [clientes, searchTerm, filterDate, filterType, intereses]);
 
   const esTerrenoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('terreno');
   const esProyectoFicha = propiedadSeleccionada?.tipo?.toLowerCase().includes('proyecto');
@@ -525,7 +541,7 @@ export default function ClientesPage() {
                                         {propC ? (
                                             <div className="text-xs flex flex-col gap-1">
                                                 <span className="font-bold text-indigo-700 uppercase tracking-wide">
-                                                    {propC.operacion || 'VENTA'} - {propC.tipo}
+                                                    {`${(propC.operacion || 'VENTA').toString().charAt(0).toUpperCase() + (propC.operacion || 'VENTA').toString().slice(1).toLowerCase()} - ${propC.tipo ? propC.tipo.toString().charAt(0).toUpperCase() + propC.tipo.toString().slice(1).toLowerCase() : ''}`}
                                                 </span>
                                                 <span className="text-gray-500 font-semibold flex items-center gap-1">
                                                     <FaMapMarkerAlt className="text-gray-400 text-[10px]"/> {propC.ubicacion}
