@@ -7,7 +7,7 @@ import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
 import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import {
-    createCliente, updateCliente, createInteres, eliminarCliente, createSeguimiento, createRequerimiento,
+    createCliente, updateCliente, createInteres, updateInteres, eliminarCliente, createSeguimiento, createRequerimiento,
     getRequerimientos
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -100,6 +100,8 @@ export default function ClientesPage() {
 
   // Estado para Tipologías de Interés en Proyectos
   const [tipologiasInteres, setTipologiasInteres] = useState<string[]>([]);
+  // cuando estamos editando un interés existente guardamos su id
+  const [editingInteresId, setEditingInteresId] = useState<string | null>(null);
 
   // Formularios
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormClienteCompleto>({
@@ -178,6 +180,8 @@ export default function ClientesPage() {
   };
  
   const handleOpenModal = () => {
+      // abrimos un cliente nuevo, borramos cualquier interés previamente almacenado
+      setEditingInteresId(null);
       setModalOpen(true);
       setPropSearch(''); setValue('propiedadId', ''); setZonasSelected([]); setZonasQuery(''); setTipologiasInteres([]);
       reset({ id: undefined, modoInteres: 'PROPIEDAD', reqTipo: 'COMPRA', reqPrioridad: 'NORMAL', reqFormaPago: 'FINANCIADO', fechaAlta: today });
@@ -185,6 +189,8 @@ export default function ClientesPage() {
   };
 
   const handleOpenEdit = (cliente: any) => {
+      // empezamos borrando cualquier interés previo en el estado
+      setEditingInteresId(null);
       const interes = intereses.find((i: any) => i.clienteId === cliente.id);
       const requerimiento = requerimientos.find((r: any) => r.clienteId === cliente.id);
       
@@ -214,8 +220,12 @@ export default function ClientesPage() {
               propiedadId: interes.propiedadId,
               observaciones: interes.nota || ''
           };
+          // guardamos el id del interés para poder actualizarlo en el submit
+          setEditingInteresId(interes.id || null);
           if (interes.Propiedad) {
-              setPropSearch(`${interes.Propiedad.tipo} - ${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
+              // algunos registros no traen tipo, prevenimos mostrar "undefined"
+              const tipoTexto = interes.Propiedad.tipo ? `${interes.Propiedad.tipo} - ` : '';
+              setPropSearch(`${tipoTexto}${interes.Propiedad.ubicacion} (${interes.Propiedad.direccion || ''})`);
               
               if(interes.nota?.includes('Interesado en tipologías:')) {
                   const parts = interes.nota.split('Interesado en tipologías: ');
@@ -295,12 +305,24 @@ export default function ClientesPage() {
 
       // MANEJO DE INTERÉS O REQUERIMIENTO
       if (data.modoInteres === 'PROPIEDAD' && data.propiedadId && nuevoId) {
-        let notaInteres = `Registro/Actualización. ${data.observaciones || ''}`;
-        
+        // construimos la nota sólo con el texto del asesor y las tipologías; NO agregamos el prefijo "Registro/Actualización"
+        let notaInteres = data.observaciones?.trim() || '';
         if (tipologiasInteres.length > 0) {
-            notaInteres += `\nInteresado en tipologías: ${tipologiasInteres.join(', ')}.`;
+            notaInteres += (notaInteres ? '\n' : '') + `Interesado en tipologías: ${tipologiasInteres.join(', ')}.`;
         }
-        await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
+
+        if (editingInteresId) {
+            // actualizar interés existente en lugar de crear uno nuevo
+            try {
+                await updateInteres(editingInteresId, { clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
+            } catch (e) {
+                console.warn('Error actualizando interés, intentando recrear', e);
+                await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
+            }
+            setEditingInteresId(null);
+        } else {
+            await createInteres({ clienteId: nuevoId, propiedadId: data.propiedadId, nota: notaInteres });
+        }
       }
 
       if (data.modoInteres === 'REQUERIMIENTO' && nuevoId) {

@@ -116,6 +116,18 @@ export const createInteres = async (datos: { clienteId: string; propiedadId: str
   return data;
 };
 
+// algunos formularios requieren actualizar un interés ya existente
+export const updateInteres = async (id: string | number, datos: { clienteId: string; propiedadId: string; nota?: string }) => {
+  const { data } = await api.put<ApiResponse<Interes>>(`/intereses/${id}`, datos);
+  return data;
+};
+
+// por si acaso necesitamos eliminar un interés
+export const deleteInteres = async (id: string | number) => {
+  const { data } = await api.delete<ApiResponse<void>>(`/intereses/${id}`);
+  return data;
+};
+
 // --- OPERACIONES --- 
 export const getOperaciones = async () => {
   const { data } = await api.get<Operacion[]>('/operaciones');
