@@ -120,7 +120,6 @@ export default function PropiedadesPage() {
                             <option value="Proyecto Duplex">Proyecto Duplex</option>
                             <option value="Proyecto Terrenos">Proyecto Terrenos</option>
                             <option value="Proyecto Locales">Proyecto Locales</option>
-                            <option value="Proyecto">Proyecto</option> {/* Dejado por compatibilidad */}
                         </select>
 
                         <div className="w-px h-6 bg-gray-300 mx-1 hidden md:block"></div>
@@ -159,6 +158,7 @@ export default function PropiedadesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {propiedadesFiltradas.map((prop) => {
                     const esTerreno = prop.tipo?.toLowerCase().includes('terreno');
+                    const esProyecto = prop.tipo?.toLowerCase().includes('proyecto');
 
                     return (
                         <Link 
@@ -238,7 +238,7 @@ export default function PropiedadesPage() {
                                     <FaMapMarkerAlt className="text-red-400"/> {prop.direccion}
                                 </p>
                                 
-                                {!esTerreno && (
+                                {!esTerreno && !esProyecto && (
                                     <div className="grid grid-cols-3 gap-2 py-4 border-t border-gray-100 mb-4 text-gray-600 text-sm bg-gray-50/50 rounded-xl px-2">
                                         <div className="flex flex-col items-center justify-center p-1">
                                             <FaBed className="text-indigo-400 text-lg mb-1"/> 
@@ -255,10 +255,20 @@ export default function PropiedadesPage() {
                                     </div>
                                 )}
 
+                                {/* Etiquetas para Terrenos */}
                                 {esTerreno && (
                                     <div className="py-4 border-t border-gray-100 mb-4 text-center">
                                         <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 uppercase tracking-widest">
                                             Propiedad tipo Terreno
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Etiquetas para Proyectos */}
+                                {esProyecto && (
+                                    <div className="py-4 border-t border-gray-100 mb-4 text-center">
+                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 uppercase tracking-widest">
+                                            Desarrollo Inmobiliario / Proyecto
                                         </span>
                                     </div>
                                 )}
