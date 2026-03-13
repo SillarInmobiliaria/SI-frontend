@@ -333,7 +333,6 @@ export default function SeguimientoPage() {
                                                 <div className="font-bold text-slate-800">{item.Cliente?.nombre}</div>
                                                 <div className="text-xs text-slate-500 flex items-center gap-1 font-mono"><FaPhone className="text-[10px]"/> {item.Cliente?.telefono1}</div>
                                                 
-                                                {/* ETIQUETA EN LA TABLA: COMPACTA Y SIN DIRECCIÓN LAGA */}
                                                 {(() => {
                                                     const interesC = intereses.find((i: any) => i.clienteId === item.clienteId);
                                                     const propC = interesC?.Propiedad;
@@ -385,7 +384,7 @@ export default function SeguimientoPage() {
                 }
             </div>
 
-            {/* MODAL HISTORIAL (CON CHAT, FECHA Y ETIQUETA APILADA) */}
+            {/* MODAL HISTORIAL (CON CHAT Y COMENTARIOS INICIALES) */}
             {isHistoryOpen && selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
@@ -439,6 +438,15 @@ export default function SeguimientoPage() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
+                            
+                            {/* NUEVO BLOQUE: COMENTARIOS INICIALES DEL CLIENTE */}
+                            {selectedItem.Cliente?.detalles && (
+                                <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-sm text-slate-700 shadow-inner mb-5">
+                                    <p className="font-black mb-1 flex items-center gap-2"><FaCommentDots className="text-yellow-500"/> Comentarios de Registro:</p>
+                                    <p className="italic whitespace-pre-wrap">"{selectedItem.Cliente.detalles}"</p>
+                                </div>
+                            )}
+
                             <div className="flex gap-3 mb-6">
                                 <button onClick={handleOpenReqModal} className="btn flex-1 bg-white text-amber-600 border-amber-200 hover:bg-amber-50 shadow-sm"><FaClipboardList/> Convertir a Requerimiento</button>
                                 <button onClick={handleGoToVisitas} className="btn flex-1 bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm"><FaCalendarPlus/> Agendar Visita</button>
