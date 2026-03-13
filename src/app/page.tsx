@@ -167,38 +167,43 @@ export default function DashboardPage() {
             ]);
             
             const hoyStr = getFechaPeru(); 
-            const [, hoyMes, hoyDia] = hoyStr.split('-');
+            const [, hoyMes, hoyDia] = hoyStr.split('-'); 
+
+            const playSound = () => {
+                try {
+                    const audio = new Audio('/notification.mp3'); 
+                    audio.play().catch(e => console.log("Navegador bloqueó el sonido (requiere interacción previa)"));
+                } catch (e) {}
+            };
             
             // 1. 📍 NOTIFICACIÓN DE VISITAS PENDIENTES
             const visHoy = visitas.filter((v: any) => v.fechaProgramada && getFechaPeru(new Date(v.fechaProgramada)) === hoyStr && v.estado === 'PENDIENTE');
-            
             if (visHoy.length > 0) {
-                setTimeout(() => {
-                    toast.custom((t) => (
-                        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
-                            <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
-                            <div className="flex-1 w-0 p-4">
-                                <div className="flex items-start">
-                                    <div className="flex-shrink-0 pt-0.5"><FaMapMarkerAlt className="h-10 w-10 text-teal-600 animate-bounce" /></div>
-                                    <div className="ml-3 flex-1">
-                                        <p className="text-sm font-bold text-gray-900">¡Salida de Campo HOY!</p>
-                                        <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-teal-700">{visHoy.length} visitas</b> pendientes.</p>
-                                    </div>
+                playSound();
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-teal-600 relative mb-2`}>
+                        <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                        <div className="flex-1 w-0 p-4">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0 pt-0.5"><FaMapMarkerAlt className="h-10 w-10 text-teal-600 animate-bounce" /></div>
+                                <div className="ml-3 flex-1">
+                                    <p className="text-sm font-bold text-gray-900">¡Salida de Campo HOY!</p>
+                                    <p className="mt-1 text-sm text-gray-500">Tienes <b className="text-teal-700">{visHoy.length} visitas</b> pendientes.</p>
                                 </div>
                             </div>
-                            <div className="flex border-l border-gray-200">
-                                <button onClick={() => { toast.dismiss(t.id); router.push('/visitas'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-bold text-teal-700 hover:bg-teal-50">Ver</button>
-                            </div>
                         </div>
-                    ), { duration: 10000 });
-                }, 1000);
+                        <div className="flex border-l border-gray-200">
+                            <button onClick={() => { toast.dismiss(t.id); router.push('/visitas'); }} className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-bold text-teal-700 hover:bg-teal-50">Ver</button>
+                        </div>
+                    </div>
+                ), { duration: 10000 });
             }
 
             // 2. 📞 NOTIFICACIÓN DE SEGUIMIENTOS HOY
             const segHoy = seguimientos.filter((s: any) => s.fechaProxima && getFechaPeru(new Date(s.fechaProxima)) === hoyStr && s.estado === 'PENDIENTE');
-            
             if (segHoy.length > 0) {
                 setTimeout(() => {
+                    playSound();
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-pink-500 relative mb-2`}>
                             <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
@@ -216,18 +221,19 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     ), { duration: 12000 });
-                }, 2000);
+                }, 400);
             }
 
             // 3. 🎂 NOTIFICACIÓN DE CUMPLEAÑOS
             const cumplesHoy = clientes.filter((c: any) => {
                 if (!c.fechaNacimiento) return false;
-                const [, mesNac, diaNac] = c.fechaNacimiento.split('T')[0].split('-');
+                const [, mesNac, diaNac] = c.fechaNacimiento.split('T')[0].split('-'); 
                 return mesNac === hoyMes && diaNac === hoyDia;
             });
 
             if (cumplesHoy.length > 0) {
                 setTimeout(() => {
+                    playSound();
                     toast.custom((t) => (
                         <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-2xl rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 border-l-8 border-amber-500 relative mb-2`}>
                             <button onClick={() => toast.dismiss(t.id)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"><FaTimes /></button>
@@ -245,7 +251,7 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     ), { duration: 15000 });
-                }, 3000);
+                }, 800);
             }
 
         } catch (error) { console.error("Error notificaciones", error); }
