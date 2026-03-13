@@ -106,7 +106,7 @@ export default function SeguimientoPage() {
   const formatearFecha = (fechaString: string) => {
     if (!fechaString) return '--';
     const fecha = new Date(fechaString);
-    return fecha.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
+    return fecha.toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const getISOFechaPeru = (fechaStr: string) => {
