@@ -952,10 +952,13 @@ export default function ClientesPage() {
                                                 <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Interesado en Propiedad</p>
                                             </div>
                                             
-                                            <h5 className="font-black text-gray-800 text-xl mb-1">{interes.Propiedad.tipo} en {interes.Propiedad.ubicacion}</h5>
-                                            <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mb-4">
-                                                <FaMapMarkerAlt className="text-red-400"/> {interes.Propiedad.direccion}
+                                            <h5 className="font-black text-gray-800 text-xl mb-1">
+                                                {interes.Propiedad.operacion || 'VENTA'} — {interes.Propiedad.tipo}
+                                            </h5>
+                                            <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mb-1">
+                                                <FaMapMarkerAlt className="text-red-400"/> {interes.Propiedad.ubicacion}
                                             </p>
+                                            <p className="text-xs text-gray-400 font-medium mb-4">{interes.Propiedad.direccion}</p>
                                             
                                             <div className="flex gap-4 mb-6">
                                                 <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-50 flex items-center gap-2">
