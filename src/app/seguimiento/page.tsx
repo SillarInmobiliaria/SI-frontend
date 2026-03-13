@@ -6,7 +6,7 @@ import SidebarAtencion from '../../components/SidebarAtencion';
 import { getSeguimientos, updateSeguimiento, createSeguimiento, createRequerimiento, getRequerimientos } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { useForm } from 'react-hook-form'; 
-import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
+import { useInmobiliariaStore } from '../../store/useInmobiliariaStore'; 
 import { 
   FaRoute, FaCheckCircle, FaClock, FaCommentDots, FaCalendarAlt, FaCheck, 
   FaUndo, FaFilter, FaHandshake, FaSpinner, FaSearch, FaHistory, FaPaperPlane, 
@@ -76,7 +76,6 @@ export default function SeguimientoPage() {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      // Ejecutamos todo en paralelo para que sea súper rápido
       const [data, reqs] = await Promise.all([
           getSeguimientos(),
           getRequerimientos().catch(() => []),
@@ -131,14 +130,11 @@ export default function SeguimientoPage() {
   const dataFiltrada = useMemo(() => {
     const filtradosBasicos = seguimientos.filter(s => {
       const texto = searchTerm.toLowerCase();
-      
-      // Buscamos coincidencia en nombre, comentario O teléfono
       const nombreCliente = s.Cliente?.nombre?.toLowerCase() || '';
       const comentario = s.comentario?.toLowerCase() || '';
       const telefonoCliente = s.Cliente?.telefono1?.toLowerCase() || '';
 
       const coincideTexto = nombreCliente.includes(texto) || comentario.includes(texto) || telefonoCliente.includes(texto);
-      
       if (searchTerm !== '' && !coincideTexto) return false;
       
       const mesRegistro = new Date(s.fecha).getUTCMonth(); 
@@ -215,7 +211,6 @@ export default function SeguimientoPage() {
   const handleOpenReqModal = () => {
       if(!selectedItem) return;
       setReqOpen(true);
-      // Resetear el formulario y zonas
       setZonasSelected([]);
       setZonasQuery('');
       reset({ 
@@ -231,7 +226,6 @@ export default function SeguimientoPage() {
   const handleCreateRequerimiento = async (data: any) => {
       if(!selectedItem) return;
       
-      // Si eligió DESCARTADO, pedimos confirmación extra por si acaso
       if (data.reqPrioridad === 'DESCARTADO' && !confirm("⚠️ ¿Marcar este cliente como DESCARTADO?\nEsto indicará que el requerimiento no es viable.")) return;
 
       const loadingToast = toast.loading(data.reqPrioridad === 'DESCARTADO' ? "Descartando..." : "Creando requerimiento...");
@@ -239,7 +233,6 @@ export default function SeguimientoPage() {
           const zonasFinales = zonasSelected.length > 0 ? zonasSelected.join(', ') : data.reqZonas;
           
           let detallePedido = "";
-          // Si es descartado, el pedido es simple
           if (data.reqPrioridad === 'DESCARTADO') {
               detallePedido = `[DESCARTADO] Motivo/Intento: ${data.reqTipo} en ${zonasFinales || 'zonas'}. ${data.reqComentarios || ''}`;
           } else {
@@ -250,7 +243,6 @@ export default function SeguimientoPage() {
               }
           }
 
-          // 1. Crear el requerimiento
           await createRequerimiento({
               clienteId: selectedItem.clienteId,
               fecha: new Date().toISOString(),
@@ -260,7 +252,6 @@ export default function SeguimientoPage() {
               usuarioId: user?.id
           });
 
-          // 2. CERRAR el seguimiento actual
           await updateSeguimiento(selectedItem.id, { 
               estado: 'FINALIZADO',
               comentario: data.reqPrioridad === 'DESCARTADO' 
@@ -285,7 +276,6 @@ export default function SeguimientoPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-purple-50 font-sans text-slate-800 flex flex-col">
       <Navbar />
-      {/* TOASTER AGREGADO */}
       <Toaster position="top-right" reverseOrder={false} />
       
       <div className="flex flex-1 relative">
@@ -334,7 +324,6 @@ export default function SeguimientoPage() {
                                 <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                                     <td className="pl-8 text-center"><div className="bg-slate-100 px-3 py-1 rounded-lg text-xs font-bold text-slate-600 border border-slate-200">{formatearFecha(item.fecha)}</div></td>
                                     
-                                    {/* COLUMNA CLIENTE + PROPIEDAD */}
                                     <td className="py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0 shadow-sm border border-pink-200">
@@ -344,7 +333,6 @@ export default function SeguimientoPage() {
                                                 <div className="font-bold text-slate-800">{item.Cliente?.nombre}</div>
                                                 <div className="text-xs text-slate-500 flex items-center gap-1 font-mono"><FaPhone className="text-[10px]"/> {item.Cliente?.telefono1}</div>
                                                 
-                                                {/* ETIQUETA DE INTERÉS */}
                                                 {(() => {
                                                     const interesC = intereses.find((i: any) => i.clienteId === item.clienteId);
                                                     const propC = interesC?.Propiedad;
@@ -356,10 +344,11 @@ export default function SeguimientoPage() {
                                                         const match = nota.match(/operaci[oó]n:\s*([^\.\n]+)/i);
                                                         if (match && match[1]) oper = match[1].trim();
 
+                                                        // Usa 'direccion' en lugar de 'ubicacion' para ser más exacto
                                                         return (
-                                                            <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] md:max-w-[300px] shadow-sm" title={`${oper} - ${propC.tipo} - ${propC.ubicacion}`}>
+                                                            <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] md:max-w-[300px] shadow-sm" title={`${oper} - ${propC.tipo || ''} - ${propC.direccion || propC.ubicacion}`}>
                                                                 <FaHome className="shrink-0 text-indigo-400"/> 
-                                                                <span className="truncate uppercase">{oper} - {propC.tipo} - {propC.ubicacion}</span>
+                                                                <span className="truncate uppercase">{oper} {propC.tipo ? `- ${propC.tipo}` : ''} - {propC.direccion || propC.ubicacion}</span>
                                                             </div>
                                                         );
                                                     } else if (reqC) {
@@ -396,16 +385,53 @@ export default function SeguimientoPage() {
                 }
             </div>
 
-            {/* MODAL HISTORIAL (CON CHAT Y FECHA) */}
+            {/* MODAL HISTORIAL (CON CHAT, FECHA Y ETIQUETA) */}
             {isHistoryOpen && selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
+                        
+                        {/* CABECERA DEL MODAL */}
                         <div className="bg-slate-900 text-white p-5 flex justify-between items-center shrink-0">
-                            <div className="flex gap-3 items-center">
-                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-xl font-bold">{selectedItem.Cliente.nombre.charAt(0)}</div>
-                                <div><h2 className="text-xl font-bold">{selectedItem.Cliente.nombre}</h2><span className="text-xs opacity-70 flex gap-2 items-center"><FaPhone/> {selectedItem.Cliente.telefono1}</span></div>
+                            <div className="flex gap-4 items-center">
+                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-xl font-bold border border-slate-700">{selectedItem.Cliente.nombre.charAt(0)}</div>
+                                <div className="flex flex-col gap-1">
+                                    <h2 className="text-xl font-bold leading-none">{selectedItem.Cliente.nombre}</h2>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <span className="text-xs opacity-80 flex gap-1 items-center font-mono"><FaPhone/> {selectedItem.Cliente.telefono1}</span>
+                                        
+                                        {/* ETIQUETA EN EL MODAL */}
+                                        {(() => {
+                                            const interesM = intereses.find((i: any) => i.clienteId === selectedItem.clienteId);
+                                            const propM = interesM?.Propiedad;
+                                            const reqM = requerimientos.find((r: any) => r.clienteId === selectedItem.clienteId);
+
+                                            if (propM) {
+                                                let operM = propM.operacion || propM.modalidad || 'VENTA';
+                                                const notaM = interesM?.nota || '';
+                                                const matchM = notaM.match(/operaci[oó]n:\s*([^\.\n]+)/i);
+                                                if (matchM && matchM[1]) operM = matchM[1].trim();
+
+                                                return (
+                                                    <div className="text-[10px] font-bold text-indigo-200 bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-700/50 flex items-center gap-1.5 shadow-sm max-w-[300px]" title={`${operM} - ${propM.tipo || ''} - ${propM.direccion || propM.ubicacion}`}>
+                                                        <FaHome className="shrink-0 text-indigo-400"/> 
+                                                        <span className="truncate uppercase">{operM} {propM.tipo ? `- ${propM.tipo}` : ''} - {propM.direccion || propM.ubicacion}</span>
+                                                    </div>
+                                                );
+                                            } else if (reqM) {
+                                                const tipoReqM = reqM.pedido?.toUpperCase().includes('ALQUILER') ? 'ALQUILER' : 'BÚSQUEDA';
+                                                return (
+                                                    <div className="text-[10px] font-bold text-amber-200 bg-amber-900/60 px-2 py-0.5 rounded border border-amber-700/50 flex items-center gap-1.5 shadow-sm max-w-[300px]" title={reqM.pedido}>
+                                                        <FaSearch className="shrink-0 text-amber-400"/> 
+                                                        <span className="truncate uppercase">{tipoReqM} - REQUERIMIENTO</span>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                    </div>
+                                </div>
                             </div>
-                            <button onClick={() => setHistoryOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white">✕</button>
+                            <button onClick={() => setHistoryOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white hover:bg-slate-800">✕</button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5 bg-slate-50">
@@ -442,8 +468,8 @@ export default function SeguimientoPage() {
                                 />
                             </div>
                             <form onSubmit={handleAddComment} className="flex gap-2">
-                                <input type="text" className="input input-bordered w-full bg-slate-50" placeholder="Escribe el resultado..." value={newComment} onChange={(e) => setNewComment(e.target.value)}/>
-                                <button type="submit" className="btn btn-primary bg-pink-600 border-none hover:bg-pink-700"><FaPaperPlane/></button>
+                                <input type="text" className="input input-bordered w-full bg-slate-50 focus:bg-white transition-colors" placeholder="Escribe el resultado..." value={newComment} onChange={(e) => setNewComment(e.target.value)}/>
+                                <button type="submit" className="btn btn-primary bg-pink-600 border-none hover:bg-pink-700 shadow-md hover:shadow-lg"><FaPaperPlane/></button>
                             </form>
                         </div>
                     </div>
@@ -463,7 +489,7 @@ export default function SeguimientoPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="form-control"><label className="label font-bold text-slate-700 text-xs">Tipo Operación</label><select {...register('reqTipo')} className="select select-bordered select-sm w-full"><option value="COMPRA">Compra</option><option value="ALQUILER">Alquiler</option></select></div>
                                 
-                                {/* 🔴 PRIORIDAD CON BOTONES (NORMAL, URGENTE, DESCARTADO) */}
+                                {/* 🔴 PRIORIDAD CON BOTONES */}
                                 <div className="form-control">
                                     <label className="label font-bold text-slate-700 text-xs">Prioridad / Estado</label>
                                     <div className="flex gap-2">
