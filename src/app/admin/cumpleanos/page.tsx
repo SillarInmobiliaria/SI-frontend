@@ -72,17 +72,15 @@ export default function CumpleanosPage() {
   const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
   const startDay = getFirstDayOfMonth(selectedMonth, selectedYear);
 
-  // --- LÓGICA PARA ZONA HORARIA Y DATOS (CORREGIDA A LIMA) ---
+  // --- LÓGICA CORREGIDA PARA LEER CUMPLEAÑOS EXACTOS ---
   const getCumpleanerosDelDia = (dia: number) => {
       const list: any[] = [];
 
       const obtenerDiaExacto = (fechaString: string) => {
           if (!fechaString) return -1;
           
-          // Forzar la fecha a la zona horaria de Perú
-          const dateObj = new Date(fechaString);
-          const fechaPeru = dateObj.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-          const partes = fechaPeru.split('-'); 
+          const fechaCorta = fechaString.split('T')[0]; 
+          const partes = fechaCorta.split('-'); 
           
           return parseInt(partes[2]); 
       };
@@ -288,7 +286,8 @@ export default function CumpleanosPage() {
                     {/* Lista Modal */}
                     <div className="p-6 max-h-[60vh] overflow-y-auto bg-slate-50 space-y-3">
                         {getCumpleanerosDelDia(selectedDay).map((p: any, idx) => {
-                            const anioNac = new Date(p.fechaNacimiento).getFullYear();
+                            // Corrección también para calcular la edad evitando la zona horaria:
+                            const anioNac = parseInt(p.fechaNacimiento.split('-')[0]);
                             const edad = selectedYear - anioNac;
                             
                             return (
