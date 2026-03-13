@@ -146,6 +146,11 @@ export default function SeguimientoPage() {
     filtradosBasicos.forEach(item => {
         if (!unicosPorCliente.has(item.clienteId)) {
             unicosPorCliente.set(item.clienteId, item);
+        } else {
+            const existing = unicosPorCliente.get(item.clienteId);
+            if (new Date(item.fecha) < new Date(existing.fecha)) {
+                unicosPorCliente.set(item.clienteId, { ...existing, fecha: item.fecha });
+            }
         }
     });
 
@@ -318,7 +323,7 @@ export default function SeguimientoPage() {
                 dataFiltrada.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold">Sin registros</div> : 
                 <div className="overflow-x-auto">
                     <table className="table w-full">
-                        <thead><tr className="bg-slate-100 text-slate-500 uppercase text-xs font-bold"><th className="pl-8 text-center">Último Mov.</th><th>Cliente / Interés</th><th>Última Nota</th><th className="text-center">Próximo</th><th className="text-center">Estado</th><th className="text-center pr-8">Acciones</th></tr></thead>
+                        <thead><tr className="bg-slate-100 text-slate-500 uppercase text-xs font-bold"><th className="pl-8 text-center">Registro</th><th>Cliente / Interés</th><th>Última Nota</th><th className="text-center">Próximo</th><th className="text-center">Estado</th><th className="text-center pr-8">Acciones</th></tr></thead>
                         <tbody>
                             {dataFiltrada.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
