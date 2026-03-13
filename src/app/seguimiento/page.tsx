@@ -399,7 +399,6 @@ export default function SeguimientoPage() {
                                     <div className="flex flex-col gap-2 mt-1">
                                         <span className="text-xs opacity-80 flex gap-1 items-center font-mono"><FaPhone/> {selectedItem.Cliente.telefono1}</span>
                                         
-                                        {/* ETIQUETA EN EL MODAL: DEBAJO DEL NÚMERO Y COMPLETA */}
                                         {(() => {
                                             const interesM = intereses.find((i: any) => i.clienteId === selectedItem.clienteId);
                                             const propM = interesM?.Propiedad;
@@ -411,12 +410,27 @@ export default function SeguimientoPage() {
                                                 const matchM = notaM.match(/operaci[oó]n:\s*([^\.\n]+)/i);
                                                 if (matchM && matchM[1]) operM = matchM[1].trim();
 
+
+                                                const tipMatchM = notaM.match(/Interesado en tipologías:\s*(.+?)\.?\s*$/i);
+                                                const tipologiasM = tipMatchM ? tipMatchM[1].split(' | ').filter(Boolean) : [];
+
                                                 return (
-                                                    <div className="text-[10px] font-bold text-indigo-200 bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-700/50 flex items-center gap-1.5 shadow-sm w-fit" title={`${operM} - ${propM.tipo || ''} - ${propM.direccion || propM.ubicacion}`}>
-                                                        <FaHome className="shrink-0 text-indigo-400 text-sm"/> 
-                                                        <span className="uppercase leading-tight">
-                                                            {operM}{propM.tipo ? ` - ${propM.tipo}` : ''} <span className="mx-1 text-indigo-400">|</span> <span className="text-indigo-100">{propM.direccion || propM.ubicacion}</span>
-                                                        </span>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <div className="text-[10px] font-bold text-indigo-200 bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-700/50 flex items-center gap-1.5 shadow-sm w-fit" title={`${operM} - ${propM.tipo || ''} - ${propM.direccion || propM.ubicacion}`}>
+                                                            <FaHome className="shrink-0 text-indigo-400 text-sm"/> 
+                                                            <span className="uppercase leading-tight">
+                                                                {operM}{propM.tipo ? ` - ${propM.tipo}` : ''} <span className="mx-1 text-indigo-400">|</span> <span className="text-indigo-100">{propM.direccion || propM.ubicacion}</span>
+                                                            </span>
+                                                        </div>
+                                                        {tipologiasM.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {tipologiasM.map((t: string, idx: number) => (
+                                                                    <span key={idx} className="text-[9px] font-bold bg-violet-500/20 text-violet-200 border border-violet-500/30 px-1.5 py-0.5 rounded-full">
+                                                                        {t}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             } else if (reqM) {
