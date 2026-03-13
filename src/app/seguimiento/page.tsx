@@ -3,14 +3,15 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import SidebarAtencion from '../../components/SidebarAtencion';
-import { getSeguimientos, updateSeguimiento, createSeguimiento, createRequerimiento } from '../../services/api'; 
+import { getSeguimientos, updateSeguimiento, createSeguimiento, createRequerimiento, getRequerimientos } from '../../services/api'; 
 import { useAuth } from '../../context/AuthContext'; 
 import { useForm } from 'react-hook-form'; 
+import { useInmobiliariaStore } from '../../store/useInmobiliariaStore';
 import { 
   FaRoute, FaCheckCircle, FaClock, FaCommentDots, FaCalendarAlt, FaCheck, 
   FaUndo, FaFilter, FaHandshake, FaSpinner, FaSearch, FaHistory, FaPaperPlane, 
   FaClipboardList, FaCalendarPlus, FaPhone, FaTimes, FaBan, FaBuilding, FaCity, 
-  FaRulerCombined, FaDollarSign, FaMoneyBillWave, FaUniversity 
+  FaRulerCombined, FaDollarSign, FaMoneyBillWave, FaUniversity, FaHome 
 } from 'react-icons/fa';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -31,6 +32,11 @@ const BANCOS_PERU = [
 export default function SeguimientoPage() {
   const router = useRouter();
   const { user } = useAuth(); 
+  
+  // --- STORE Y ESTADOS GLOBALES ---
+  const { intereses, fetchIntereses } = useInmobiliariaStore();
+  const [requerimientos, setRequerimientos] = useState<any[]>([]);
+
   const [seguimientos, setSeguimientos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -61,7 +67,7 @@ export default function SeguimientoPage() {
   // Watchers para UI Reactiva
   const reqTipo = watch('reqTipo');
   const reqFormaPago = watch('reqFormaPago');
-  const reqPrioridad = watch('reqPrioridad'); // <--- AHORA ESCUCHAMOS LA PRIORIDAD
+  const reqPrioridad = watch('reqPrioridad');
 
   useEffect(() => {
     cargarDatos();
@@ -70,9 +76,15 @@ export default function SeguimientoPage() {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const data = await getSeguimientos();
+      // Ejecutamos todo en paralelo para que sea súper rápido
+      const [data, reqs] = await Promise.all([
+          getSeguimientos(),
+          getRequerimientos().catch(() => []),
+          fetchIntereses()
+      ]);
       const sorted = data.sort((a:any, b:any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setSeguimientos(sorted);
+      setRequerimientos(reqs || []);
     } catch (error) { console.error(error); } 
     finally { setLoading(false); }
   };
@@ -316,20 +328,64 @@ export default function SeguimientoPage() {
                 dataFiltrada.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold">Sin registros</div> : 
                 <div className="overflow-x-auto">
                     <table className="table w-full">
-                        <thead><tr className="bg-slate-100 text-slate-500 uppercase text-xs font-bold"><th className="pl-8 text-center">Último Mov.</th><th>Cliente</th><th>Última Nota</th><th className="text-center">Próximo</th><th className="text-center">Estado</th><th className="text-center pr-8">Acciones</th></tr></thead>
+                        <thead><tr className="bg-slate-100 text-slate-500 uppercase text-xs font-bold"><th className="pl-8 text-center">Último Mov.</th><th>Cliente / Interés</th><th>Última Nota</th><th className="text-center">Próximo</th><th className="text-center">Estado</th><th className="text-center pr-8">Acciones</th></tr></thead>
                         <tbody>
                             {dataFiltrada.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                                     <td className="pl-8 text-center"><div className="bg-slate-100 px-3 py-1 rounded-lg text-xs font-bold text-slate-600 border border-slate-200">{formatearFecha(item.fecha)}</div></td>
-                                    <td><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">{item.Cliente?.nombre?.charAt(0)}</div><div><div className="font-bold text-slate-800">{item.Cliente?.nombre}</div><div className="text-xs text-slate-400">{item.Cliente?.telefono1}</div></div></div></td>
+                                    
+                                    {/* COLUMNA CLIENTE + PROPIEDAD */}
+                                    <td className="py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center font-bold shrink-0 shadow-sm border border-pink-200">
+                                                {item.Cliente?.nombre?.charAt(0)}
+                                            </div>
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="font-bold text-slate-800">{item.Cliente?.nombre}</div>
+                                                <div className="text-xs text-slate-500 flex items-center gap-1 font-mono"><FaPhone className="text-[10px]"/> {item.Cliente?.telefono1}</div>
+                                                
+                                                {/* ETIQUETA DE INTERÉS */}
+                                                {(() => {
+                                                    const interesC = intereses.find((i: any) => i.clienteId === item.clienteId);
+                                                    const propC = interesC?.Propiedad;
+                                                    const reqC = requerimientos.find((r: any) => r.clienteId === item.clienteId);
+
+                                                    if (propC) {
+                                                        let oper = propC.operacion || propC.modalidad || 'VENTA';
+                                                        const nota = interesC?.nota || '';
+                                                        const match = nota.match(/operaci[oó]n:\s*([^\.\n]+)/i);
+                                                        if (match && match[1]) oper = match[1].trim();
+
+                                                        return (
+                                                            <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] md:max-w-[300px] shadow-sm" title={`${oper} - ${propC.tipo} - ${propC.ubicacion}`}>
+                                                                <FaHome className="shrink-0 text-indigo-400"/> 
+                                                                <span className="truncate uppercase">{oper} - {propC.tipo} - {propC.ubicacion}</span>
+                                                            </div>
+                                                        );
+                                                    } else if (reqC) {
+                                                        const tipoReq = reqC.pedido?.toUpperCase().includes('ALQUILER') ? 'ALQUILER' : 'BÚSQUEDA';
+                                                        return (
+                                                            <div className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] shadow-sm" title={reqC.pedido}>
+                                                                <FaSearch className="shrink-0 text-amber-500"/> 
+                                                                <span className="truncate uppercase">{tipoReq} - REQUERIMIENTO</span>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+
+                                            </div>
+                                        </div>
+                                    </td>
+
                                     <td className="max-w-xs"><p className="text-sm text-slate-600 italic truncate">{item.comentario}</p></td>
-                                    <td className="text-center">{item.fechaProxima ? <span className={`text-xs font-bold px-2 py-1 rounded ${new Date(item.fechaProxima) < new Date() && item.estado === 'PENDIENTE' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>{formatearFecha(item.fechaProxima)}</span> : '--'}</td>
+                                    <td className="text-center">{item.fechaProxima ? <span className={`text-xs font-bold px-2 py-1 rounded border ${new Date(item.fechaProxima) < new Date() && item.estado === 'PENDIENTE' ? 'bg-red-50 text-red-600 border-red-200 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>{formatearFecha(item.fechaProxima)}</span> : '--'}</td>
                                     <td className="text-center"><span className={`badge border-none font-bold ${item.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{item.estado}</span></td>
                                     <td className="text-center pr-8">
-                                        <div className="flex justify-center gap-2">
-                                            <button onClick={() => handleOpenHistory(item)} className="btn btn-sm btn-circle btn-ghost text-slate-500 tooltip" data-tip="Ver Historial"><FaHistory/></button>
-                                            <button onClick={() => handleCambiarEstado(item.id, item.estado)} className="btn btn-sm btn-circle btn-ghost text-emerald-600 tooltip" data-tip="Marcar Finalizado"><FaCheck/></button>
-                                            <button onClick={() => handleCierreVenta(item.Cliente?.nombre)} className="btn btn-sm bg-indigo-600 text-white border-none gap-2 px-3 shadow-md hover:bg-indigo-700"><FaHandshake/> Cierre</button>
+                                        <div className="flex justify-center items-center gap-2">
+                                            <button onClick={() => handleOpenHistory(item)} className="btn btn-sm btn-circle btn-ghost text-slate-500 hover:text-blue-600 hover:bg-blue-50 tooltip tooltip-left" data-tip="Ver Historial"><FaHistory/></button>
+                                            <button onClick={() => handleCambiarEstado(item.id, item.estado)} className="btn btn-sm btn-circle btn-ghost text-emerald-600 hover:bg-emerald-50 tooltip tooltip-top" data-tip="Marcar Finalizado"><FaCheck/></button>
+                                            <button onClick={() => handleCierreVenta(item.Cliente?.nombre)} className="btn btn-sm bg-gradient-to-r from-pink-500 to-rose-600 text-white border-none gap-2 px-4 shadow-md hover:shadow-lg hover:scale-105 transition-all ml-1"><FaHandshake/> Cierre</button>
                                         </div>
                                     </td>
                                 </tr>
