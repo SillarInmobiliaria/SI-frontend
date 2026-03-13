@@ -333,6 +333,7 @@ export default function SeguimientoPage() {
                                                 <div className="font-bold text-slate-800">{item.Cliente?.nombre}</div>
                                                 <div className="text-xs text-slate-500 flex items-center gap-1 font-mono"><FaPhone className="text-[10px]"/> {item.Cliente?.telefono1}</div>
                                                 
+                                                {/* ETIQUETA EN LA TABLA: COMPACTA Y SIN DIRECCIÓN LAGA */}
                                                 {(() => {
                                                     const interesC = intereses.find((i: any) => i.clienteId === item.clienteId);
                                                     const propC = interesC?.Propiedad;
@@ -344,17 +345,16 @@ export default function SeguimientoPage() {
                                                         const match = nota.match(/operaci[oó]n:\s*([^\.\n]+)/i);
                                                         if (match && match[1]) oper = match[1].trim();
 
-                                                        // Usa 'direccion' en lugar de 'ubicacion' para ser más exacto
                                                         return (
-                                                            <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] md:max-w-[300px] shadow-sm" title={`${oper} - ${propC.tipo || ''} - ${propC.direccion || propC.ubicacion}`}>
+                                                            <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 mt-1.5 w-fit flex items-center gap-1.5 max-w-[200px] shadow-sm" title={`${oper} - ${propC.tipo || 'PROPIEDAD'} - ${propC.direccion || propC.ubicacion}`}>
                                                                 <FaHome className="shrink-0 text-indigo-400"/> 
-                                                                <span className="truncate uppercase">{oper} {propC.tipo ? `- ${propC.tipo}` : ''} - {propC.direccion || propC.ubicacion}</span>
+                                                                <span className="truncate uppercase">{oper}{propC.tipo ? ` - ${propC.tipo}` : ''}</span>
                                                             </div>
                                                         );
                                                     } else if (reqC) {
                                                         const tipoReq = reqC.pedido?.toUpperCase().includes('ALQUILER') ? 'ALQUILER' : 'BÚSQUEDA';
                                                         return (
-                                                            <div className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-1.5 w-fit flex items-center gap-1.5 max-w-[250px] shadow-sm" title={reqC.pedido}>
+                                                            <div className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-1.5 w-fit flex items-center gap-1.5 max-w-[200px] shadow-sm" title={reqC.pedido}>
                                                                 <FaSearch className="shrink-0 text-amber-500"/> 
                                                                 <span className="truncate uppercase">{tipoReq} - REQUERIMIENTO</span>
                                                             </div>
@@ -385,21 +385,22 @@ export default function SeguimientoPage() {
                 }
             </div>
 
-            {/* MODAL HISTORIAL (CON CHAT, FECHA Y ETIQUETA) */}
+            {/* MODAL HISTORIAL (CON CHAT, FECHA Y ETIQUETA APILADA) */}
             {isHistoryOpen && selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white w-full max-w-xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
                         
                         {/* CABECERA DEL MODAL */}
-                        <div className="bg-slate-900 text-white p-5 flex justify-between items-center shrink-0">
-                            <div className="flex gap-4 items-center">
-                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-xl font-bold border border-slate-700">{selectedItem.Cliente.nombre.charAt(0)}</div>
-                                <div className="flex flex-col gap-1">
+                        <div className="bg-slate-900 text-white p-5 flex justify-between items-start shrink-0">
+                            <div className="flex gap-4 items-start">
+                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-xl font-bold border border-slate-700 mt-1">{selectedItem.Cliente.nombre.charAt(0)}</div>
+                                <div className="flex flex-col gap-1.5">
                                     <h2 className="text-xl font-bold leading-none">{selectedItem.Cliente.nombre}</h2>
-                                    <div className="flex flex-wrap items-center gap-3">
+                                    
+                                    <div className="flex flex-col gap-2 mt-1">
                                         <span className="text-xs opacity-80 flex gap-1 items-center font-mono"><FaPhone/> {selectedItem.Cliente.telefono1}</span>
                                         
-                                        {/* ETIQUETA EN EL MODAL */}
+                                        {/* ETIQUETA EN EL MODAL: DEBAJO DEL NÚMERO Y COMPLETA */}
                                         {(() => {
                                             const interesM = intereses.find((i: any) => i.clienteId === selectedItem.clienteId);
                                             const propM = interesM?.Propiedad;
@@ -412,23 +413,26 @@ export default function SeguimientoPage() {
                                                 if (matchM && matchM[1]) operM = matchM[1].trim();
 
                                                 return (
-                                                    <div className="text-[10px] font-bold text-indigo-200 bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-700/50 flex items-center gap-1.5 shadow-sm max-w-[300px]" title={`${operM} - ${propM.tipo || ''} - ${propM.direccion || propM.ubicacion}`}>
-                                                        <FaHome className="shrink-0 text-indigo-400"/> 
-                                                        <span className="truncate uppercase">{operM} {propM.tipo ? `- ${propM.tipo}` : ''} - {propM.direccion || propM.ubicacion}</span>
+                                                    <div className="text-[10px] font-bold text-indigo-200 bg-indigo-900/60 px-2.5 py-1.5 rounded-lg border border-indigo-700/50 flex items-center gap-1.5 shadow-sm w-fit" title={`${operM} - ${propM.tipo || ''} - ${propM.direccion || propM.ubicacion}`}>
+                                                        <FaHome className="shrink-0 text-indigo-400 text-sm"/> 
+                                                        <span className="uppercase leading-tight">
+                                                            {operM}{propM.tipo ? ` - ${propM.tipo}` : ''} <span className="mx-1 text-indigo-400">|</span> <span className="text-indigo-100">{propM.direccion || propM.ubicacion}</span>
+                                                        </span>
                                                     </div>
                                                 );
                                             } else if (reqM) {
                                                 const tipoReqM = reqM.pedido?.toUpperCase().includes('ALQUILER') ? 'ALQUILER' : 'BÚSQUEDA';
                                                 return (
-                                                    <div className="text-[10px] font-bold text-amber-200 bg-amber-900/60 px-2 py-0.5 rounded border border-amber-700/50 flex items-center gap-1.5 shadow-sm max-w-[300px]" title={reqM.pedido}>
-                                                        <FaSearch className="shrink-0 text-amber-400"/> 
-                                                        <span className="truncate uppercase">{tipoReqM} - REQUERIMIENTO</span>
+                                                    <div className="text-[10px] font-bold text-amber-200 bg-amber-900/60 px-2.5 py-1.5 rounded-lg border border-amber-700/50 flex items-center gap-1.5 shadow-sm w-fit" title={reqM.pedido}>
+                                                        <FaSearch className="shrink-0 text-amber-400 text-sm"/> 
+                                                        <span className="uppercase">{tipoReqM} - REQUERIMIENTO</span>
                                                     </div>
                                                 );
                                             }
                                             return null;
                                         })()}
                                     </div>
+
                                 </div>
                             </div>
                             <button onClick={() => setHistoryOpen(false)} className="btn btn-sm btn-circle btn-ghost text-white hover:bg-slate-800">✕</button>
