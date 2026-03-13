@@ -536,9 +536,15 @@ export default function ClientesPage() {
                                     avatarColor = 'bg-gradient-to-br from-purple-500 to-indigo-600';
                                 }
                             } else if (hasRealSeg) {
-                                statusLabel = 'SEGUIMIENTO';
-                                statusColor = 'bg-blue-100 text-blue-700';
-                                avatarColor = 'bg-gradient-to-br from-blue-400 to-blue-600';
+                                if (segC?.estado === 'FINALIZADO') {
+                                    statusLabel = 'FINALIZADO';
+                                    statusColor = 'bg-slate-100 text-slate-500';
+                                    avatarColor = 'bg-gradient-to-br from-slate-400 to-slate-500';
+                                } else {
+                                    statusLabel = 'SEGUIMIENTO';
+                                    statusColor = 'bg-blue-100 text-blue-700';
+                                    avatarColor = 'bg-gradient-to-br from-blue-400 to-blue-600';
+                                }
                             }
 
                             return (
