@@ -441,23 +441,13 @@ export default function ClientesPage() {
   const handleNumberInput = (e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, ''); };
 
   const clientesFiltrados = useMemo(() => {
-      let filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || (c.dni && c.dni.includes(searchTerm)) || c.telefono1.includes(searchTerm));
-      if (searchTerm) {
-          filtrados = filtrados.filter(c => {
-              const interesC = intereses.find(i => i.clienteId === c.id);
-              const propC = interesC?.Propiedad;
-              const term = searchTerm.toLowerCase();
-              if (propC) {
-                  const oper = propC.operacion?.toLowerCase() || '';
-                  const tipo = propC.tipo?.toLowerCase() || '';
-                  const ubic = propC.ubicacion?.toLowerCase() || '';
-                  if (oper.includes(term) || tipo.includes(term) || ubic.includes(term)) {
-                      return true;
-                  }
-              }
-              return false;
-          }).concat(filtrados.filter(c => !filtrados.includes(c)));
-      }
+      let filtrados = clientes.filter(c => {
+          if (!searchTerm) return true;
+          const term = searchTerm.toLowerCase();
+          return c.nombre.toLowerCase().includes(term) || 
+                 (c.dni && c.dni.includes(searchTerm)) || 
+                 c.telefono1.includes(searchTerm);
+      });
       if (searchTerm === '') { filtrados = filtrados.filter(c => { const fechaRaw = c.fechaAlta || c.createdAt || ''; return fechaRaw.split('T')[0] === filterDate; }); }
       if (filterType !== 'TODOS') filtrados = filtrados.filter(c => c.tipo === filterType);
       filtrados.sort((a, b) => new Date(b.fechaAlta || b.createdAt || new Date().toISOString()).getTime() - new Date(a.fechaAlta || a.createdAt || new Date().toISOString()).getTime());
@@ -921,7 +911,7 @@ export default function ClientesPage() {
                             </div>
                             <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow md:col-span-2">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-2"><FaCalendarAlt className="text-indigo-400"/> Fecha de Registro</p>
-                                <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '---'}</p>
+                                <p className="font-bold text-gray-800">{selectedCliente.fechaAlta ? new Date(selectedCliente.fechaAlta).toLocaleDateString('es-PE', { timeZone: 'America/Lima', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '---'}</p>
                             </div>
 
                             {selectedCliente.detalles && (
