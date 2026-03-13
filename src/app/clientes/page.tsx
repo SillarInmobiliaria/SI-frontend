@@ -567,7 +567,7 @@ export default function ClientesPage() {
                                         {propC ? (
                                             <div className="text-xs flex flex-col gap-1">
                                                 <span className="font-bold text-indigo-700 uppercase tracking-wide">
-                                                    {`${(propC.operacion || 'VENTA').toString().charAt(0).toUpperCase() + (propC.operacion || 'VENTA').toString().slice(1).toLowerCase()} - ${propC.tipo ? propC.tipo.toString().charAt(0).toUpperCase() + propC.tipo.toString().slice(1).toLowerCase() : ''}`}
+                                                    {`${(propC.modalidad || 'VENTA').toString().charAt(0).toUpperCase() + (propC.modalidad || 'VENTA').toString().slice(1).toLowerCase()} - ${propC.tipo ? propC.tipo.toString().charAt(0).toUpperCase() + propC.tipo.toString().slice(1).toLowerCase() : ''}`}
                                                 </span>
                                                 <span className="text-gray-500 font-semibold flex items-center gap-1">
                                                     <FaMapMarkerAlt className="text-gray-400 text-[10px]"/> {propC.ubicacion}
@@ -953,7 +953,7 @@ export default function ClientesPage() {
                                             </div>
                                             
                                             <h5 className="font-black text-gray-800 text-xl mb-1">
-                                                {interes.Propiedad.operacion || 'VENTA'} — {interes.Propiedad.tipo}
+                                                {interes.Propiedad.modalidad || 'VENTA'} — {interes.Propiedad.tipo}
                                             </h5>
                                             <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mb-1">
                                                 <FaMapMarkerAlt className="text-red-400"/> {interes.Propiedad.ubicacion}
