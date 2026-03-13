@@ -72,13 +72,18 @@ export default function CumpleanosPage() {
   const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
   const startDay = getFirstDayOfMonth(selectedMonth, selectedYear);
 
-  // --- LÓGICA PARA ZONA HORARIA Y DATOS ---
+  // --- LÓGICA PARA ZONA HORARIA Y DATOS (CORREGIDA A LIMA) ---
   const getCumpleanerosDelDia = (dia: number) => {
       const list: any[] = [];
 
       const obtenerDiaExacto = (fechaString: string) => {
           if (!fechaString) return -1;
-          const partes = fechaString.toString().split('T')[0].split('-'); 
+          
+          // Forzar la fecha a la zona horaria de Perú
+          const dateObj = new Date(fechaString);
+          const fechaPeru = dateObj.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+          const partes = fechaPeru.split('-'); 
+          
           return parseInt(partes[2]); 
       };
 
@@ -105,6 +110,13 @@ export default function CumpleanosPage() {
       const num = persona.tipo === 'CLIENTE' ? persona.telefono1 : persona.celular1;
       return `https://wa.me/51${num}?text=${encodeURIComponent(mensaje)}`;
   };
+
+  const getHoyPeru = () => {
+    const hoyStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+    const [y, m, d] = hoyStr.split('-').map(Number);
+    return { dia: d, mes: m, anio: y };
+  };
+  const hoyPeru = getHoyPeru();
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-10">
@@ -194,9 +206,9 @@ export default function CumpleanosPage() {
                     const cumpleaneros = getCumpleanerosDelDia(dia);
                     
                     const isToday = 
-                        dia === new Date().getDate() && 
-                        selectedMonth === (new Date().getMonth() + 1) &&
-                        selectedYear === new Date().getFullYear();
+                        dia === hoyPeru.dia && 
+                        selectedMonth === hoyPeru.mes &&
+                        selectedYear === hoyPeru.anio;
 
                     const hasData = cumpleaneros.length > 0;
 
